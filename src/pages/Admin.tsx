@@ -26,6 +26,13 @@ const Admin = () => {
     }
   }, [user, isAdmin, navigate, toast]);
 
+  const handlePlaceholderClick = (featureName: string) => {
+    toast({
+      title: "Coming Soon",
+      description: `The ${featureName} feature is coming soon.`,
+    });
+  };
+
   if (!isAdmin) return null;
 
   return (
@@ -57,6 +64,11 @@ const Admin = () => {
                     Import Products
                   </Link>
                 </li>
+                <li>
+                  <Link to="/admin/products/categories" className="text-primary hover:underline">
+                    Manage Categories
+                  </Link>
+                </li>
               </ul>
             </CardContent>
             <CardFooter>
@@ -82,22 +94,26 @@ const Admin = () => {
             <CardContent className="pt-6">
               <ul className="space-y-2">
                 <li>
-                  <Link to="/admin/users" className="text-primary hover:underline">
+                  <button
+                    onClick={() => handlePlaceholderClick('User Management')}
+                    className="text-primary hover:underline text-left"
+                  >
                     View Users
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link to="/admin/users/pending" className="text-primary hover:underline">
+                  <button 
+                    onClick={() => handlePlaceholderClick('Approval Requests')}
+                    className="text-primary hover:underline text-left"
+                  >
                     Approval Requests
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/admin/users">
-                  Manage Users
-                </Link>
+              <Button onClick={() => handlePlaceholderClick('User Management')} variant="outline" className="w-full">
+                Manage Users
               </Button>
             </CardFooter>
           </Card>
@@ -116,22 +132,26 @@ const Admin = () => {
             <CardContent className="pt-6">
               <ul className="space-y-2">
                 <li>
-                  <Link to="/admin/orders" className="text-primary hover:underline">
+                  <button
+                    onClick={() => handlePlaceholderClick('Orders')}
+                    className="text-primary hover:underline text-left"
+                  >
                     Orders
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link to="/admin/analytics" className="text-primary hover:underline">
+                  <button
+                    onClick={() => handlePlaceholderClick('Sales Analytics')}
+                    className="text-primary hover:underline text-left"
+                  >
                     Sales Analytics
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/admin/orders">
-                  View Orders
-                </Link>
+              <Button onClick={() => handlePlaceholderClick('Orders')} variant="outline" className="w-full">
+                View Orders
               </Button>
             </CardFooter>
           </Card>
@@ -150,22 +170,26 @@ const Admin = () => {
             <CardContent className="pt-6">
               <ul className="space-y-2">
                 <li>
-                  <Link to="/admin/settings/general" className="text-primary hover:underline">
+                  <button
+                    onClick={() => handlePlaceholderClick('General Settings')}
+                    className="text-primary hover:underline text-left"
+                  >
                     General Settings
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link to="/admin/settings/shipping" className="text-primary hover:underline">
+                  <button
+                    onClick={() => handlePlaceholderClick('Shipping Options')}
+                    className="text-primary hover:underline text-left"
+                  >
                     Shipping Options
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/admin/settings/general">
-                  Manage Settings
-                </Link>
+              <Button onClick={() => handlePlaceholderClick('Settings')} variant="outline" className="w-full">
+                Manage Settings
               </Button>
             </CardFooter>
           </Card>

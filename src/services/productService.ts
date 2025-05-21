@@ -139,6 +139,61 @@ export const deleteProduct = async (id: string): Promise<void> => {
   }
 };
 
+// Get all available categories
+export const getCategories = async (): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('category');
+
+  if (error) {
+    console.error('Error fetching categories:', error);
+    throw error;
+  }
+
+  // Filter unique categories and remove null values
+  const categories = data
+    .map(item => item.category)
+    .filter((category, index, self) => 
+      category !== null && 
+      category !== undefined && 
+      self.indexOf(category) === index
+    );
+
+  return categories;
+};
+
+// Create a new category (by adding a product with that category)
+export const addCategory = async (categoryName: string): Promise<void> => {
+  // This is a simple implementation - in a real-world scenario,
+  // you might want a separate categories table
+  const dummyProduct = {
+    name: `${categoryName} Category Placeholder`,
+    description: `Placeholder for ${categoryName} category`,
+    price: 0,
+    minQuantity: 1,
+    stock: 0,
+    image: 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png',
+    category: categoryName.toLowerCase(),
+  };
+
+  const { error } = await supabase
+    .from('products')
+    .insert({
+      name: dummyProduct.name,
+      description: dummyProduct.description,
+      price: dummyProduct.price,
+      min_quantity: dummyProduct.minQuantity,
+      stock: dummyProduct.stock,
+      image: dummyProduct.image,
+      category: dummyProduct.category,
+    });
+
+  if (error) {
+    console.error('Error creating category:', error);
+    throw new Error(`Failed to create category: ${error.message}`);
+  }
+};
+
 // Example import data for PP Protein products
 export const ppProteinSampleProducts: Omit<Product, 'id'>[] = [
   {
