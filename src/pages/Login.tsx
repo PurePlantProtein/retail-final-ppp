@@ -82,36 +82,42 @@ const Login = () => {
   return (
     <Layout>
       <div className="flex justify-center items-center min-h-[70vh]">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-3xl font-bold">Welcome back</CardTitle>
-            <CardDescription>
+        <Card className="w-full max-w-md bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#212529] dark:to-[#343a40] border-none shadow-lg">
+          <CardHeader className="space-y-6 text-center pt-8">
+            <div className="flex justify-center">
+              <img src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=50" 
+                   alt="PP Protein" 
+                   className="h-16 w-auto mb-2" />
+            </div>
+            <CardTitle className="text-3xl font-bold text-[#212529] dark:text-white">Welcome back</CardTitle>
+            <CardDescription className="text-[#495057] dark:text-[#adb5bd]">
               Enter your email and password to login to your wholesale account
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               {errorMessage && (
-                <div className="p-3 text-white bg-destructive rounded-md text-sm">
+                <div className="p-3 text-white bg-[#ff4d6d] rounded-md text-sm">
                   {errorMessage}
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-[#343a40] dark:text-[#f8f9fa]">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
                 />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-[#343a40] dark:text-[#f8f9fa]">Password</Label>
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-primary hover:underline"
+                    className="text-sm text-[#25a18e] hover:text-[#1e8a77] hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -122,17 +128,22 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full mt-6 bg-[#25a18e] hover:bg-[#1e8a77] text-white transition-all" 
+                disabled={isLoading}
+              >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </CardContent>
           </form>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-gray-500">
+          <CardFooter className="flex justify-center pb-8">
+            <p className="text-sm text-[#6c757d] dark:text-[#adb5bd]">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline">
+              <Link to="/signup" className="text-[#25a18e] hover:text-[#1e8a77] hover:underline">
                 Sign up
               </Link>
             </p>
