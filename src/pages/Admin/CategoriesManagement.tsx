@@ -5,7 +5,7 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCategories, addCategory } from '@/services/productService';
+import { getCategories, addCategory, deleteCategory } from '@/services/productService';
 import { AlertCircle, Plus, Tag, Trash } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,8 @@ import {
   DialogHeader, 
   DialogTitle,
   DialogTrigger,
-  DialogFooter
+  DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
@@ -26,6 +27,8 @@ const CategoriesManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
@@ -91,6 +94,36 @@ const CategoriesManagement = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to add category";
       setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeletePrompt = (category: string) => {
+    setCategoryToDelete(category);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    
+    setIsSubmitting(true);
+    try {
+      await deleteCategory(categoryToDelete);
+      toast({
+        title: "Success",
+        description: `Category "${categoryToDelete}" has been deleted.`,
+      });
+      loadCategories();
+      setDeleteDialogOpen(false);
+      setCategoryToDelete(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete category";
       toast({
         title: "Error",
         description: errorMessage,
@@ -200,10 +233,7 @@ const CategoriesManagement = () => {
                     variant="ghost" 
                     size="icon" 
                     className="text-muted-foreground hover:text-destructive"
-                    onClick={() => toast({
-                      title: "Coming Soon",
-                      description: "Category deletion will be available in a future update."
-                    })}
+                    onClick={() => handleDeletePrompt(category)}
                   >
                     <Trash className="h-4 w-4" />
                   </Button>
@@ -222,6 +252,30 @@ const CategoriesManagement = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the category "{categoryToDelete}"? 
+              This may affect products using this category.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteCategory}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

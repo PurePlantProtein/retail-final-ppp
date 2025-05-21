@@ -1,6 +1,6 @@
 
 // Updated Category type to accept string literals
-export type Category = 'electronics' | 'clothing' | 'food' | 'furniture' | 'accessories' | 'supplements' | 'other';
+export type Category = 'electronics' | 'clothing' | 'food' | 'furniture' | 'accessories' | 'supplements' | 'protein' | 'other' | string;
 
 export type Product = {
   id: string;

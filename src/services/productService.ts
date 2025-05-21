@@ -31,6 +31,37 @@ export const getProducts = async (): Promise<Product[]> => {
   return data.map(transformProduct);
 };
 
+// Fetch products by category
+export const getProductsByCategory = async (category: string): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('category', category)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error(`Error fetching products in category ${category}:`, error);
+    throw error;
+  }
+
+  return data.map(transformProduct);
+};
+
+// Count products by category
+export const countProductsByCategory = async (category: string): Promise<number> => {
+  const { count, error } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+    .eq('category', category);
+
+  if (error) {
+    console.error(`Error counting products in category ${category}:`, error);
+    throw error;
+  }
+
+  return count || 0;
+};
+
 // Fetch a single product by ID
 export const getProductById = async (id: string): Promise<Product | null> => {
   const { data, error } = await supabase
@@ -194,6 +225,33 @@ export const addCategory = async (categoryName: string): Promise<void> => {
   }
 };
 
+// Delete a category by removing all products in that category
+export const deleteCategory = async (categoryName: string): Promise<void> => {
+  // Get all products in the category first
+  const { data, error: fetchError } = await supabase
+    .from('products')
+    .select('id')
+    .eq('category', categoryName);
+
+  if (fetchError) {
+    console.error(`Error fetching products in category ${categoryName}:`, fetchError);
+    throw fetchError;
+  }
+
+  // If there are products with this category, delete them
+  if (data && data.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('products')
+      .delete()
+      .eq('category', categoryName);
+
+    if (deleteError) {
+      console.error(`Error deleting products in category ${categoryName}:`, deleteError);
+      throw deleteError;
+    }
+  }
+};
+
 // Example import data for PP Protein products
 export const ppProteinSampleProducts: Omit<Product, 'id'>[] = [
   {
@@ -203,7 +261,7 @@ export const ppProteinSampleProducts: Omit<Product, 'id'>[] = [
     minQuantity: 10,
     stock: 100,
     image: "https://ppprotein.com.au/cdn/shop/files/ppprotein-light-vanilla_360x.png",
-    category: "food"
+    category: "protein"
   },
   {
     name: "PP Protein Chocolate Whey Protein 1kg",
@@ -212,7 +270,7 @@ export const ppProteinSampleProducts: Omit<Product, 'id'>[] = [
     minQuantity: 10,
     stock: 100,
     image: "https://ppprotein.com.au/cdn/shop/files/ppprotein-light-chocolate_360x.png",
-    category: "food"
+    category: "protein"
   },
   {
     name: "PP Protein Strawberry Whey Protein 1kg",
@@ -221,7 +279,7 @@ export const ppProteinSampleProducts: Omit<Product, 'id'>[] = [
     minQuantity: 10,
     stock: 100,
     image: "https://ppprotein.com.au/cdn/shop/files/ppprotein-light-strawberry_360x.png",
-    category: "food"
+    category: "protein"
   },
   {
     name: "PP Protein Shaker Bottle",
@@ -239,7 +297,7 @@ export const ppProteinSampleProducts: Omit<Product, 'id'>[] = [
     minQuantity: 5,
     stock: 50,
     image: "https://ppprotein.com.au/cdn/shop/files/ppprotein-preworkout_360x.png",
-    category: "food"
+    category: "supplements"
   },
   {
     name: "PP Protein Mass Gainer 2kg",
@@ -248,6 +306,6 @@ export const ppProteinSampleProducts: Omit<Product, 'id'>[] = [
     minQuantity: 5,
     stock: 40,
     image: "https://ppprotein.com.au/cdn/shop/files/ppprotein-isolate_360x.png",
-    category: "food"
+    category: "supplements"
   }
 ];

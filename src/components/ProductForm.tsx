@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,14 +8,23 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Category, Product } from '@/types/product';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { createProduct, updateProduct } from '@/services/productService';
+import { createProduct, updateProduct, getCategories } from '@/services/productService';
 import { useToast } from '@/components/ui/use-toast';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
-const categories: Category[] = ['food', 'accessories', 'supplements', 'clothing', 'electronics', 'furniture', 'other'];
+const defaultCategories: Category[] = ['food', 'accessories', 'supplements', 'clothing', 'electronics', 'furniture', 'protein', 'other'];
 
 const productSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
@@ -24,7 +33,7 @@ const productSchema = z.object({
   minQuantity: z.coerce.number().int().positive({ message: "Minimum quantity must be a positive integer" }),
   stock: z.coerce.number().int().nonnegative({ message: "Stock must be a non-negative integer" }),
   image: z.string().url({ message: "Image must be a valid URL" }),
-  category: z.enum(['food', 'accessories', 'supplements', 'clothing', 'electronics', 'furniture', 'other'])
+  category: z.string().min(1, { message: "Please select a category" })
 });
 
 type ProductFormProps = {
@@ -36,6 +45,26 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>(defaultCategories);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+
+  // Fetch available categories when component mounts
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const fetchedCategories = await getCategories();
+        if (fetchedCategories && fetchedCategories.length > 0) {
+          setCategories(fetchedCategories);
+        }
+      } catch (err) {
+        console.error("Error loading categories:", err);
+        // Fall back to default categories if fetch fails
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
@@ -54,7 +83,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       minQuantity: 1,
       stock: 0,
       image: 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_360x.png',
-      category: 'other'
+      category: ''
     },
   });
 
@@ -80,7 +109,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
           minQuantity: data.minQuantity,
           stock: data.stock,
           image: data.image,
-          category: data.category
+          category: data.category as Category
         };
         
         console.log('Submitting product data:', newProductData);
@@ -106,6 +135,47 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast({
+        title: "Error",
+        description: "Category name cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const lowerCaseName = newCategoryName.toLowerCase();
+    if (categories.includes(lowerCaseName)) {
+      toast({
+        title: "Error",
+        description: "This category already exists",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Update UI immediately for better UX
+      setCategories([...categories, lowerCaseName]);
+      form.setValue("category", lowerCaseName);
+      setNewCategoryName("");
+      setIsAddingCategory(false);
+      
+      toast({
+        title: "Success",
+        description: `Category "${lowerCaseName}" has been added.`,
+      });
+    } catch (err) {
+      console.error('Error adding category:', err);
+      toast({
+        title: "Error",
+        description: "Failed to add category",
+        variant: "destructive",
+      });
     }
   };
 
@@ -173,23 +243,56 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map(category => (
+                          <SelectItem key={category} value={category}>
+                            {category.charAt(0).toUpperCase() + category.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" size="icon">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Category</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="new-category">Category Name</Label>
+                            <Input
+                              id="new-category"
+                              value={newCategoryName}
+                              onChange={(e) => setNewCategoryName(e.target.value)}
+                              placeholder="Enter category name"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            type="button" 
+                            onClick={handleAddCategory}
+                          >
+                            Add Category
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

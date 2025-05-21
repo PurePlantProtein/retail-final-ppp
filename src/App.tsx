@@ -20,6 +20,9 @@ import Admin from "./pages/Admin";
 import ProductImport from "./pages/Admin/ProductImport";
 import ProductsManagement from "./pages/Admin/ProductsManagement";
 import CategoriesManagement from "./pages/Admin/CategoriesManagement";
+import UsersManagement from "./pages/Admin/UsersManagement";
+import SettingsManagement from "./pages/Admin/SettingsManagement";
+import AnalyticsManagement from "./pages/Admin/AnalyticsManagement";
 import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
 
@@ -50,12 +53,20 @@ const App = () => {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/orders" element={<Orders />} />
+                  
+                  {/* Admin Routes */}
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/admin/products" element={<ProductsManagement />} />
                   <Route path="/admin/products/import" element={<ProductImport />} />
                   <Route path="/admin/products/categories" element={<CategoriesManagement />} />
-                  <Route path="/orders" element={<Orders />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="/admin/users" element={<UsersManagement />} />
+                  <Route path="/admin/users/approvals" element={<UsersManagement />} />
+                  <Route path="/admin/settings" element={<SettingsManagement />} />
+                  <Route path="/admin/analytics" element={<AnalyticsManagement />} />
+                  <Route path="/admin/orders" element={<Orders />} />
+                  
+                  {/* Catch-all route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
