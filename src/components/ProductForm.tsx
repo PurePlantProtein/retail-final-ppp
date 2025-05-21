@@ -48,10 +48,12 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
   const [categories, setCategories] = useState<string[]>(defaultCategories);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch available categories when component mounts
   useEffect(() => {
     const loadCategories = async () => {
+      setIsLoading(true);
       try {
         const fetchedCategories = await getCategories();
         if (fetchedCategories && fetchedCategories.length > 0) {
@@ -60,6 +62,8 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       } catch (err) {
         console.error("Error loading categories:", err);
         // Fall back to default categories if fetch fails
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -247,6 +251,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value}
+                      disabled={isLoading}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">

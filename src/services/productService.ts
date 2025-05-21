@@ -104,21 +104,22 @@ export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<v
 
 // Create a new product
 export const createProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
-  // Log the authenticated state before making the request
-  const { data: sessionData } = await supabase.auth.getSession();
-  console.log('Current auth session:', sessionData?.session ? 'Authenticated' : 'Not authenticated');
-
+  // Convert the product data to match database column names
+  const productData = {
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    min_quantity: product.minQuantity,
+    stock: product.stock,
+    image: product.image,
+    category: product.category,
+  };
+  
+  console.log('Creating product with data:', productData);
+  
   const { data, error } = await supabase
     .from('products')
-    .insert({
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      min_quantity: product.minQuantity,
-      stock: product.stock,
-      image: product.image,
-      category: product.category,
-    })
+    .insert(productData)
     .select()
     .single();
 
@@ -141,6 +142,8 @@ export const updateProduct = async (id: string, product: Partial<Omit<Product, '
   if (product.stock !== undefined) updateData.stock = product.stock;
   if (product.image !== undefined) updateData.image = product.image;
   if (product.category !== undefined) updateData.category = product.category;
+  
+  console.log(`Updating product ${id} with data:`, updateData);
   
   const { data, error } = await supabase
     .from('products')
@@ -172,6 +175,8 @@ export const deleteProduct = async (id: string): Promise<void> => {
 
 // Get all available categories
 export const getCategories = async (): Promise<string[]> => {
+  console.log('Fetching categories...');
+  
   const { data, error } = await supabase
     .from('products')
     .select('category');
@@ -189,7 +194,9 @@ export const getCategories = async (): Promise<string[]> => {
       category !== undefined && 
       self.indexOf(category) === index
     );
-
+  
+  console.log('Fetched categories:', categories);
+  
   return categories;
 };
 
