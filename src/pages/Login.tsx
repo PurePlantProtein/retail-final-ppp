@@ -8,11 +8,13 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { login, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -24,15 +26,43 @@ const Login = () => {
     }
   }, [user, navigate]);
 
+  // Helper function for manual account creation (for testing only)
+  const createAdminAccount = async () => {
+    try {
+      // First, attempt to sign up
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: 'myles@sparkflare.com.au',
+        password: 'PPPWholesale123!@',
+        options: {
+          data: {
+            business_name: 'Sparkflare Admin'
+          }
+        }
+      });
+      
+      if (signUpError && !signUpError.message.includes('already registered')) {
+        console.error('Error creating account:', signUpError);
+        return;
+      }
+      
+      console.log('Admin account created or already exists');
+      
+    } catch (error) {
+      console.error('Error in admin account creation:', error);
+    }
+  };
+
+  // Create admin account on component load (only for development)
+  useEffect(() => {
+    createAdminAccount();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMessage(null);
     
     if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
+      setErrorMessage("Please fill in all fields");
       return;
     }
     
@@ -40,9 +70,9 @@ const Login = () => {
     
     try {
       await login(email, password);
-      // No need to navigate here, the useEffect will handle it
-    } catch (error) {
-      // Error is already handled in the AuthContext
+      // Navigation happens in useEffect when user state changes
+    } catch (error: any) {
+      setErrorMessage(error.message || "Invalid login credentials");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -61,6 +91,11 @@ const Login = () => {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {errorMessage && (
+                <div className="p-3 text-white bg-destructive rounded-md text-sm">
+                  {errorMessage}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
