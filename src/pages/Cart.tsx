@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Card, 
@@ -16,12 +16,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { Trash2, Plus, Minus, CreditCard } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { loadPayPalScript, initPayPalButton } from '@/services/paypalService';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, clearCart, subtotal } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
+  const paypalButtonRef = useRef<HTMLDivElement>(null);
+  const [isPaypalLoading, setIsPaypalLoading] = useState(false);
 
   const handleRemoveItem = (productId: string) => {
     removeFromCart(productId);
@@ -31,11 +36,42 @@ const Cart = () => {
     updateQuantity(productId, quantity);
   };
 
-  const handleCheckout = () => {
-    // This is where we would integrate with Stripe/PayPal
+  // Initialize PayPal SDK
+  useEffect(() => {
+    if (paymentMethod === 'paypal' && subtotal > 0 && user) {
+      // Use sandbox Client ID (replace with your actual client ID)
+      const clientId = "Aev56QXMEJq8AJhog4PGc3XGepFcoKONnrr6g093b45VZLpJEZ5I07Y8gMhJYGdfg7T5rQw1i7HRhQG1";
+      
+      setIsPaypalLoading(true);
+      loadPayPalScript(clientId)
+        .then(() => {
+          if (paypalButtonRef.current) {
+            initPayPalButton(
+              'paypal-button-container',
+              subtotal,
+              (data) => handlePaypalSuccess(data),
+              (error) => handlePaypalError(error)
+            );
+          }
+          setIsPaypalLoading(false);
+        })
+        .catch(error => {
+          console.error("Failed to load PayPal SDK:", error);
+          toast({
+            title: "PayPal Error",
+            description: "Failed to load PayPal payment system",
+            variant: "destructive",
+          });
+          setIsPaypalLoading(false);
+        });
+    }
+  }, [paymentMethod, subtotal, user]);
+
+  const handleStripeCheckout = () => {
+    // This is where we would integrate with Stripe
     toast({
       title: "Checkout initiated",
-      description: "This is where Stripe/PayPal integration would happen.",
+      description: "This is where Stripe integration would happen.",
     });
     // For demo purposes, we'll just show a success message and clear the cart
     toast({
@@ -44,6 +80,25 @@ const Cart = () => {
     });
     clearCart();
     navigate('/orders');
+  };
+
+  const handlePaypalSuccess = (data: any) => {
+    console.log("PayPal payment successful:", data);
+    toast({
+      title: "PayPal Payment Successful",
+      description: `Your payment (ID: ${data.orderID}) has been processed successfully.`,
+    });
+    clearCart();
+    navigate('/orders');
+  };
+
+  const handlePaypalError = (error: any) => {
+    console.error("PayPal payment error:", error);
+    toast({
+      title: "Payment Failed",
+      description: "There was an issue processing your PayPal payment.",
+      variant: "destructive",
+    });
   };
 
   if (!user) {
@@ -207,14 +262,42 @@ const Cart = () => {
                     <span>${subtotal.toFixed(2)}</span>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button 
+                <CardFooter className="flex flex-col gap-4">
+                  <Tabs 
+                    defaultValue="stripe" 
                     className="w-full" 
-                    size="lg"
-                    onClick={handleCheckout}
+                    value={paymentMethod}
+                    onValueChange={(value) => setPaymentMethod(value as 'stripe' | 'paypal')}
                   >
-                    <CreditCard className="mr-2 h-4 w-4" /> Checkout
-                  </Button>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="stripe">Credit Card</TabsTrigger>
+                      <TabsTrigger value="paypal">PayPal</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="stripe" className="mt-4">
+                      <Button 
+                        className="w-full" 
+                        size="lg"
+                        onClick={handleStripeCheckout}
+                      >
+                        <CreditCard className="mr-2 h-4 w-4" /> Pay with Stripe
+                      </Button>
+                    </TabsContent>
+                    
+                    <TabsContent value="paypal" className="mt-4">
+                      {isPaypalLoading ? (
+                        <div className="flex justify-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                        </div>
+                      ) : (
+                        <div 
+                          id="paypal-button-container" 
+                          ref={paypalButtonRef}
+                          className="min-h-[40px]"
+                        ></div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
                 </CardFooter>
               </Card>
               <p className="text-xs text-gray-500 mt-2 text-center">
