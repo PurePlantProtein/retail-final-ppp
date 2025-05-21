@@ -1,84 +1,107 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from '@supabase/supabase-js';
 
-export type User = {
+export type UserProfile = {
   id: string;
-  email: string;
-  name: string;
+  business_name: string;
+  business_address?: string;
+  phone?: string;
+  business_type?: string;
   role: 'admin' | 'retailer';
 };
 
 type AuthContextType = {
   user: User | null;
+  profile: UserProfile | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  signup: (email: string, password: string, businessName: string) => Promise<void>;
+  logout: () => Promise<void>;
   isAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo
-const mockUsers = [
-  {
-    id: '1',
-    email: 'admin@example.com',
-    password: 'admin123',
-    name: 'Admin User',
-    role: 'admin' as const
-  },
-  {
-    id: '2',
-    email: 'retailer@example.com',
-    password: 'retailer123',
-    name: 'Retail Store',
-    role: 'retailer' as const
-  }
-];
+// For development purposes only - to identify admin users
+const ADMIN_EMAILS = ['admin@example.com'];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Check for saved session
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+  // Fetch user profile data
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Determine role based on email (in a real app, this would come from the database)
+        const role = ADMIN_EMAILS.includes(user?.email || '') ? 'admin' : 'retailer';
+        setProfile({ ...data, role });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
     }
-    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          // Use setTimeout to prevent auth deadlocks
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     
-    // Simulate network request
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
     try {
-      const user = mockUsers.find(
-        user => user.email === email && user.password === password
-      );
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (!user) {
-        throw new Error('Invalid credentials');
-      }
-      
-      const { password: _, ...userWithoutPassword } = user;
-      setUser(userWithoutPassword);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+      if (error) throw error;
       
       toast({
         title: "Login successful",
-        description: `Welcome back, ${userWithoutPassword.name}!`,
+        description: "Welcome back!",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
       throw error;
@@ -87,37 +110,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (email: string, password: string, name: string) => {
+  const signup = async (email: string, password: string, businessName: string) => {
     setIsLoading(true);
     
-    // Simulate network request
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
     try {
-      // Check if email already exists
-      if (mockUsers.some(user => user.email === email)) {
-        throw new Error('Email already in use');
-      }
-      
-      // In a real app, we would make an API call to create the user
-      const newUser = {
-        id: Math.random().toString(36).substr(2, 9),
+      const { data, error } = await supabase.auth.signUp({
         email,
-        name,
-        role: 'retailer' as const
-      };
+        password,
+        options: {
+          data: {
+            business_name: businessName
+          }
+        }
+      });
       
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
+      if (error) throw error;
       
       toast({
         title: "Account created",
-        description: `Welcome, ${name}!`,
+        description: "Welcome to PP Protein Wholesale!",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Sign up failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
       throw error;
@@ -126,22 +142,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
   };
 
   const value = {
     user,
+    profile,
     isLoading,
     login,
     signup,
     logout,
-    isAdmin: user?.role === 'admin',
+    isAdmin: ADMIN_EMAILS.includes(user?.email || ''),
   };
 
   return (

@@ -24,6 +24,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          business_address: string | null
+          business_name: string | null
+          business_type: string | null
+          created_at: string
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_address?: string | null
+          business_name?: string | null
+          business_type?: string | null
+          created_at?: string
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_address?: string | null
+          business_name?: string | null
+          business_type?: string | null
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

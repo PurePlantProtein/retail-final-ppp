@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,16 +13,23 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
+  const [businessName, setBusinessName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signup, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/products');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!email || !password || !confirmPassword || !name) {
+    if (!email || !password || !confirmPassword || !businessName) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -52,8 +59,8 @@ const Signup = () => {
     setIsLoading(true);
     
     try {
-      await signup(email, password, name);
-      navigate('/products');
+      await signup(email, password, businessName);
+      // No need to navigate here, the useEffect will handle it
     } catch (error) {
       // Error is already handled in the AuthContext
       console.error(error);
@@ -69,18 +76,18 @@ const Signup = () => {
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-3xl font-bold">Create an account</CardTitle>
             <CardDescription>
-              Enter your details to register as a retail partner
+              Enter your details to register as a wholesale partner
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Business Name</Label>
+                <Label htmlFor="businessName">Business Name</Label>
                 <Input
-                  id="name"
-                  placeholder="Your Store Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  id="businessName"
+                  placeholder="Your Business Name"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">

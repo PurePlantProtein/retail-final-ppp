@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,9 +13,16 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/products');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -33,7 +40,7 @@ const Login = () => {
     
     try {
       await login(email, password);
-      navigate('/products');
+      // No need to navigate here, the useEffect will handle it
     } catch (error) {
       // Error is already handled in the AuthContext
       console.error(error);
@@ -49,7 +56,7 @@ const Login = () => {
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-3xl font-bold">Welcome back</CardTitle>
             <CardDescription>
-              Enter your email and password to login to your account
+              Enter your email and password to login to your wholesale account
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -85,12 +92,6 @@ const Login = () => {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
-              
-              <div className="text-sm text-gray-500 text-center mt-2">
-                <p>Demo credentials:</p>
-                <p>Admin: admin@example.com / admin123</p>
-                <p>Retailer: retailer@example.com / retailer123</p>
-              </div>
             </CardContent>
           </form>
           <CardFooter className="flex justify-center">
