@@ -9,6 +9,48 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { supabase } from '@/integrations/supabase/client';
+import { Separator } from '@/components/ui/separator';
+import { Star } from 'lucide-react';
+
+// Helper function for manual account creation (for testing only)
+const createAdminAccount = async () => {
+  try {
+    // First, attempt to sign up
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: 'myles@sparkflare.com.au',
+      password: 'PPPWholesale123!@',
+      options: {
+        data: {
+          business_name: 'Sparkflare Admin'
+        }
+      }
+    });
+    
+    if (signUpError && !signUpError.message.includes('already registered')) {
+      console.error('Error creating account:', signUpError);
+      return;
+    }
+    
+    console.log('Admin account created or already exists');
+    
+  } catch (error) {
+    console.error('Error in admin account creation:', error);
+  }
+};
+
+const Testimonial = ({ name, content, rating = 5 }) => (
+  <div className="p-4 bg-white rounded-lg shadow-sm mb-4">
+    <div className="flex items-center mb-2">
+      <div className="flex space-x-0.5 text-yellow-500">
+        {[...Array(rating)].map((_, i) => (
+          <Star key={i} className="w-4 h-4 fill-current" />
+        ))}
+      </div>
+    </div>
+    <p className="text-gray-700 mb-3 text-sm">{content}</p>
+    <p className="font-medium text-gray-900">{name}</p>
+  </div>
+);
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -25,32 +67,6 @@ const Login = () => {
       navigate('/products');
     }
   }, [user, navigate]);
-
-  // Helper function for manual account creation (for testing only)
-  const createAdminAccount = async () => {
-    try {
-      // First, attempt to sign up
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: 'myles@sparkflare.com.au',
-        password: 'PPPWholesale123!@',
-        options: {
-          data: {
-            business_name: 'Sparkflare Admin'
-          }
-        }
-      });
-      
-      if (signUpError && !signUpError.message.includes('already registered')) {
-        console.error('Error creating account:', signUpError);
-        return;
-      }
-      
-      console.log('Admin account created or already exists');
-      
-    } catch (error) {
-      console.error('Error in admin account creation:', error);
-    }
-  };
 
   // Create admin account on component load (only for development)
   useEffect(() => {
@@ -80,41 +96,43 @@ const Login = () => {
   };
 
   return (
-    <Layout>
-      <div className="flex justify-center items-center min-h-[70vh]">
-        <Card className="w-full max-w-md bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#212529] dark:to-[#343a40] border-none shadow-lg">
-          <CardHeader className="space-y-6 text-center pt-8">
-            <div className="flex justify-center">
-              <img src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=50" 
-                   alt="PP Protein" 
-                   className="h-16 w-auto mb-2" />
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex flex-col md:flex-row min-h-screen">
+        {/* Left side - Login Form */}
+        <div className="w-full md:w-[45%] p-6 md:p-12 flex items-center justify-center">
+          <div className="w-full max-w-md">
+            <div className="mb-10">
+              <img 
+                src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=200" 
+                alt="PP Protein" 
+                className="h-10 mb-8" 
+              />
+              <h1 className="text-3xl font-bold mb-2">Sign in to your account</h1>
+              <p className="text-gray-600">Enter your details below to access your wholesale account</p>
             </div>
-            <CardTitle className="text-3xl font-bold text-[#212529] dark:text-white">Welcome back</CardTitle>
-            <CardDescription className="text-[#495057] dark:text-[#adb5bd]">
-              Enter your email and password to login to your wholesale account
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              {errorMessage && (
-                <div className="p-3 text-white bg-[#ff4d6d] rounded-md text-sm">
-                  {errorMessage}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-[#343a40] dark:text-[#f8f9fa]">Email</Label>
+
+            {errorMessage && (
+              <div className="p-3 text-white bg-[#ff4d6d] rounded-md text-sm mb-4">
+                {errorMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="your@email.com"
+                  placeholder="you@yourbusiness.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
+                  className="mt-1 w-full"
                 />
               </div>
-              <div className="space-y-2">
+              
+              <div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-[#343a40] dark:text-[#f8f9fa]">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                   <Link
                     to="/forgot-password"
                     className="text-sm text-[#25a18e] hover:text-[#1e8a77] hover:underline"
@@ -128,29 +146,63 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
+                  className="mt-1 w-full"
                 />
               </div>
+              
               <Button 
                 type="submit" 
-                className="w-full mt-6 bg-[#25a18e] hover:bg-[#1e8a77] text-white transition-all" 
+                className="w-full bg-[#25a18e] hover:bg-[#1e8a77]" 
                 disabled={isLoading}
               >
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading ? "Signing in..." : "Sign in"}
               </Button>
-            </CardContent>
-          </form>
-          <CardFooter className="flex justify-center pb-8">
-            <p className="text-sm text-[#6c757d] dark:text-[#adb5bd]">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-[#25a18e] hover:text-[#1e8a77] hover:underline">
-                Sign up
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
+            </form>
+            
+            <div className="mt-8">
+              <p className="text-center text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link to="/signup" className="text-[#25a18e] hover:text-[#1e8a77] font-medium hover:underline">
+                  Create an account
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Right side - Image and Testimonials */}
+        <div className="hidden md:block md:w-[55%] bg-gradient-to-br from-[#f8f9fa] to-[#e2d1c3] relative">
+          <div className="absolute inset-0 bg-[#25a18e]/10"></div>
+          <div className="h-full overflow-y-auto p-10 relative z-10">
+            <div className="max-w-lg mx-auto">
+              <img 
+                src="https://ppprotein.com.au/cdn/shop/products/apple-crumble-protein-donut-mix-160g-pp-protein-573315_1000x.jpg?v=1647926271" 
+                alt="PP Protein Products" 
+                className="w-full h-64 object-cover rounded-xl mb-8" 
+              />
+              
+              <h2 className="text-2xl font-bold mb-6 text-gray-800">What our customers are saying</h2>
+              
+              <Testimonial 
+                name="Sarah T., Health Food Store" 
+                content="PP Protein wholesale has transformed our store's protein section. The products are always high quality and our customers love them. The ordering process is seamless!"
+              />
+              
+              <Testimonial 
+                name="Michael R., Gym Owner" 
+                content="Our gym members have been thrilled with the PP Protein products we stock. The wholesale pricing allows us to offer great deals while maintaining good margins."
+              />
+              
+              <Testimonial 
+                name="Jennifer K., Nutritionist" 
+                content="I recommend PP Protein products to all my clients. The wholesale platform makes it easy for me to purchase in bulk for my practice."
+                rating={4}
+              />
+            </div>
+          </div>
+        </div>
       </div>
-    </Layout>
+    </div>
   );
 };
 

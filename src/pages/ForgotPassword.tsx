@@ -1,116 +1,167 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import Layout from '@/components/Layout';
 import { supabase } from '@/integrations/supabase/client';
+import { ArrowLeft, CheckCircle, Star } from 'lucide-react';
+
+const Testimonial = ({ name, content, rating = 5 }) => (
+  <div className="p-4 bg-white rounded-lg shadow-sm mb-4">
+    <div className="flex items-center mb-2">
+      <div className="flex space-x-0.5 text-yellow-500">
+        {[...Array(rating)].map((_, i) => (
+          <Star key={i} className="w-4 h-4 fill-current" />
+        ))}
+      </div>
+    </div>
+    <p className="text-gray-700 mb-3 text-sm">{content}</p>
+    <p className="font-medium text-gray-900">{name}</p>
+  </div>
+);
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setErrorMessage(null);
     
     if (!email) {
-      setErrorMessage("Please enter your email address");
+      toast({
+        title: "Error",
+        description: "Please enter your email address",
+        variant: "destructive",
+      });
       return;
     }
     
     setIsLoading(true);
     
     try {
-      // Get the current hostname and protocol for the redirect URL
-      const baseUrl = window.location.origin;
-      const redirectTo = `${baseUrl}/reset-password`;
-      
-      console.log("Sending password reset with redirect to:", redirectTo);
-      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectTo,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       
       if (error) throw error;
       
       setIsSuccess(true);
+      
       toast({
-        title: "Password reset email sent",
-        description: "Check your inbox for the password reset link",
+        title: "Success",
+        description: "Password reset link sent to your email",
       });
     } catch (error: any) {
-      setErrorMessage(error.message || "Failed to send password reset email");
-      console.error("Password reset error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reset link",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Layout>
-      <div className="flex justify-center items-center min-h-[70vh]">
-        <Card className="w-full max-w-md bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#212529] dark:to-[#343a40] border-none shadow-lg">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-3xl font-bold text-[#212529] dark:text-white">Forgot Password</CardTitle>
-            <CardDescription className="text-[#495057] dark:text-[#adb5bd]">
-              Enter your email to receive a password reset link
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              {errorMessage && (
-                <div className="p-3 text-white bg-[#ff4d6d] rounded-md text-sm">
-                  {errorMessage}
-                </div>
-              )}
-              
-              {isSuccess ? (
-                <div className="p-4 bg-[#25a18e]/20 text-[#25a18e] rounded-md text-center">
-                  <p className="font-medium">Password reset email sent!</p>
-                  <p className="text-sm mt-2">Please check your inbox for the password reset link.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-[#343a40] dark:text-[#f8f9fa]">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
-                    />
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex flex-col md:flex-row min-h-screen">
+        {/* Left side - Form */}
+        <div className="w-full md:w-[45%] p-6 md:p-12 flex items-center justify-center">
+          <div className="w-full max-w-md">
+            <div className="mb-8">
+              <img 
+                src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=200" 
+                alt="PP Protein" 
+                className="h-10 mb-8" 
+              />
+              <h1 className="text-3xl font-bold mb-2">Reset Password</h1>
+              <p className="text-gray-600">
+                Enter your email and we'll send you instructions to reset your password
+              </p>
+            </div>
+
+            {isSuccess ? (
+              <div className="bg-green-50 border border-green-100 rounded-lg p-4 mb-6">
+                <div className="flex">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <div>
+                    <h3 className="font-medium text-green-800">Password reset email sent</h3>
+                    <p className="text-green-700 text-sm mt-1">
+                      Check your inbox for instructions to reset your password. If you don't see it, check your spam folder.
+                    </p>
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-[#25a18e] hover:bg-[#1e8a77] text-white transition-all" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Sending..." : "Send Reset Link"}
-                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </form>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-[#6c757d] dark:text-[#adb5bd]">
-              Remember your password?{" "}
-              <Link to="/login" className="text-[#25a18e] hover:text-[#1e8a77] hover:underline">
-                Login
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@yourbusiness.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-[#25a18e] hover:bg-[#1e8a77]" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Sending..." : "Send Reset Link"}
+                </Button>
+              </form>
+            )}
+            
+            <div className="mt-8">
+              <Link to="/login" className="inline-flex items-center text-sm text-[#25a18e] hover:text-[#1e8a77] font-medium">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to login
               </Link>
-            </p>
-          </CardFooter>
-        </Card>
+            </div>
+          </div>
+        </div>
+        
+        {/* Right side - Image and Testimonials */}
+        <div className="hidden md:block md:w-[55%] bg-gradient-to-br from-[#f8f9fa] to-[#e2d1c3] relative">
+          <div className="absolute inset-0 bg-[#25a18e]/10"></div>
+          <div className="h-full overflow-y-auto p-10 relative z-10">
+            <div className="max-w-lg mx-auto">
+              <img 
+                src="https://ppprotein.com.au/cdn/shop/products/collagen-coffee-creamer-350g-pp-protein-414141_1000x.jpg?v=1647926202" 
+                alt="PP Protein Products" 
+                className="w-full h-64 object-cover rounded-xl mb-8" 
+              />
+              
+              <h2 className="text-2xl font-bold mb-6 text-gray-800">Customer Support</h2>
+              
+              <Testimonial 
+                name="Fast Support" 
+                content="Our team is available to help with any questions or issues you may have with your wholesale account."
+              />
+              
+              <Testimonial 
+                name="Secure Access" 
+                content="Your account security is important to us. We implement industry-standard security measures to protect your information."
+              />
+              
+              <Testimonial 
+                name="Need more help?" 
+                content="Contact our wholesale support team directly at wholesale@ppprotein.com.au or call us at (02) 8123-4567."
+                rating={5}
+              />
+            </div>
+          </div>
+        </div>
       </div>
-    </Layout>
+    </div>
   );
 };
 
