@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/types/product';
-import { getProducts } from '@/services/mockData';
+import { getProducts } from '@/services/productService';
 import { Search } from 'lucide-react';
 
 const Products = () => {
@@ -114,10 +114,10 @@ const Products = () => {
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="electronics">Electronics</SelectItem>
+                  <SelectItem value="food">Food & Supplements</SelectItem>
+                  <SelectItem value="accessories">Accessories</SelectItem>
                   <SelectItem value="clothing">Clothing</SelectItem>
-                  <SelectItem value="food">Food</SelectItem>
-                  <SelectItem value="furniture">Furniture</SelectItem>
+                  <SelectItem value="equipment">Equipment</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectGroup>
               </SelectContent>

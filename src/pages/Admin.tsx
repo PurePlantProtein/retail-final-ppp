@@ -1,245 +1,178 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { getProducts, getOrders } from '@/services/mockData';
-import { Product, Order } from '@/types/product';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Eye, Package, DollarSign } from 'lucide-react';
+import { Package, Users, Settings, BarChart3 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
 const Admin = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  
+  // Check if user is admin (simplified check)
+  const isAdmin = user?.email === 'admin@example.com';
 
   useEffect(() => {
     if (!user) {
       navigate('/login');
-      return;
+    } else if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access this page.",
+        variant: "destructive",
+      });
+      navigate('/products');
     }
+  }, [user, isAdmin, navigate, toast]);
 
-    if (user && !isAdmin) {
-      navigate('/');
-      return;
-    }
-
-    const fetchData = async () => {
-      try {
-        const [productsData, ordersData] = await Promise.all([
-          getProducts(),
-          getOrders()
-        ]);
-        
-        setProducts(productsData);
-        setOrders(ordersData);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user, isAdmin, navigate]);
-
-  const getStatusColor = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800';
-      case 'shipped':
-        return 'bg-purple-100 text-purple-800';
-      case 'delivered':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  if (!user || !isAdmin) {
-    return null;
-  }
-
-  const totalRevenue = orders.reduce((total, order) => total + order.total, 0);
-  const totalProducts = products.length;
-  const totalOrders = orders.length;
+  if (!isAdmin) return null;
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+      <div className="max-w-6xl mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                Total Revenue
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Products Management */}
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-primary/10">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Products
               </CardTitle>
+              <CardDescription>
+                Manage your product catalog
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center">
-                <DollarSign className="text-primary h-5 w-5 mr-2" />
-                <span className="text-2xl font-bold">${totalRevenue.toFixed(2)}</span>
-              </div>
+            <CardContent className="pt-6">
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/admin/products/import" className="text-primary hover:underline">
+                    Import Products
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/admin/products" className="text-primary hover:underline">
+                    View & Edit Products
+                  </Link>
+                </li>
+              </ul>
             </CardContent>
+            <CardFooter>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/admin/products/import">
+                  Manage Products
+                </Link>
+              </Button>
+            </CardFooter>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                Total Products
+          {/* User Management */}
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-primary/10">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Users
               </CardTitle>
+              <CardDescription>
+                Manage wholesale accounts
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center">
-                <Package className="text-primary h-5 w-5 mr-2" />
-                <span className="text-2xl font-bold">{totalProducts}</span>
-              </div>
+            <CardContent className="pt-6">
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/admin/users" className="text-primary hover:underline">
+                    View Users
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/admin/users/pending" className="text-primary hover:underline">
+                    Approval Requests
+                  </Link>
+                </li>
+              </ul>
             </CardContent>
+            <CardFooter>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/admin/users">
+                  Manage Users
+                </Link>
+              </Button>
+            </CardFooter>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                Total Orders
+          {/* Orders */}
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-primary/10">
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Orders & Analytics
               </CardTitle>
+              <CardDescription>
+                View orders and sales data
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center">
-                <Package className="text-primary h-5 w-5 mr-2" />
-                <span className="text-2xl font-bold">{totalOrders}</span>
-              </div>
+            <CardContent className="pt-6">
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/admin/orders" className="text-primary hover:underline">
+                    Orders
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/admin/analytics" className="text-primary hover:underline">
+                    Sales Analytics
+                  </Link>
+                </li>
+              </ul>
             </CardContent>
+            <CardFooter>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/admin/orders">
+                  View Orders
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          {/* Settings */}
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-primary/10">
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Settings
+              </CardTitle>
+              <CardDescription>
+                Configure system settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/admin/settings/general" className="text-primary hover:underline">
+                    General Settings
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/admin/settings/shipping" className="text-primary hover:underline">
+                    Shipping Options
+                  </Link>
+                </li>
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/admin/settings/general">
+                  Manage Settings
+                </Link>
+              </Button>
+            </CardFooter>
           </Card>
         </div>
-        
-        <Tabs defaultValue="orders">
-          <TabsList className="mb-8">
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="orders" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Orders</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <p>Loading orders...</p>
-                ) : orders.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Order ID</TableHead>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Total</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {orders.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell className="font-medium">{order.id}</TableCell>
-                            <TableCell>{order.userName}</TableCell>
-                            <TableCell>
-                              {new Date(order.createdAt).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={getStatusColor(order.status)}>
-                                {order.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>${order.total.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <p className="text-center py-4">No orders found.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="products" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Products</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <p>Loading products...</p>
-                ) : products.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Price</TableHead>
-                          <TableHead>Min Quantity</TableHead>
-                          <TableHead>Stock</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {products.map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell className="font-medium">{product.id}</TableCell>
-                            <TableCell>{product.name}</TableCell>
-                            <TableCell>${product.price.toFixed(2)}</TableCell>
-                            <TableCell>{product.minQuantity}</TableCell>
-                            <TableCell>{product.stock}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {product.category}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <p className="text-center py-4">No products found.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </div>
     </Layout>
   );

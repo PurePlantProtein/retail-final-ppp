@@ -13,6 +13,7 @@ import Cart from "./pages/Cart";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Admin from "./pages/Admin";
+import ProductImport from "./pages/Admin/ProductImport";
 import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/products/import" element={<ProductImport />} />
               <Route path="/orders" element={<Orders />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

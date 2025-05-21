@@ -11,7 +11,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProductById } from '@/services/mockData';
+import { getProductById } from '@/services/productService';
 import { Product } from '@/types/product';
 import { Plus, Minus, ArrowLeft } from 'lucide-react';
 
