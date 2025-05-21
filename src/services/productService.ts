@@ -34,7 +34,13 @@ export const getProducts = async (): Promise<Product[]> => {
     throw error;
   }
 
-  return data.map(transformProduct);
+  // Filter out category placeholder products
+  return data
+    .filter(item => 
+      // Filter out products that are just category placeholders
+      !(item.name && item.name.includes('Category Placeholder'))
+    )
+    .map(transformProduct);
 };
 
 // Fetch products by category
@@ -229,13 +235,19 @@ export const getCategories = async (): Promise<string[]> => {
 
 // Create a new category (by adding a product with that category)
 export const addCategory = async (categoryName: string): Promise<void> => {
-  // This is a simple implementation - in a real-world scenario,
-  // you might want a separate categories table
+  // Check if category already exists
+  const categories = await getCategories();
+  if (categories.includes(categoryName.toLowerCase())) {
+    console.log(`Category ${categoryName} already exists, skipping creation`);
+    return;
+  }
+  
+  // Create a placeholder product with isHidden flag
   const dummyProduct = {
     name: `${categoryName} Category Placeholder`,
     description: `Placeholder for ${categoryName} category`,
     price: 0,
-    minQuantity: 1,
+    min_quantity: 1,
     stock: 0,
     image: 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png',
     category: categoryName.toLowerCase(),
@@ -243,15 +255,7 @@ export const addCategory = async (categoryName: string): Promise<void> => {
 
   const { error } = await supabase
     .from('products')
-    .insert({
-      name: dummyProduct.name,
-      description: dummyProduct.description,
-      price: dummyProduct.price,
-      min_quantity: dummyProduct.minQuantity,
-      stock: dummyProduct.stock,
-      image: dummyProduct.image,
-      category: dummyProduct.category,
-    });
+    .insert(dummyProduct);
 
   if (error) {
     console.error('Error creating category:', error);

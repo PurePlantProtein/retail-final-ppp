@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/types/product';
-import { getProducts } from '@/services/productService';
+import { getProducts, getCategories } from '@/services/productService';
 import { Search } from 'lucide-react';
 
 const Products = () => {
@@ -24,22 +24,27 @@ const Products = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [categories, setCategories] = useState<string[]>([]);
   
   const categoryParam = searchParams.get('category') || 'all';
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getProducts();
-        setProducts(data);
-        setIsLoading(false);
+        setIsLoading(true);
+        const productData = await getProducts();
+        const categoryData = await getCategories();
+        
+        setProducts(productData);
+        setCategories(categoryData);
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching data:', error);
+      } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProducts();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -114,11 +119,11 @@ const Products = () => {
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="food">Food & Supplements</SelectItem>
-                  <SelectItem value="accessories">Accessories</SelectItem>
-                  <SelectItem value="clothing">Clothing</SelectItem>
-                  <SelectItem value="equipment">Equipment</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
