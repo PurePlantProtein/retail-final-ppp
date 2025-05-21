@@ -97,7 +97,7 @@ const AppSidebar = () => {
         </SidebarGroup>
         
         {isAdmin && (
-          <SidebarGroup defaultOpen={isAdminExpanded}>
+          <SidebarGroup>
             <SidebarGroupLabel className="text-gray-500">Admin</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
