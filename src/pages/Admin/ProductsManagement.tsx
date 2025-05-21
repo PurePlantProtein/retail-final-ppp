@@ -7,11 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import ProductForm from '@/components/ProductForm';
-import { getProducts, deleteProduct } from '@/services/productService';
+import { getProducts, deleteProduct, createProduct } from '@/services/productService';
 import { Product } from '@/types/product';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, Trash, Plus, AlertCircle } from 'lucide-react';
+import { Edit, Trash, Plus, AlertCircle, Copy } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ProductsManagement = () => {
@@ -95,6 +95,32 @@ const ProductsManagement = () => {
     }
   };
 
+  const handleDuplicateProduct = async (product: Product) => {
+    try {
+      // Create a new product with the same data but a different ID
+      const { id, ...productData } = product;
+      // Append " (Copy)" to the name
+      const duplicatedProduct = {
+        ...productData,
+        name: `${product.name} (Copy)`,
+      };
+      
+      await createProduct(duplicatedProduct);
+      toast({
+        title: "Success",
+        description: `Product "${product.name}" has been duplicated.`,
+      });
+      loadProducts();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to duplicate product";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleProductSaved = () => {
     loadProducts();
     if (activeTab === 'edit') {
@@ -162,7 +188,7 @@ const ProductsManagement = () => {
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-gray-500 mb-4 line-clamp-2">{product.description}</p>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -171,6 +197,15 @@ const ProductsManagement = () => {
                         >
                           <Edit className="h-4 w-4" />
                           Edit
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          size="sm" 
+                          onClick={() => handleDuplicateProduct(product)}
+                          className="flex items-center gap-1"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Duplicate
                         </Button>
                         <Button 
                           variant="destructive" 
