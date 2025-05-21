@@ -1,0 +1,159 @@
+
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import Layout from '@/components/Layout';
+import ProductCard from '@/components/ProductCard';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Product } from '@/types/product';
+import { getProducts } from '@/services/mockData';
+import { Search } from 'lucide-react';
+
+const Products = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  
+  const categoryParam = searchParams.get('category') || 'all';
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getProducts();
+        setProducts(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    // Filter products based on search query and category
+    let filtered = products;
+    
+    if (searchQuery) {
+      filtered = filtered.filter(
+        product =>
+          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    if (categoryParam !== 'all') {
+      filtered = filtered.filter(
+        product => product.category === categoryParam
+      );
+    }
+    
+    setFilteredProducts(filtered);
+  }, [products, searchQuery, categoryParam]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSearchParams();
+  };
+
+  const handleCategoryChange = (value: string) => {
+    searchParams.set('category', value);
+    setSearchParams(searchParams);
+  };
+
+  const updateSearchParams = () => {
+    if (searchQuery) {
+      searchParams.set('search', searchQuery);
+    } else {
+      searchParams.delete('search');
+    }
+    setSearchParams(searchParams);
+  };
+
+  return (
+    <Layout>
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b">
+          <h1 className="text-3xl font-bold">Products</h1>
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <form onSubmit={handleSearch} className="relative">
+              <Input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full sm:w-64 pr-10"
+              />
+              <Button 
+                type="submit" 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-0 top-0 h-full"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </form>
+            
+            <Select value={categoryParam} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="electronics">Electronics</SelectItem>
+                  <SelectItem value="clothing">Clothing</SelectItem>
+                  <SelectItem value="food">Food</SelectItem>
+                  <SelectItem value="furniture">Furniture</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        {isLoading ? (
+          <div className="product-grid">
+            {Array(6).fill(0).map((_, index) => (
+              <div key={index} className="space-y-3">
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
+          <div className="product-grid">
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <h3 className="text-xl font-medium text-gray-700 mb-2">No products found</h3>
+            <p className="text-gray-500">
+              Try changing your search query or category filter.
+            </p>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default Products;

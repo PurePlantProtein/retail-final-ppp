@@ -1,0 +1,180 @@
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserOrders } from '@/services/mockData';
+import { Order } from '@/types/product';
+
+const Orders = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchUserOrders = async () => {
+      try {
+        const data = await getUserOrders(user.id);
+        setOrders(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserOrders();
+  }, [user, navigate]);
+
+  const getStatusColor = (status: Order['status']) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'shipped':
+        return 'bg-purple-100 text-purple-800';
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (!user) return null;
+
+  return (
+    <Layout>
+      <div className="max-w-4xl mx-auto py-8">
+        <h1 className="text-2xl font-bold mb-6">My Orders</h1>
+        
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : orders.length > 0 ? (
+          <div className="space-y-6">
+            {orders.map((order) => (
+              <Card key={order.id} className="overflow-hidden">
+                <CardHeader className="bg-gray-50">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Order ID: {order.id}</p>
+                      <CardTitle className="text-lg mt-1">
+                        Placed on {new Date(order.createdAt).toLocaleDateString()}
+                      </CardTitle>
+                    </div>
+                    <Badge variant="outline" className={getStatusColor(order.status)}>
+                      {order.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="pt-6">
+                  <div className="space-y-6">
+                    <Accordion type="single" collapsible defaultValue="items">
+                      <AccordionItem value="items">
+                        <AccordionTrigger>
+                          Order Items ({order.items.length})
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-4 mt-4">
+                            {order.items.map((item, index) => (
+                              <div 
+                                key={`${order.id}-${item.product.id}-${index}`} 
+                                className="flex items-center gap-4 py-3"
+                              >
+                                <div className="w-16 h-16 flex-shrink-0">
+                                  <img 
+                                    src={item.product.image} 
+                                    alt={item.product.name}
+                                    className="w-full h-full object-cover rounded"
+                                  />
+                                </div>
+                                <div className="flex-grow">
+                                  <p className="font-medium">{item.product.name}</p>
+                                  <p className="text-sm text-gray-600">
+                                    Qty: {item.quantity} × ${item.product.price.toFixed(2)}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-medium">
+                                    ${(item.quantity * item.product.price).toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                      
+                      <AccordionItem value="payment">
+                        <AccordionTrigger>
+                          Payment Information
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-2 py-2">
+                            <div className="flex justify-between">
+                              <p>Payment Method:</p>
+                              <p className="capitalize">{order.paymentMethod.replace('-', ' ')}</p>
+                            </div>
+                            <div className="flex justify-between">
+                              <p>Order Total:</p>
+                              <p className="font-medium">${order.total.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                    
+                    <Separator />
+                    
+                    <div className="flex flex-wrap gap-4">
+                      <Button variant="outline">Track Order</Button>
+                      <Button variant="outline">Download Invoice</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="pt-6 flex flex-col items-center py-16">
+              <p className="mb-6 text-gray-500">You don't have any orders yet</p>
+              <Button asChild>
+                <a href="/products">Browse Products</a>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default Orders;
