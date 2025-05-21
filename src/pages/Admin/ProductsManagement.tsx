@@ -11,7 +11,8 @@ import { getProducts, deleteProduct } from '@/services/productService';
 import { Product } from '@/types/product';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, Trash, Plus } from 'lucide-react';
+import { Edit, Trash, Plus, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ProductsManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +21,7 @@ const ProductsManagement = () => {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('list');
+  const [error, setError] = useState<string | null>(null);
   
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
@@ -28,6 +30,7 @@ const ProductsManagement = () => {
   useEffect(() => {
     if (!user) {
       navigate('/login');
+      return;
     } else if (!isAdmin) {
       toast({
         title: "Access Denied",
@@ -35,28 +38,30 @@ const ProductsManagement = () => {
         variant: "destructive",
       });
       navigate('/products');
+      return;
     }
+    
+    loadProducts();
   }, [user, isAdmin, navigate, toast]);
 
   const loadProducts = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getProducts();
       setProducts(data);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to load products";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: "Failed to load products",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
 
   const handleEditProduct = (product: Product) => {
     setEditProduct(product);
@@ -81,9 +86,10 @@ const ProductsManagement = () => {
       setDeleteDialogOpen(false);
       setProductToDelete(null);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete product";
       toast({
         title: "Error",
-        description: "Failed to delete product",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -111,6 +117,13 @@ const ProductsManagement = () => {
             Add New Product
           </Button>
         </div>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-6">

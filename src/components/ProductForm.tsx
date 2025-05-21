@@ -12,6 +12,8 @@ import { createProduct, updateProduct } from '@/services/productService';
 import { useToast } from '@/components/ui/use-toast';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const categories: Category[] = ['food', 'accessories', 'supplements', 'clothing', 'electronics', 'furniture', 'other'];
 
@@ -33,6 +35,7 @@ type ProductFormProps = {
 const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
@@ -57,6 +60,8 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
 
   const handleSubmit = async (data: z.infer<typeof productSchema>) => {
     setIsSubmitting(true);
+    setError(null);
+    
     try {
       if (product) {
         // Update existing product
@@ -77,18 +82,26 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
           image: data.image,
           category: data.category
         };
+        
+        console.log('Submitting product data:', newProductData);
+        
         const newProduct = await createProduct(newProductData);
+        
         toast({
           title: "Success",
           description: `Product "${data.name}" has been created.`,
         });
+        
         form.reset();
         onSuccess?.(newProduct);
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('Product form submission error:', err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to save product";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save product",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -98,6 +111,13 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
 
   return (
     <Card className="p-6">
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <FormField

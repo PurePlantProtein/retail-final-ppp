@@ -73,6 +73,10 @@ export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<v
 
 // Create a new product
 export const createProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
+  // Log the authenticated state before making the request
+  const { data: sessionData } = await supabase.auth.getSession();
+  console.log('Current auth session:', sessionData?.session ? 'Authenticated' : 'Not authenticated');
+
   const { data, error } = await supabase
     .from('products')
     .insert({
@@ -89,7 +93,7 @@ export const createProduct = async (product: Omit<Product, 'id'>): Promise<Produ
 
   if (error) {
     console.error('Error creating product:', error);
-    throw error;
+    throw new Error(`Failed to create product: ${error.message}`);
   }
 
   return transformProduct(data);
@@ -116,7 +120,7 @@ export const updateProduct = async (id: string, product: Partial<Omit<Product, '
 
   if (error) {
     console.error('Error updating product:', error);
-    throw error;
+    throw new Error(`Failed to update product: ${error.message}`);
   }
 
   return transformProduct(data);
@@ -131,7 +135,7 @@ export const deleteProduct = async (id: string): Promise<void> => {
 
   if (error) {
     console.error('Error deleting product:', error);
-    throw error;
+    throw new Error(`Failed to delete product: ${error.message}`);
   }
 };
 
