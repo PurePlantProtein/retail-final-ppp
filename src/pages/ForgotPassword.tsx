@@ -28,8 +28,14 @@ const ForgotPassword = () => {
     setIsLoading(true);
     
     try {
+      // Get the current hostname and protocol for the redirect URL
+      const baseUrl = window.location.origin;
+      const redirectTo = `${baseUrl}/reset-password`;
+      
+      console.log("Sending password reset with redirect to:", redirectTo);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/reset-password',
+        redirectTo: redirectTo,
       });
       
       if (error) throw error;
@@ -41,7 +47,7 @@ const ForgotPassword = () => {
       });
     } catch (error: any) {
       setErrorMessage(error.message || "Failed to send password reset email");
-      console.error(error);
+      console.error("Password reset error:", error);
     } finally {
       setIsLoading(false);
     }

@@ -2,6 +2,7 @@
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
+import { AlertTriangle } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
@@ -18,7 +19,7 @@ const NotFound = () => {
       <div className="text-center bg-white dark:bg-[#343a40] p-8 rounded-lg shadow-xl max-w-md w-full">
         <div className="mb-8">
           <div className="mx-auto w-24 h-24 rounded-full bg-[#ff4d6d]/10 flex items-center justify-center">
-            <span className="text-5xl font-bold text-[#ff4d6d]">404</span>
+            <AlertTriangle size={40} className="text-[#ff4d6d]" />
           </div>
         </div>
         
@@ -26,6 +27,10 @@ const NotFound = () => {
         
         <p className="text-lg text-[#6c757d] dark:text-[#adb5bd] mb-8">
           Oops! We couldn't find the page you're looking for.
+        </p>
+
+        <p className="text-md text-[#6c757d] dark:text-[#adb5bd] mb-8">
+          The link you clicked may be broken or the page may have been removed or renamed.
         </p>
         
         <Link 

@@ -14,21 +14,23 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hashParams, setHashParams] = useState<URLSearchParams | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Verify the recovery token is present in the URL when the component loads
+  // Extract the hash parameters on component mount
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (!hashParams.get('access_token') && !hashParams.get('type')) {
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+      setHashParams(new URLSearchParams(hash));
+    } else {
       toast({
         title: "Invalid or expired link",
         description: "Please request a new password reset link.",
         variant: "destructive",
       });
-      navigate('/forgot-password');
     }
-  }, [navigate, toast]);
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -69,8 +71,8 @@ const ResetPassword = () => {
         navigate('/login');
       }, 2000);
     } catch (error: any) {
+      console.error("Password reset error:", error);
       setErrorMessage(error.message || "Failed to update password. Please try again.");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -86,44 +88,59 @@ const ResetPassword = () => {
               Enter your new password below
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
+          {!hashParams ? (
             <CardContent className="space-y-4">
-              {errorMessage && (
-                <div className="p-3 text-white bg-[#ff4d6d] rounded-md text-sm">
-                  {errorMessage}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-[#343a40] dark:text-[#f8f9fa]">New Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
-                />
+              <div className="p-4 bg-red-100 text-red-800 rounded-md">
+                <p className="font-medium">Invalid or expired link</p>
+                <p className="text-sm mt-2">Please request a new password reset link from the forgot password page.</p>
+                <Button 
+                  onClick={() => navigate('/forgot-password')}
+                  className="w-full mt-4 bg-[#25a18e] hover:bg-[#1e8a77] text-white transition-all"
+                >
+                  Go to Forgot Password
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-[#343a40] dark:text-[#f8f9fa]">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
-                />
-              </div>
-              <Button 
-                type="submit" 
-                className="w-full mt-6 bg-[#25a18e] hover:bg-[#1e8a77] text-white transition-all" 
-                disabled={isLoading}
-              >
-                {isLoading ? "Updating Password..." : "Reset Password"}
-              </Button>
             </CardContent>
-          </form>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-4">
+                {errorMessage && (
+                  <div className="p-3 text-white bg-[#ff4d6d] rounded-md text-sm">
+                    {errorMessage}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-[#343a40] dark:text-[#f8f9fa]">New Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-[#343a40] dark:text-[#f8f9fa]">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="bg-white border-[#ced4da] dark:bg-[#495057] dark:border-[#6c757d] focus-visible:ring-[#25a18e]"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full mt-6 bg-[#25a18e] hover:bg-[#1e8a77] text-white transition-all" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Updating Password..." : "Reset Password"}
+                </Button>
+              </CardContent>
+            </form>
+          )}
           <CardFooter className="flex justify-center">
             <p className="text-sm text-[#6c757d] dark:text-[#adb5bd]">
               Remember your password?{" "}
