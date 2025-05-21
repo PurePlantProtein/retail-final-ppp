@@ -67,8 +67,17 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
         });
         onSuccess?.(updatedProduct);
       } else {
-        // Create new product
-        const newProduct = await createProduct(data);
+        // Create new product - Ensure all required fields are provided
+        const newProductData = {
+          name: data.name,
+          description: data.description,
+          price: data.price,
+          minQuantity: data.minQuantity,
+          stock: data.stock,
+          image: data.image,
+          category: data.category
+        };
+        const newProduct = await createProduct(newProductData);
         toast({
           title: "Success",
           description: `Product "${data.name}" has been created.`,
