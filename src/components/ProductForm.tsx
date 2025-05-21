@@ -6,13 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Category, Product } from '@/types/product';
+import { Category, Product, AminoAcid, NutritionalValue } from '@/types/product';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { createProduct, updateProduct, getCategories } from '@/services/productService';
 import { useToast } from '@/components/ui/use-toast';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Plus } from 'lucide-react';
+import { AlertCircle, Plus, Minus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Dialog, 
@@ -23,8 +23,20 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const defaultCategories: Category[] = ['food', 'accessories', 'supplements', 'clothing', 'electronics', 'furniture', 'protein', 'other'];
+
+const aminoAcidSchema = z.object({
+  name: z.string(),
+  amount: z.string()
+});
+
+const nutritionalValueSchema = z.object({
+  name: z.string(),
+  perServing: z.string(),
+  per100g: z.string()
+});
 
 const productSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
@@ -33,7 +45,14 @@ const productSchema = z.object({
   minQuantity: z.coerce.number().int().positive({ message: "Minimum quantity must be a positive integer" }),
   stock: z.coerce.number().int().nonnegative({ message: "Stock must be a non-negative integer" }),
   image: z.string().url({ message: "Image must be a valid URL" }),
-  category: z.string().min(1, { message: "Please select a category" })
+  category: z.string().min(1, { message: "Please select a category" }),
+  // New fields
+  servingSize: z.string().optional(),
+  numberOfServings: z.coerce.number().int().nonnegative().optional(),
+  bagSize: z.string().optional(),
+  ingredients: z.string().optional(),
+  aminoAcidProfile: z.array(aminoAcidSchema).optional(),
+  nutritionalInfo: z.array(nutritionalValueSchema).optional()
 });
 
 type ProductFormProps = {
@@ -49,6 +68,29 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("basic");
+  
+  // Amino Acid Profile state
+  const [aminoAcids, setAminoAcids] = useState<AminoAcid[]>(
+    product?.aminoAcidProfile || [
+      { name: 'Alanine', amount: '' },
+      { name: 'Arginine', amount: '' },
+      { name: 'Aspartic acid', amount: '' },
+      { name: 'Cystine', amount: '' },
+      { name: 'Glutamic acid', amount: '' },
+      { name: 'Glycine', amount: '' }
+    ]
+  );
+  
+  // Nutritional Info state
+  const [nutritionalValues, setNutritionalValues] = useState<NutritionalValue[]>(
+    product?.nutritionalInfo || [
+      { name: 'Energy', perServing: '', per100g: '' },
+      { name: 'Protein', perServing: '', per100g: '' },
+      { name: 'Fat Total', perServing: '', per100g: '' },
+      { name: 'Carbohydrate', perServing: '', per100g: '' }
+    ]
+  );
 
   // Fetch available categories when component mounts
   useEffect(() => {
@@ -79,7 +121,14 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       minQuantity: product.minQuantity,
       stock: product.stock,
       image: product.image,
-      category: product.category
+      category: product.category,
+      // New fields
+      servingSize: product.servingSize || '',
+      numberOfServings: product.numberOfServings || 0,
+      bagSize: product.bagSize || '',
+      ingredients: product.ingredients || '',
+      aminoAcidProfile: product.aminoAcidProfile || [],
+      nutritionalInfo: product.nutritionalInfo || []
     } : {
       name: '',
       description: '',
@@ -87,7 +136,14 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       minQuantity: 1,
       stock: 0,
       image: 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_360x.png',
-      category: ''
+      category: '',
+      // New fields
+      servingSize: '',
+      numberOfServings: 0,
+      bagSize: '',
+      ingredients: '',
+      aminoAcidProfile: [],
+      nutritionalInfo: []
     },
   });
 
@@ -95,10 +151,17 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
     setIsSubmitting(true);
     setError(null);
     
+    // Include amino acid profile and nutritional info
+    const formData = {
+      ...data,
+      aminoAcidProfile: aminoAcids,
+      nutritionalInfo: nutritionalValues
+    };
+    
     try {
       if (product) {
         // Update existing product
-        const updatedProduct = await updateProduct(product.id, data);
+        const updatedProduct = await updateProduct(product.id, formData);
         toast({
           title: "Success",
           description: `Product "${data.name}" has been updated.`,
@@ -107,13 +170,19 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       } else {
         // Create new product - Ensure all required fields are provided
         const newProductData = {
-          name: data.name,
-          description: data.description,
-          price: data.price,
-          minQuantity: data.minQuantity,
-          stock: data.stock,
-          image: data.image,
-          category: data.category as Category
+          name: formData.name,
+          description: formData.description,
+          price: formData.price,
+          minQuantity: formData.minQuantity,
+          stock: formData.stock,
+          image: formData.image,
+          category: formData.category as Category,
+          servingSize: formData.servingSize,
+          numberOfServings: formData.numberOfServings,
+          bagSize: formData.bagSize,
+          ingredients: formData.ingredients,
+          aminoAcidProfile: formData.aminoAcidProfile,
+          nutritionalInfo: formData.nutritionalInfo
         };
         
         console.log('Submitting product data:', newProductData);
@@ -183,6 +252,40 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
     }
   };
 
+  // Handle amino acid profile changes
+  const handleAminoAcidChange = (index: number, field: keyof AminoAcid, value: string) => {
+    const newAminoAcids = [...aminoAcids];
+    newAminoAcids[index] = { ...newAminoAcids[index], [field]: value };
+    setAminoAcids(newAminoAcids);
+  };
+
+  const handleAddAminoAcid = () => {
+    setAminoAcids([...aminoAcids, { name: '', amount: '' }]);
+  };
+
+  const handleRemoveAminoAcid = (index: number) => {
+    const newAminoAcids = [...aminoAcids];
+    newAminoAcids.splice(index, 1);
+    setAminoAcids(newAminoAcids);
+  };
+
+  // Handle nutritional info changes
+  const handleNutritionalValueChange = (index: number, field: keyof NutritionalValue, value: string) => {
+    const newNutritionalValues = [...nutritionalValues];
+    newNutritionalValues[index] = { ...newNutritionalValues[index], [field]: value };
+    setNutritionalValues(newNutritionalValues);
+  };
+
+  const handleAddNutritionalValue = () => {
+    setNutritionalValues([...nutritionalValues, { name: '', perServing: '', per100g: '' }]);
+  };
+
+  const handleRemoveNutritionalValue = (index: number) => {
+    const newNutritionalValues = [...nutritionalValues];
+    newNutritionalValues.splice(index, 1);
+    setNutritionalValues(newNutritionalValues);
+  };
+
   return (
     <Card className="p-6">
       {error && (
@@ -194,168 +297,372 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Product Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="PP Protein Vanilla Whey" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Describe your product..." 
-                    className="min-h-[100px]" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price ($)</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="nutrition">Nutrition Details</TabsTrigger>
+              <TabsTrigger value="amino">Amino Acid Profile</TabsTrigger>
+              <TabsTrigger value="nutritional">Nutritional Info</TabsTrigger>
+            </TabsList>
             
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <div className="flex gap-2">
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value}
-                      disabled={isLoading}
-                    >
+            <TabsContent value="basic">
+              <div className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Name</FormLabel>
                       <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
+                        <Input placeholder="PP Protein Vanilla Whey" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {categories.map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category.charAt(0).toUpperCase() + category.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
-                      <DialogTrigger asChild>
-                        <Button type="button" variant="outline" size="icon">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Add New Category</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="new-category">Category Name</Label>
-                            <Input
-                              id="new-category"
-                              value={newCategoryName}
-                              onChange={(e) => setNewCategoryName(e.target.value)}
-                              placeholder="Enter category name"
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button 
-                            type="button" 
-                            onClick={handleAddCategory}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Describe your product..." 
+                          className="min-h-[100px]" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Price ($)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <div className="flex gap-2">
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                            disabled={isLoading}
                           >
-                            Add Category
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map(category => (
+                                <SelectItem key={category} value={category}>
+                                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
+                            <DialogTrigger asChild>
+                              <Button type="button" variant="outline" size="icon">
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Add New Category</DialogTitle>
+                              </DialogHeader>
+                              <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="new-category">Category Name</Label>
+                                  <Input
+                                    id="new-category"
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                    placeholder="Enter category name"
+                                  />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button 
+                                  type="button" 
+                                  onClick={handleAddCategory}
+                                >
+                                  Add Category
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="minQuantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Minimum Order Quantity</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Minimum quantity per order
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="stock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Available Stock</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Current inventory quantity
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://example.com/image.png" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Enter a direct link to the product image
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="nutrition">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="servingSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Serving Size</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., 30g" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="numberOfServings"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of Servings</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g., 30" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="bagSize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bag Size</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., 1kg" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="ingredients"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ingredients</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="List product ingredients..." 
+                          className="min-h-[100px]" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        List all ingredients separated by commas
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="amino">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Amino Acid Profile</h3>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleAddAminoAcid}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Add Amino Acid
+                  </Button>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <div className="grid grid-cols-12 gap-2 mb-2 font-medium">
+                    <div className="col-span-5">Name</div>
+                    <div className="col-span-5">Amount</div>
+                    <div className="col-span-2"></div>
                   </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                  
+                  {aminoAcids.map((aminoAcid, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 mb-2 items-center">
+                      <div className="col-span-5">
+                        <Input
+                          value={aminoAcid.name}
+                          onChange={(e) => handleAminoAcidChange(index, 'name', e.target.value)}
+                          placeholder="Amino acid name"
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <Input
+                          value={aminoAcid.amount}
+                          onChange={(e) => handleAminoAcidChange(index, 'amount', e.target.value)}
+                          placeholder="e.g., 1.1g"
+                        />
+                      </div>
+                      <div className="col-span-2 flex justify-end">
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleRemoveAminoAcid(index)}
+                        >
+                          <Minus className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {aminoAcids.length === 0 && (
+                    <p className="text-gray-500 text-center py-2">No amino acids added</p>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="minQuantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Minimum Order Quantity</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Minimum quantity per order
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="stock"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Available Stock</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Current inventory quantity
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="image"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Image URL</FormLabel>
-                <FormControl>
-                  <Input placeholder="https://example.com/image.png" {...field} />
-                </FormControl>
-                <FormDescription>
-                  Enter a direct link to the product image
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <TabsContent value="nutritional">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Nutritional Information</h3>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleAddNutritionalValue}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Add Nutritional Value
+                  </Button>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <div className="grid grid-cols-12 gap-2 mb-2 font-medium">
+                    <div className="col-span-3">Name</div>
+                    <div className="col-span-4">Per Serving</div>
+                    <div className="col-span-4">Per 100g</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                  
+                  {nutritionalValues.map((nutritionalValue, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 mb-2 items-center">
+                      <div className="col-span-3">
+                        <Input
+                          value={nutritionalValue.name}
+                          onChange={(e) => handleNutritionalValueChange(index, 'name', e.target.value)}
+                          placeholder="e.g., Protein"
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <Input
+                          value={nutritionalValue.perServing}
+                          onChange={(e) => handleNutritionalValueChange(index, 'perServing', e.target.value)}
+                          placeholder="e.g., 24.3g"
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <Input
+                          value={nutritionalValue.per100g}
+                          onChange={(e) => handleNutritionalValueChange(index, 'per100g', e.target.value)}
+                          placeholder="e.g., 81g"
+                        />
+                      </div>
+                      <div className="col-span-1 flex justify-end">
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleRemoveNutritionalValue(index)}
+                        >
+                          <Minus className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {nutritionalValues.length === 0 && (
+                    <p className="text-gray-500 text-center py-2">No nutritional values added</p>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? "Saving..." : product ? "Update Product" : "Create Product"}

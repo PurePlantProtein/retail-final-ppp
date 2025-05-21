@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Product, Category } from '@/types/product';
+import { Product, Category, AminoAcid, NutritionalValue } from '@/types/product';
 
 // Transform Supabase product data to our Product type
 const transformProduct = (item: any): Product => {
@@ -13,6 +12,13 @@ const transformProduct = (item: any): Product => {
     stock: item.stock,
     image: item.image || 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png',
     category: (item.category as Category) || 'other',
+    // New fields
+    servingSize: item.serving_size,
+    numberOfServings: item.number_of_servings,
+    bagSize: item.bag_size,
+    ingredients: item.ingredients,
+    aminoAcidProfile: item.amino_acid_profile,
+    nutritionalInfo: item.nutritional_info,
   };
 };
 
@@ -93,6 +99,12 @@ export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<v
       stock: product.stock,
       image: product.image,
       category: product.category,
+      serving_size: product.servingSize,
+      number_of_servings: product.numberOfServings,
+      bag_size: product.bagSize,
+      ingredients: product.ingredients,
+      amino_acid_profile: product.aminoAcidProfile,
+      nutritional_info: product.nutritionalInfo,
     }))
   );
 
@@ -113,6 +125,13 @@ export const createProduct = async (product: Omit<Product, 'id'>): Promise<Produ
     stock: product.stock,
     image: product.image,
     category: product.category,
+    // New fields
+    serving_size: product.servingSize,
+    number_of_servings: product.numberOfServings,
+    bag_size: product.bagSize,
+    ingredients: product.ingredients,
+    amino_acid_profile: product.aminoAcidProfile,
+    nutritional_info: product.nutritionalInfo,
   };
   
   console.log('Creating product with data:', productData);
@@ -142,6 +161,14 @@ export const updateProduct = async (id: string, product: Partial<Omit<Product, '
   if (product.stock !== undefined) updateData.stock = product.stock;
   if (product.image !== undefined) updateData.image = product.image;
   if (product.category !== undefined) updateData.category = product.category;
+  
+  // New fields
+  if (product.servingSize !== undefined) updateData.serving_size = product.servingSize;
+  if (product.numberOfServings !== undefined) updateData.number_of_servings = product.numberOfServings;
+  if (product.bagSize !== undefined) updateData.bag_size = product.bagSize;
+  if (product.ingredients !== undefined) updateData.ingredients = product.ingredients;
+  if (product.aminoAcidProfile !== undefined) updateData.amino_acid_profile = product.aminoAcidProfile;
+  if (product.nutritionalInfo !== undefined) updateData.nutritional_info = product.nutritionalInfo;
   
   console.log(`Updating product ${id} with data:`, updateData);
   
