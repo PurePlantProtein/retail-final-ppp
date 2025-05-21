@@ -25,6 +25,10 @@ import SettingsManagement from "./pages/Admin/SettingsManagement";
 import AnalyticsManagement from "./pages/Admin/AnalyticsManagement";
 import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
+import FAQ from "./pages/FAQ";
+import ShippingPolicy from "./pages/ShippingPolicy";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext";
@@ -54,6 +58,10 @@ const App = () => {
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/orders" element={<Orders />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route path="/shipping" element={<ShippingPolicy />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacy />} />
                   
                   {/* Admin Routes */}
                   <Route path="/admin" element={<Admin />} />

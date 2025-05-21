@@ -12,7 +12,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex flex-col min-h-screen w-full">
+      <div className="flex flex-col min-h-screen w-full bg-background">
         <Navbar />
         <div className="flex flex-1 w-full">
           <AppSidebar />
