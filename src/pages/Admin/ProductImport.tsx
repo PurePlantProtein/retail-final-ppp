@@ -7,15 +7,13 @@ import Layout from '@/components/Layout';
 import { ppProteinSampleProducts, importProducts } from '@/services/productService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Category } from '@/types/product';
 
 const ProductImport = () => {
   const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
-
-  // Check if user is admin (simplified check)
-  const isAdmin = user?.email === 'admin@example.com';
 
   React.useEffect(() => {
     if (!user) {

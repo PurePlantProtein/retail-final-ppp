@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/types/product';
+import { Product, Category } from '@/types/product';
 
 // Transform Supabase product data to our Product type
 const transformProduct = (item: any): Product => {
@@ -12,7 +12,7 @@ const transformProduct = (item: any): Product => {
     minQuantity: item.min_quantity,
     stock: item.stock,
     image: item.image || 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png',
-    category: item.category || 'other',
+    category: (item.category as Category) || 'other',
   };
 };
 
@@ -71,8 +71,72 @@ export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<v
   }
 };
 
+// Create a new product
+export const createProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
+  const { data, error } = await supabase
+    .from('products')
+    .insert({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      min_quantity: product.minQuantity,
+      stock: product.stock,
+      image: product.image,
+      category: product.category,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating product:', error);
+    throw error;
+  }
+
+  return transformProduct(data);
+};
+
+// Update an existing product
+export const updateProduct = async (id: string, product: Partial<Omit<Product, 'id'>>): Promise<Product> => {
+  const updateData: any = {};
+  
+  if (product.name !== undefined) updateData.name = product.name;
+  if (product.description !== undefined) updateData.description = product.description;
+  if (product.price !== undefined) updateData.price = product.price;
+  if (product.minQuantity !== undefined) updateData.min_quantity = product.minQuantity;
+  if (product.stock !== undefined) updateData.stock = product.stock;
+  if (product.image !== undefined) updateData.image = product.image;
+  if (product.category !== undefined) updateData.category = product.category;
+  
+  const { data, error } = await supabase
+    .from('products')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating product:', error);
+    throw error;
+  }
+
+  return transformProduct(data);
+};
+
+// Delete a product
+export const deleteProduct = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting product:', error);
+    throw error;
+  }
+};
+
 // Example import data for PP Protein products
-export const ppProteinSampleProducts = [
+export const ppProteinSampleProducts: Omit<Product, 'id'>[] = [
   {
     name: "PP Protein Vanilla Whey Protein 1kg",
     description: "Premium vanilla flavored whey protein powder, 1kg bag. Ideal for muscle recovery and growth.",

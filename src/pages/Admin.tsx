@@ -9,13 +9,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
 const Admin = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Check if user is admin (simplified check)
-  const isAdmin = user?.email === 'admin@example.com';
-
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -33,7 +30,7 @@ const Admin = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto py-8">
+      <div className="max-w-6xl mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -51,20 +48,20 @@ const Admin = () => {
             <CardContent className="pt-6">
               <ul className="space-y-2">
                 <li>
-                  <Link to="/admin/products/import" className="text-primary hover:underline">
-                    Import Products
+                  <Link to="/admin/products" className="text-primary hover:underline">
+                    Manage Products
                   </Link>
                 </li>
                 <li>
-                  <Link to="/admin/products" className="text-primary hover:underline">
-                    View & Edit Products
+                  <Link to="/admin/products/import" className="text-primary hover:underline">
+                    Import Products
                   </Link>
                 </li>
               </ul>
             </CardContent>
             <CardFooter>
               <Button asChild variant="outline" className="w-full">
-                <Link to="/admin/products/import">
+                <Link to="/admin/products">
                   Manage Products
                 </Link>
               </Button>
