@@ -26,38 +26,56 @@ export type Database = {
       }
       products: {
         Row: {
+          amino_acid_profile: Json | null
+          bag_size: string | null
           category: string | null
           created_at: string
           description: string
           id: string
           image: string | null
+          ingredients: string | null
           min_quantity: number
           name: string
+          number_of_servings: number | null
+          nutritional_info: Json | null
           price: number
+          serving_size: string | null
           stock: number
           updated_at: string
         }
         Insert: {
+          amino_acid_profile?: Json | null
+          bag_size?: string | null
           category?: string | null
           created_at?: string
           description: string
           id?: string
           image?: string | null
+          ingredients?: string | null
           min_quantity?: number
           name: string
+          number_of_servings?: number | null
+          nutritional_info?: Json | null
           price: number
+          serving_size?: string | null
           stock?: number
           updated_at?: string
         }
         Update: {
+          amino_acid_profile?: Json | null
+          bag_size?: string | null
           category?: string | null
           created_at?: string
           description?: string
           id?: string
           image?: string | null
+          ingredients?: string | null
           min_quantity?: number
           name?: string
+          number_of_servings?: number | null
+          nutritional_info?: Json | null
           price?: number
+          serving_size?: string | null
           stock?: number
           updated_at?: string
         }

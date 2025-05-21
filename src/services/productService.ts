@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Category, AminoAcid, NutritionalValue } from '@/types/product';
 
@@ -17,8 +18,8 @@ const transformProduct = (item: any): Product => {
     numberOfServings: item.number_of_servings,
     bagSize: item.bag_size,
     ingredients: item.ingredients,
-    aminoAcidProfile: item.amino_acid_profile,
-    nutritionalInfo: item.nutritional_info,
+    aminoAcidProfile: item.amino_acid_profile || [],
+    nutritionalInfo: item.nutritional_info || [],
   };
 };
 
