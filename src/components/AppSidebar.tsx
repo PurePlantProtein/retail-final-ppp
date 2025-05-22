@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Tag,
   ClipboardList,
+  FileText,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -49,6 +50,7 @@ const AppSidebar = () => {
     { icon: Home, label: 'Home', path: '/' },
     { icon: Package, label: 'Products', path: '/products' },
     { icon: ShoppingBag, label: 'Orders', path: '/orders' },
+    { icon: FileText, label: 'Marketing Materials', path: '/marketing' },
   ];
 
   // Admin-only navigation items
@@ -58,6 +60,7 @@ const AppSidebar = () => {
     { icon: Tag, label: 'Categories', path: '/admin/products/categories' },
     { icon: ClipboardList, label: 'Orders', path: '/admin/orders' },
     { icon: Users, label: 'Users', path: '/admin/users' },
+    { icon: FileText, label: 'Marketing Materials', path: '/admin/marketing' },
     { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
     { icon: Settings, label: 'Settings', path: '/admin/settings' },
   ];

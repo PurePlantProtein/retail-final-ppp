@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -114,6 +115,39 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      marketing_materials: {
+        Row: {
+          id: string
+          title: string
+          description: string
+          file_url: string
+          file_type: string
+          created_at: string
+          updated_at: string
+          category: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          description: string
+          file_url: string
+          file_type: string
+          created_at?: string
+          updated_at?: string
+          category?: string | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string
+          file_url?: string
+          file_type?: string
+          created_at?: string
+          updated_at?: string
+          category?: string | null
         }
         Relationships: []
       }
@@ -250,11 +284,14 @@ export const Constants = {
 export type Category = string;
 
 export interface AminoAcid {
-  [key: string]: number;
+  name: string;
+  amount: string;
 }
 
 export interface NutritionalValue {
-  [key: string]: number;
+  name: string;
+  perServing: string;
+  per100g: string;
 }
 
 export interface ShippingOption {
@@ -271,7 +308,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  image: string;
+  image: string | null;
   category: string;
   stock: number;
   min_quantity: number;
@@ -292,6 +329,15 @@ export interface Product {
   servingSize?: string | null; // Alias for serving_size
   aminoAcidProfile?: AminoAcid[] | null; // Alias for amino_acid_profile
   nutritionalInfo?: NutritionalValue[] | null; // Alias for nutritional_info
+}
+
+// Define a separate type to differentiate categories from products
+export interface CategoryDisplay {
+  id: string;
+  name: string;
+  description: string;
+  image: string | null;
+  isCategory: true; // Flag to identify as a category
 }
 
 export interface OrderItem {
@@ -325,4 +371,15 @@ export interface Order {
   notes?: string;
   invoiceUrl?: string;
   invoiceStatus?: string;
+}
+
+export interface MarketingMaterial {
+  id: string;
+  title: string;
+  description: string;
+  file_url: string;
+  file_type: string;
+  category?: string;
+  created_at: string;
+  updated_at: string;
 }
