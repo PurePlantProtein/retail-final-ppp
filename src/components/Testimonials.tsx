@@ -10,7 +10,7 @@ type TestimonialProps = {
 
 const Testimonial = ({ name, title, content, rating }: TestimonialProps) => {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 min-w-[300px] md:min-w-[400px] mx-4 flex-shrink-0">
+    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
       <div className="flex text-yellow-400 mb-3">
         {[...Array(rating)].map((_, i) => (
           <svg key={i} xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -46,30 +46,18 @@ const Testimonials = () => {
       title: "Health Food Store Owner",
       content: "The wholesale program is excellent. Great margins and my customers keep coming back for more.",
       rating: 5,
-    },
-    {
-      name: "Jennifer Lee",
-      title: "Nutritionist",
-      content: "I recommend PP Protein to all my clients. The quality is unmatched and the amino acid profile is perfect.",
-      rating: 5,
-    },
+    }
   ];
 
   return (
     <div className="py-12 bg-gradient-to-r from-cyan-50 to-cyan-100">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">What our customers are saying</h2>
+        <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">What our customers are saying</h2>
         
-        <div className="overflow-hidden">
-          <div className="flex animate-marquee">
-            {testimonials.map((testimonial, index) => (
-              <Testimonial key={index} {...testimonial} />
-            ))}
-            {/* Duplicate testimonials for seamless looping */}
-            {testimonials.map((testimonial, index) => (
-              <Testimonial key={`dup-${index}`} {...testimonial} />
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {testimonials.map((testimonial, index) => (
+            <Testimonial key={index} {...testimonial} />
+          ))}
         </div>
       </div>
     </div>

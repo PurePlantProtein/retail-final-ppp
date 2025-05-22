@@ -14,9 +14,14 @@ const Footer = () => {
             <h3 className="font-bold text-lg mb-4 flex items-center">
               <img src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=50" alt="PP Protein" className="h-10" />
             </h3>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 text-sm mb-2">
               Your trusted wholesale protein supplier for retail partners.
             </p>
+            <div className="text-gray-500 text-sm space-y-1">
+              <p>2/5 Clancys Rd, Mount Evelyn VIC 3796.</p>
+              <p>0432590067</p>
+              <p>hello@ppprotein.com.au</p>
+            </div>
           </div>
           
           <div>
@@ -44,9 +49,9 @@ const Footer = () => {
             <h4 className="font-semibold mb-4 text-[#25a18e]">Support</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/contact" className="text-gray-500 hover:text-[#25a18e] transition-colors">
+                <a href="https://www.ppprotein.com.au/pages/contact" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#25a18e] transition-colors">
                   Contact Us
-                </Link>
+                </a>
               </li>
               <li>
                 <Link to="/faq" className="text-gray-500 hover:text-[#25a18e] transition-colors">
