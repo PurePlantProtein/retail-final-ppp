@@ -8,6 +8,7 @@ import { Product } from '@/types/product';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Minus } from 'lucide-react';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 interface ProductCardProps {
   product: Product;
@@ -42,12 +43,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <Card className="h-full flex flex-col overflow-hidden">
       <Link to={`/products/${product.id}`}>
-        <div className="relative pt-4 px-4 flex justify-center">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="h-56 object-contain transition-transform duration-300 hover:scale-105"
-          />
+        <div className="p-4">
+          <AspectRatio ratio={1/1} className="bg-white rounded-md overflow-hidden">
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+            />
+          </AspectRatio>
         </div>
       </Link>
       <CardHeader className="pb-2">

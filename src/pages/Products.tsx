@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -17,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/types/product';
 import { getProducts, getCategories } from '@/services/productService';
 import { Search } from 'lucide-react';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -134,7 +134,11 @@ const Products = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {Array(6).fill(0).map((_, index) => (
               <div key={index} className="space-y-3">
-                <Skeleton className="h-56 w-full" />
+                <div className="p-4">
+                  <AspectRatio ratio={1/1}>
+                    <Skeleton className="h-full w-full" />
+                  </AspectRatio>
+                </div>
                 <Skeleton className="h-6 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-4 w-full" />
