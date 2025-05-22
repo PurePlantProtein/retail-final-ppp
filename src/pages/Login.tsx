@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -116,26 +117,13 @@ const Login = () => {
     }
   };
 
-  const testimonials = [
-    { 
-      name: "Peter Murray",
-      role: "Osteopath",
-      content: "Meeting your daily protein intake is invaluable. I rely on PPP every day to ensure my recovery needs are met. Maintaining a healthy musculoskeletal system is crucial for optimising performance and minimising injury risks!",
-      rating: 5
-    },
-    { 
-      name: "Ayden Musgrave",
-      role: "Exercise Physiologist",
-      content: "As an exercise physiologist, I recommend PPP for optimal recovery and long-term health. It's a complete protein source with clean, natural ingredients, perfect for supporting an active lifestyle.",
-      rating: 5
-    },
-    { 
-      name: "Nicole Marie",
-      role: "Coeliac Dietitian",
-      content: "The Premium Plant Protein Powders are hands down the best plant protein powder I have found to date. It's not grainy and doesn't have that bad aftertaste you typically get with other plant proteins. I also love how smooth they are!",
-      rating: 4
-    }
-  ];
+  // Single featured testimonial
+  const featuredTestimonial = { 
+    name: "Peter Murray",
+    role: "Osteopath",
+    content: "Meeting your daily protein intake is invaluable. I rely on PPP every day to ensure my recovery needs are met. Maintaining a healthy musculoskeletal system is crucial for optimising performance and minimising injury risks!",
+    rating: 5
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -213,7 +201,7 @@ const Login = () => {
           </div>
         </div>
         
-        {/* Right side - Image and Testimonials */}
+        {/* Right side - Image and Single Static Testimonial */}
         <div 
           className="hidden md:block md:w-[55%] relative"
           style={{
@@ -224,23 +212,17 @@ const Login = () => {
           }}
         >
           <div className="absolute inset-0 bg-[#25a18e]/30 backdrop-blur-sm"></div>
-          <div className="h-full flex flex-col justify-end p-10 relative z-10">
-            <div className="max-w-lg mx-auto mb-8">
+          <div className="h-full flex flex-col justify-center p-10 relative z-10">
+            <div className="max-w-lg mx-auto">
               <h2 className="text-2xl font-bold mb-6 text-white drop-shadow-md">What our customers are saying</h2>
               
-              <div className="overflow-hidden">
-                <div className="animate-marquee flex">
-                  {testimonials.concat(testimonials).map((testimonial, index) => (
-                    <div key={index} className="min-w-[350px] mr-6 flex-shrink-0">
-                      <Testimonial 
-                        name={testimonial.name} 
-                        role={testimonial.role}
-                        content={testimonial.content}
-                        rating={testimonial.rating}
-                      />
-                    </div>
-                  ))}
-                </div>
+              <div>
+                <Testimonial 
+                  name={featuredTestimonial.name} 
+                  role={featuredTestimonial.role}
+                  content={featuredTestimonial.content}
+                  rating={featuredTestimonial.rating}
+                />
               </div>
             </div>
           </div>
