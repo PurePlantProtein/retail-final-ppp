@@ -1,24 +1,280 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-// Updated Category type to accept string literals
-export type Category = 'electronics' | 'clothing' | 'food' | 'furniture' | 'accessories' | 'supplements' | 'protein' | 'other' | string;
+export type Database = {
+  public: {
+    Tables: {
+      leadgen: {
+        Row: {
+          created_at: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          amino_acid_profile: Json | null
+          bag_size: string | null
+          category: string | null
+          created_at: string
+          description: string
+          id: string
+          image: string | null
+          ingredients: string | null
+          min_quantity: number
+          name: string
+          number_of_servings: number | null
+          nutritional_info: Json | null
+          price: number
+          serving_size: string | null
+          stock: number
+          updated_at: string
+          weight: number | null
+        }
+        Insert: {
+          amino_acid_profile?: Json | null
+          bag_size?: string | null
+          category?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          image?: string | null
+          ingredients?: string | null
+          min_quantity?: number
+          name: string
+          number_of_servings?: number | null
+          nutritional_info?: Json | null
+          price: number
+          serving_size?: string | null
+          stock?: number
+          updated_at?: string
+          weight?: number | null
+        }
+        Update: {
+          amino_acid_profile?: Json | null
+          bag_size?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          image?: string | null
+          ingredients?: string | null
+          min_quantity?: number
+          name?: string
+          number_of_servings?: number | null
+          nutritional_info?: Json | null
+          price?: number
+          serving_size?: string | null
+          stock?: number
+          updated_at?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          business_address: string | null
+          business_name: string | null
+          business_type: string | null
+          created_at: string
+          email: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_address?: string | null
+          business_name?: string | null
+          business_type?: string | null
+          created_at?: string
+          email?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_address?: string | null
+          business_name?: string | null
+          business_type?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
 
-// Updated nutrition-related types
-export type AminoAcid = {
+type DefaultSchema = Database[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof Database },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
+
+export interface Product {
+  id: string;
   name: string;
-  amount: string;
-};
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+  stock: number;
+  min_quantity: number;
+  weight: number | null;
+  bag_size: string | null;
+  number_of_servings: number | null;
+  serving_size: string | null;
+  ingredients: string | null;
+  amino_acid_profile: Json | null;
+  nutritional_info: Json | null;
+  created_at: string;
+  updated_at: string;
+}
 
-export type NutritionalValue = {
-  name: string;
-  perServing: string;
-  per100g: string;
-};
+export interface OrderItem {
+  product: Product;
+  quantity: number;
+}
 
-// Shipping carriers
-export type ShippingCarrier = 'australia-post' | 'transdirect' | 'other';
+export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
-// Shipping address type
-export type ShippingAddress = {
+export interface ShippingAddress {
   name: string;
   street: string;
   city: string;
@@ -26,83 +282,20 @@ export type ShippingAddress = {
   postalCode: string;
   country: string;
   phone: string;
-};
+}
 
-// Shipping option type
-export type ShippingOption = {
-  id: string;
-  name: string;
-  carrier: ShippingCarrier;
-  price: number;
-  estimatedDeliveryDays: string;
-  description?: string;
-};
-
-// Order status
-export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-
-// Payment method
-export type PaymentMethod = 'paypal' | 'bank-transfer';
-
-// Xero integration fields
-export type XeroInvoice = {
-  invoiceId: string;
-  invoiceNumber: string;
-  invoiceUrl: string;
-  amountDue: number;
-  amountPaid: number;
-  dueDate: string;
-};
-
-export type Product = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  minQuantity: number;
-  image: string;
-  stock: number;
-  category: Category;
-  // New fields
-  servingSize?: string;
-  numberOfServings?: number;
-  bagSize?: string;
-  ingredients?: string;
-  aminoAcidProfile?: AminoAcid[];
-  nutritionalInfo?: NutritionalValue[];
-  // Shipping related fields
-  weight?: number; // in kg
-  dimensions?: {
-    length: number; // in cm
-    width: number;  // in cm
-    height: number; // in cm
-  };
-};
-
-export type Order = {
+export interface Order {
   id: string;
   userId: string;
   userName: string;
-  items: {
-    product: Product;
-    quantity: number;
-  }[];
+  email?: string;
+  items: OrderItem[];
   total: number;
   status: OrderStatus;
   createdAt: string;
-  updatedAt: string;
-  paymentMethod: PaymentMethod;
-  shippingOption?: ShippingOption;
-  shippingAddress?: ShippingAddress;
-  // Xero invoice fields
-  invoiceUrl?: string;
-  invoiceId?: string;
+  paymentMethod: string;
+  invoiceStatus?: string;
   invoiceNumber?: string;
-  invoiceStatus?: 'draft' | 'submitted' | 'paid' | 'void';
-  // Additional Xero fields
-  xeroDetails?: XeroInvoice;
-  // Additional meta fields
+  shippingAddress?: ShippingAddress;
   notes?: string;
-  taxAmount?: number;
-  discountAmount?: number;
-};
+}

@@ -1,237 +1,483 @@
 import { Product, Order, OrderStatus } from '@/types/product';
 
-export const mockProducts: Product[] = [
+// Mock data for products
+let productsList: Product[] = [
   {
     id: '1',
-    name: 'Premium T-Shirt',
-    description: 'High-quality cotton t-shirt available in multiple colors',
-    price: 15.99,
-    minQuantity: 10,
-    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    stock: 500,
-    category: 'clothing',
-    weight: 0.2, // weight in kg
-    dimensions: {
-      length: 30,
-      width: 25,
-      height: 5
+    name: 'Whey Protein Isolate',
+    description: 'High-quality whey protein isolate for muscle recovery.',
+    price: 79.99,
+    image: 'https://m.media-amazon.com/images/I/71xbJvzzmdL._AC_UF1000,1000_QL80_.jpg',
+    category: 'Protein',
+    stock: 50,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 1000,
+    bag_size: '1kg',
+    number_of_servings: 33,
+    serving_size: '30g',
+    ingredients: 'Whey Protein Isolate, Natural Flavors, Sucralose',
+    nutritional_info: {
+      calories: 120,
+      protein: 25,
+      carbs: 3,
+      fat: 1
+    },
+    amino_acid_profile: {
+      leucine: 2.5,
+      isoleucine: 1.5,
+      valine: 1.5
     }
   },
   {
     id: '2',
-    name: 'Bluetooth Speaker',
-    description: 'Portable wireless speaker with 10-hour battery life',
-    price: 45.99,
-    minQuantity: 5,
-    image: 'https://images.unsplash.com/photo-1589003077984-894e133dabab?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    stock: 120,
-    category: 'electronics',
-    weight: 0.8,
-    dimensions: {
-      length: 20,
-      width: 10,
-      height: 8
-    }
+    name: 'Creatine Monohydrate',
+    description: 'Pure creatine monohydrate for increased strength and power.',
+    price: 29.99,
+    image: 'https://cdn.shopify.com/s/files/1/0620/4474/7479/products/creatine-monohydrate-unflavored-1kg-147884_540x.jpg?v=1664969434',
+    category: 'Performance',
+    stock: 100,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 500,
+    bag_size: '500g',
+    number_of_servings: 166,
+    serving_size: '3g',
+    ingredients: 'Creatine Monohydrate',
+    nutritional_info: {
+      calories: 0,
+      creatine: 3
+    },
+    amino_acid_profile: {}
   },
   {
     id: '3',
-    name: 'Coffee Beans (1kg)',
-    description: 'Premium arabica coffee beans, ethically sourced',
-    price: 24.99,
-    minQuantity: 5,
-    image: 'https://images.unsplash.com/photo-1559525839-d3d301140615?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    stock: 200,
-    category: 'food',
-    weight: 1.0,
-    dimensions: {
-      length: 15,
-      width: 10,
-      height: 20
+    name: 'BCAA Powder',
+    description: 'Branched-chain amino acids to support muscle growth and reduce fatigue.',
+    price: 39.99,
+    image: 'https://www.gnc.com/dw/image/v2/BBLB_PRD/on/demandware.static/-/Sites-master-catalog-gnc/default/dw0c3cd058/hi-res/352145_1.jpg?sw=2000&sh=2000&sm=fit',
+    category: 'Recovery',
+    stock: 75,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 300,
+    bag_size: '300g',
+    number_of_servings: 30,
+    serving_size: '10g',
+    ingredients: 'L-Leucine, L-Isoleucine, L-Valine, Citric Acid, Natural Flavors, Sucralose',
+    nutritional_info: {
+      calories: 10,
+      leucine: 2,
+      isoleucine: 1,
+      valine: 1
+    },
+    amino_acid_profile: {
+      leucine: 2,
+      isoleucine: 1,
+      valine: 1
     }
   },
   {
     id: '4',
-    name: 'Office Chair',
-    description: 'Ergonomic office chair with lumbar support',
-    price: 129.99,
-    minQuantity: 2,
-    image: 'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    stock: 50,
-    category: 'furniture',
-    weight: 15.0,
-    dimensions: {
-      length: 60,
-      width: 60,
-      height: 120
-    }
+    name: 'Pre-Workout Complex',
+    description: 'Advanced pre-workout formula for energy, focus, and performance.',
+    price: 49.99,
+    image: 'https://cdn.shopify.com/s/files/1/0266/7112/0472/products/muscle-nation-legacy-pre-workout-40serves-blue-raspberry_800x.jpg?v=1672842698',
+    category: 'Performance',
+    stock: 60,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 400,
+    bag_size: '400g',
+    number_of_servings: 40,
+    serving_size: '10g',
+    ingredients: 'Beta-Alanine, Citrulline Malate, Caffeine Anhydrous, L-Theanine, Natural Flavors, Sucralose',
+    nutritional_info: {
+      calories: 15,
+      beta_alanine: 3,
+      citrulline_malate: 6,
+      caffeine: 200
+    },
+    amino_acid_profile: {}
   },
   {
     id: '5',
-    name: 'Smart Watch',
-    description: 'Fitness tracker with heart rate monitoring',
-    price: 89.99,
-    minQuantity: 3,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    stock: 75,
-    category: 'electronics',
-    weight: 0.15,
-    dimensions: {
-      length: 5,
-      width: 4,
-      height: 2
+    name: 'Vegan Protein Blend',
+    description: 'Plant-based protein blend for vegans and vegetarians.',
+    price: 69.99,
+    image: 'https://cdn.shopify.com/s/files/1/0528/7827/7458/products/VeganProtein_540x.png?v=1615973769',
+    category: 'Protein',
+    stock: 40,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 900,
+    bag_size: '900g',
+    number_of_servings: 30,
+    serving_size: '30g',
+    ingredients: 'Pea Protein, Brown Rice Protein, Chia Seed Protein, Natural Flavors, Stevia',
+    nutritional_info: {
+      calories: 110,
+      protein: 22,
+      carbs: 4,
+      fat: 2
+    },
+    amino_acid_profile: {
+      leucine: 2,
+      isoleucine: 1,
+      valine: 1
     }
   },
   {
     id: '6',
-    name: 'Ceramic Mug Set',
-    description: 'Set of 6 handcrafted ceramic mugs',
-    price: 34.99,
-    minQuantity: 4,
-    image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-    stock: 100,
-    category: 'other',
-    weight: 2.5,
-    dimensions: {
-      length: 40,
-      width: 30,
-      height: 20
-    }
-  }
-];
-
-export const mockOrders: Order[] = [
-  {
-    id: '1',
-    userId: '2',
-    userName: 'Retail Store',
-    items: [
-      { product: mockProducts[0], quantity: 20 },
-      { product: mockProducts[2], quantity: 10 }
-    ],
-    total: 569.70,
-    status: 'delivered',
-    createdAt: '2023-05-15T10:30:00Z',
-    updatedAt: '2023-05-18T14:20:00Z',
-    paymentMethod: 'paypal'
+    name: 'Glutamine Powder',
+    description: 'Pure L-Glutamine to support muscle recovery and immune function.',
+    price: 24.99,
+    image: 'https://www.nutritionwarehouse.com.au/media/catalog/product/cache/1/image/650x650/040ec09b1e358998e92faca65b79a892/a/p/applied-nutrition-l-glutamine-500g.jpg',
+    category: 'Recovery',
+    stock: 80,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 400,
+    bag_size: '400g',
+    number_of_servings: 80,
+    serving_size: '5g',
+    ingredients: 'L-Glutamine',
+    nutritional_info: {
+      calories: 0,
+      glutamine: 5
+    },
+    amino_acid_profile: {}
   },
   {
-    id: '2',
-    userId: '2',
-    userName: 'Retail Store',
-    items: [
-      { product: mockProducts[3], quantity: 5 },
-      { product: mockProducts[5], quantity: 8 }
-    ],
-    total: 929.87,
-    status: 'processing',
-    createdAt: '2023-06-20T09:15:00Z',
-    updatedAt: '2023-06-20T09:15:00Z',
-    paymentMethod: 'paypal'
+    id: '7',
+    name: 'Casein Protein',
+    description: 'Slow-digesting protein for nighttime recovery.',
+    price: 59.99,
+    image: 'https://www.sportyshealth.com.au/images/W/OPTIMUM-NUTRITION-GOLD-STANDARD-100-CASEIN-PROTEIN-900g.jpg',
+    category: 'Protein',
+    stock: 35,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 900,
+    bag_size: '900g',
+    number_of_servings: 30,
+    serving_size: '30g',
+    ingredients: 'Micellar Casein, Natural Flavors, Sucralose',
+    nutritional_info: {
+      calories: 120,
+      protein: 24,
+      carbs: 4,
+      fat: 1
+    },
+    amino_acid_profile: {
+      leucine: 2.3,
+      isoleucine: 1.4,
+      valine: 1.3
+    }
+  },
+  {
+    id: '8',
+    name: 'Weight Gainer',
+    description: 'High-calorie formula for gaining weight and muscle mass.',
+    price: 89.99,
+    image: 'https://www.sportyshealth.com.au/images/W/MASS-GAIN-PROTEIN-plus-CREATINE-GLUTAMINE.jpg',
+    category: 'Performance',
+    stock: 25,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 2500,
+    bag_size: '2.5kg',
+    number_of_servings: 16,
+    serving_size: '155g',
+    ingredients: 'Maltodextrin, Whey Protein Concentrate, Natural Flavors, Sucralose',
+    nutritional_info: {
+      calories: 600,
+      protein: 30,
+      carbs: 120,
+      fat: 5
+    },
+    amino_acid_profile: {
+      leucine: 3,
+      isoleucine: 2,
+      valine: 2
+    }
+  },
+  {
+    id: '9',
+    name: 'Collagen Peptides',
+    description: 'Supports healthy skin, hair, and joints.',
+    price: 44.99,
+    image: 'https://static.thcdn.com/images/large/webp//productimg/1600/1600/12081399-1184837494929836.jpg',
+    category: 'Supplements',
+    stock: 55,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 500,
+    bag_size: '500g',
+    number_of_servings: 50,
+    serving_size: '10g',
+    ingredients: 'Collagen Peptides',
+    nutritional_info: {
+      calories: 35,
+      protein: 9,
+      carbs: 0,
+      fat: 0
+    },
+    amino_acid_profile: {}
+  },
+  {
+    id: '10',
+    name: 'Omega-3 Fish Oil',
+    description: 'Essential fatty acids for heart and brain health.',
+    price: 34.99,
+    image: 'https://static.thcdn.com/images/large/webp//productimg/1600/1600/12789868-1384894843364261.jpg',
+    category: 'Supplements',
+    stock: 70,
+    min_quantity: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z',
+    weight: 120,
+    bag_size: '120 softgels',
+    number_of_servings: 120,
+    serving_size: '1 softgel',
+    ingredients: 'Fish Oil, EPA, DHA',
+    nutritional_info: {
+      calories: 10,
+      epa: 180,
+      dha: 120
+    },
+    amino_acid_profile: {}
   }
 ];
 
-// Mock data service functions
-export const getProducts = (): Promise<Product[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(mockProducts), 500);
-  });
-};
-
-export const getProductById = (id: string): Promise<Product | undefined> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(mockProducts.find(p => p.id === id)), 300);
-  });
-};
-
-export const getProductsByCategory = (category: string): Promise<Product[]> => {
+// Mock function to fetch all products
+export const getProducts = async (): Promise<Product[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      const filtered = category === 'all' 
-        ? mockProducts 
-        : mockProducts.filter(p => p.category === category);
-      resolve(filtered);
-    }, 300);
+      resolve(productsList);
+    }, 500);
   });
 };
 
-export const getOrders = (): Promise<Order[]> => {
+// Mock function to fetch a single product by ID
+export const getProductById = async (id: string): Promise<Product | undefined> => {
   return new Promise((resolve) => {
-    // Try to get orders from localStorage first
-    const ordersFromStorage = localStorage.getItem('orders');
-    let allOrders = ordersFromStorage ? JSON.parse(ordersFromStorage) : [];
-    
-    // If there are no orders in localStorage, use the mockOrders
-    if (allOrders.length === 0) {
-      allOrders = mockOrders;
-    }
-    
-    setTimeout(() => resolve(allOrders), 500);
+    setTimeout(() => {
+      const product = productsList.find(product => product.id === id);
+      resolve(product);
+    }, 500);
   });
 };
 
-export const getOrderById = (id: string): Promise<Order | undefined> => {
+// Mock function to create a new product
+export const createProduct = async (product: Product): Promise<Product> => {
   return new Promise((resolve) => {
-    // Try to get orders from localStorage first
-    const ordersFromStorage = localStorage.getItem('orders');
-    let allOrders = ordersFromStorage ? JSON.parse(ordersFromStorage) : mockOrders;
-    
-    setTimeout(() => resolve(allOrders.find((o: Order) => o.id === id)), 300);
+    setTimeout(() => {
+      productsList.push(product);
+      resolve(product);
+    }, 500);
   });
 };
 
-// New function to update order status
-export const updateOrderStatus = async (orderId: string, newStatus: OrderStatus): Promise<boolean> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  try {
-    // Get orders from localStorage
-    const ordersFromStorage = localStorage.getItem('orders');
-    if (!ordersFromStorage) {
-      return false;
-    }
-    
-    const allOrders: Order[] = JSON.parse(ordersFromStorage);
-    
-    // Find the target order
-    const updatedOrders = allOrders.map(order => 
-      order.id === orderId 
-        ? { 
-            ...order, 
-            status: newStatus, 
-            updatedAt: new Date().toISOString() 
-          } 
-        : order
-    );
-    
-    // Save updated orders back to localStorage
-    localStorage.setItem('orders', JSON.stringify(updatedOrders));
-    
-    return true;
-  } catch (error) {
-    console.error("Error updating order status:", error);
-    return false;
-  }
+// Mock function to update a product
+export const updateProduct = async (id: string, updates: Partial<Product>): Promise<Product | undefined> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      productsList = productsList.map(product => {
+        if (product.id === id) {
+          return { ...product, ...updates };
+        }
+        return product;
+      });
+      const updatedProduct = productsList.find(product => product.id === id);
+      resolve(updatedProduct);
+    }, 500);
+  });
 };
 
-// Mock function to get user orders
-export const getUserOrders = async (userId: string): Promise<Order[]> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  try {
-    // Get orders from localStorage
-    const ordersFromStorage = localStorage.getItem('orders');
-    if (!ordersFromStorage) {
-      return [];
-    }
-    
-    const allOrders: Order[] = JSON.parse(ordersFromStorage);
-    
-    // Filter orders by userId
-    return allOrders.filter(order => order.userId === userId);
-  } catch (error) {
-    console.error("Error retrieving orders from localStorage:", error);
-    return [];
+// Mock function to delete a product
+export const deleteProduct = async (id: string): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      productsList = productsList.filter(product => product.id !== id);
+      resolve();
+    }, 500);
+  });
+};
+
+// Mock data for orders
+let ordersList: Order[] = [
+  {
+    id: '101',
+    userId: 'user1',
+    userName: 'John Doe',
+    email: 'john.doe@example.com',
+    items: [
+      { product: productsList[0], quantity: 2 },
+      { product: productsList[1], quantity: 1 }
+    ],
+    total: 190.00,
+    status: 'processing',
+    createdAt: '2024-07-01T10:00:00.000Z',
+    paymentMethod: 'credit-card',
+    shippingAddress: {
+      name: 'John Doe',
+      street: '123 Main St',
+      city: 'Anytown',
+      state: 'CA',
+      postalCode: '91234',
+      country: 'USA',
+      phone: '555-123-4567'
+    },
+    notes: 'Please deliver between 9am and 5pm.'
+  },
+  {
+    id: '102',
+    userId: 'user2',
+    userName: 'Jane Smith',
+    email: 'jane.smith@example.com',
+    items: [
+      { product: productsList[2], quantity: 3 },
+      { product: productsList[3], quantity: 2 }
+    ],
+    total: 220.00,
+    status: 'shipped',
+    createdAt: '2024-07-05T14:30:00.000Z',
+    paymentMethod: 'paypal',
+    shippingAddress: {
+      name: 'Jane Smith',
+      street: '456 Elm St',
+      city: 'Springfield',
+      state: 'IL',
+      postalCode: '62704',
+      country: 'USA',
+      phone: '555-987-6543'
+    },
+    notes: 'Leave package at the front door.'
+  },
+  {
+    id: '103',
+    userId: 'user1',
+    userName: 'John Doe',
+    email: 'john.doe@example.com',
+    items: [
+      { product: productsList[4], quantity: 1 },
+      { product: productsList[5], quantity: 4 }
+    ],
+    total: 170.00,
+    status: 'delivered',
+    createdAt: '2024-07-10T09:15:00.000Z',
+    paymentMethod: 'bank-transfer',
+    shippingAddress: {
+      name: 'John Doe',
+      street: '123 Main St',
+      city: 'Anytown',
+      state: 'CA',
+      postalCode: '91234',
+      country: 'USA',
+      phone: '555-123-4567'
+    },
+    notes: 'Call before delivery.'
+  },
+  {
+    id: '104',
+    userId: 'user3',
+    userName: 'Alice Johnson',
+    email: 'alice.johnson@example.com',
+    items: [
+      { product: productsList[6], quantity: 2 },
+      { product: productsList[7], quantity: 1 }
+    ],
+    total: 210.00,
+    status: 'pending',
+    createdAt: '2024-07-15T16:45:00.000Z',
+    paymentMethod: 'credit-card',
+    shippingAddress: {
+      name: 'Alice Johnson',
+      street: '789 Oak St',
+      city: 'Sometown',
+      state: 'NY',
+      postalCode: '10001',
+      country: 'USA',
+      phone: '555-456-7890'
+    },
+    notes: 'Deliver to the back entrance.'
+  },
+  {
+    id: '105',
+    userId: 'user2',
+    userName: 'Jane Smith',
+    email: 'jane.smith@example.com',
+    items: [
+      { product: productsList[8], quantity: 3 },
+      { product: productsList[9], quantity: 2 }
+    ],
+    total: 200.00,
+    status: 'cancelled',
+    createdAt: '2024-07-20T11:00:00.000Z',
+    paymentMethod: 'paypal',
+    shippingAddress: {
+      name: 'Jane Smith',
+      street: '456 Elm St',
+      city: 'Springfield',
+      state: 'IL',
+      postalCode: '62704',
+      country: 'USA',
+      phone: '555-987-6543'
+    },
+    notes: 'Cancelled by customer.'
   }
+];
+
+// Mock function to fetch all orders
+export const getOrders = async (): Promise<Order[]> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(ordersList);
+    }, 500);
+  });
+};
+
+// Mock function to fetch a single order by ID
+export const getOrderById = async (orderId: string): Promise<Order | undefined> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const order = ordersList.find(order => order.id === orderId);
+      resolve(order);
+    }, 500);
+  });
+};
+
+// Mock function to update order status
+export const updateOrderStatus = async (orderId: string, newStatus: OrderStatus): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      ordersList = ordersList.map(order => {
+        if (order.id === orderId) {
+          return { ...order, status: newStatus };
+        }
+        return order;
+      });
+      resolve();
+    }, 500);
+  });
+};
+
+// Add this function to delete an order
+export const deleteOrder = async (orderId: string): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      ordersList = ordersList.filter(order => order.id !== orderId);
+      resolve();
+    }, 500);
+  });
 };

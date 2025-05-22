@@ -36,12 +36,22 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from '@/contexts/AuthContext';
-import { getOrders, updateOrderStatus, getOrderById } from '@/services/mockData';
+import { getOrders, updateOrderStatus, getOrderById, deleteOrder } from '@/services/mockData';
 import { Order, OrderStatus } from '@/types/product';
-import { Eye } from 'lucide-react';
+import { Eye, Edit, Trash2 } from 'lucide-react';
+import { useForm } from "react-hook-form";
 
 const OrdersManagement = () => {
   const { isAdmin } = useAuth();
@@ -51,9 +61,26 @@ const OrdersManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 5;
   
-  // New state for order details modal
+  // State for order details modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
+  
+  // State for edit order dialog
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  
+  // State for delete confirmation
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+
+  // Form for editing orders
+  const editForm = useForm<{
+    userName: string;
+    status: OrderStatus;
+    paymentMethod: string;
+    invoiceStatus: string;
+    notes: string;
+  }>();
 
   useEffect(() => {
     if (!isAdmin) {
@@ -86,6 +113,11 @@ const OrdersManagement = () => {
         )
       );
       
+      // If the order is currently selected in the details view, update it there too
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, status: newStatus });
+      }
+      
       toast.success(`Order #${orderId} status updated to ${newStatus}`);
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -93,7 +125,7 @@ const OrdersManagement = () => {
     }
   };
 
-  // New function to view order details
+  // Function to view order details
   const handleViewOrderDetails = async (orderId: string) => {
     try {
       const order = await getOrderById(orderId);
@@ -106,6 +138,87 @@ const OrdersManagement = () => {
     } catch (error) {
       console.error('Error fetching order details:', error);
       toast.error('Failed to fetch order details');
+    }
+  };
+  
+  // Function to open edit dialog
+  const handleEditOrder = async (orderId: string) => {
+    try {
+      const order = await getOrderById(orderId);
+      if (order) {
+        setEditingOrder(order);
+        editForm.reset({
+          userName: order.userName,
+          status: order.status,
+          paymentMethod: order.paymentMethod,
+          invoiceStatus: order.invoiceStatus || 'pending',
+          notes: order.notes || '',
+        });
+        setIsEditDialogOpen(true);
+      } else {
+        toast.error('Order not found');
+      }
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      toast.error('Failed to fetch order details');
+    }
+  };
+  
+  // Function to save edited order
+  const handleSaveOrderEdit = editForm.handleSubmit(async (data) => {
+    if (!editingOrder) return;
+    
+    try {
+      // In a real app, this would call an API to update the order
+      const updatedOrder = {
+        ...editingOrder,
+        userName: data.userName,
+        status: data.status,
+        paymentMethod: data.paymentMethod,
+        invoiceStatus: data.invoiceStatus,
+        notes: data.notes,
+      };
+      
+      // Update orders list
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === editingOrder.id ? updatedOrder : order
+        )
+      );
+      
+      // If the order is currently selected in the details view, update it there too
+      if (selectedOrder && selectedOrder.id === editingOrder.id) {
+        setSelectedOrder(updatedOrder);
+      }
+      
+      toast.success(`Order #${editingOrder.id} updated successfully`);
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast.error('Failed to update order');
+    }
+  });
+  
+  // Function to handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    if (!orderToDelete) return;
+    
+    try {
+      await deleteOrder(orderToDelete);
+      
+      // Update the orders list
+      setOrders(prevOrders => prevOrders.filter(order => order.id !== orderToDelete));
+      
+      toast.success(`Order #${orderToDelete} deleted successfully`);
+      setIsDeleteDialogOpen(false);
+      
+      // If the deleted order was being viewed, close the details dialog
+      if (selectedOrder && selectedOrder.id === orderToDelete) {
+        setIsOrderDetailsOpen(false);
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast.error('Failed to delete order');
     }
   };
 
@@ -185,6 +298,24 @@ const OrdersManagement = () => {
                               >
                                 <Eye className="h-4 w-4 mr-1" />
                                 View
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleEditOrder(order.id)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setOrderToDelete(order.id);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                               <Select
                                 defaultValue={order.status}
@@ -284,6 +415,9 @@ const OrdersManagement = () => {
               <div>
                 <h3 className="text-lg font-medium">Customer Information</h3>
                 <p className="text-sm text-gray-500">{selectedOrder.userName}</p>
+                {selectedOrder.email && (
+                  <p className="text-sm text-gray-500">{selectedOrder.email}</p>
+                )}
               </div>
 
               <Separator />
@@ -413,12 +547,173 @@ const OrdersManagement = () => {
               )}
 
               <div className="flex justify-end gap-2 mt-6">
-                <Button variant="outline" onClick={() => setIsOrderDetailsOpen(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsOrderDetailsOpen(false)}
+                >
                   Close
+                </Button>
+                <Button 
+                  variant="default"
+                  onClick={() => {
+                    setIsOrderDetailsOpen(false);
+                    handleEditOrder(selectedOrder.id);
+                  }}
+                >
+                  Edit
                 </Button>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Order Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Order</DialogTitle>
+            <DialogDescription>
+              Make changes to order #{editingOrder?.id}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleSaveOrderEdit)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="userName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editForm.control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Method</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="credit-card">Credit Card</SelectItem>
+                        <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
+                        <SelectItem value="paypal">PayPal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editForm.control}
+                name="invoiceStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invoice Status</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select invoice status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="overdue">Overdue</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editForm.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter className="pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Order</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete order #{orderToDelete}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-4">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Layout>

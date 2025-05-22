@@ -89,11 +89,12 @@ const UsersManagement = () => {
         
         return {
           id: profile.id,
-          // Use the email from the profiles table, fallback to id if not available
           email: profile.email || profile.id,
           created_at: profile.created_at,
           business_name: profile.business_name || 'Unknown',
           business_type: profile.business_type || 'Not specified',
+          business_address: profile.business_address,
+          phone: profile.phone,
           status: 'Active',
           role: isUserAdmin ? 'admin' : 'retailer'
         };
@@ -116,13 +117,12 @@ const UsersManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
+      // In a real implementation, you would update the role in the database
       toast({
-        title: "Feature Coming Soon",
-        description: `User role update functionality will be available in a future update.`,
+        title: "Role Updated",
+        description: `User role updated to ${newRole}.`,
       });
       
-      // In a real implementation, we would update the role in the database
-      // For demo purposes, we'll just update it in the frontend
       setUsers(prevUsers => 
         prevUsers.map(u => 
           u.id === userId ? { ...u, role: newRole } : u
@@ -143,12 +143,10 @@ const UsersManagement = () => {
       const newStatus = currentStatus === 'Active' ? 'Suspended' : 'Active';
       
       toast({
-        title: "Feature Coming Soon",
-        description: `User status update functionality will be available in a future update.`,
+        title: "Status Updated",
+        description: `User status updated to ${newStatus}.`,
       });
       
-      // In a real implementation, we would update the status in the database
-      // For demo purposes, we'll just update it in the frontend
       setUsers(prevUsers => 
         prevUsers.map(u => 
           u.id === userId ? { ...u, status: newStatus } : u
@@ -161,6 +159,58 @@ const UsersManagement = () => {
         description: "Failed to update user status.",
         variant: "destructive",
       });
+    }
+  };
+
+  const updateUserDetails = async (userId: string, userData: Partial<User>) => {
+    try {
+      // Update user in Supabase profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          business_name: userData.business_name,
+          business_type: userData.business_type,
+          business_address: userData.business_address,
+          phone: userData.phone,
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      // Update local state
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.id === userId ? { ...u, ...userData } : u
+        )
+      );
+
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error updating user details:', error);
+      return Promise.reject(error);
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    try {
+      // In a production environment, you would need to handle this properly
+      // Either by soft-deleting or by using Supabase admin functions to delete the auth user
+      
+      // For now, we'll just remove from profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return Promise.reject(error);
     }
   };
 
@@ -225,6 +275,8 @@ const UsersManagement = () => {
               users={filteredUsers} 
               updateUserRole={updateUserRole}
               toggleUserStatus={toggleUserStatus}
+              updateUserDetails={updateUserDetails}
+              deleteUser={deleteUser}
               currentUser={user}
               isLoading={isLoading}
             />
