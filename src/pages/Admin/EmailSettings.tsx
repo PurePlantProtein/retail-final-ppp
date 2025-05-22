@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import Layout from '@/components/Layout';
@@ -41,46 +40,30 @@ const EmailSettings = () => {
       
       // Create a mock order for testing the email that conforms to Order type
       const mockOrder = {
-        id: `TEST-${Date.now().toString().slice(-6)}`,
-        userId: 'test-user-id',
-        userName: 'Test User',
-        total: 99.95,
-        status: 'pending' as const, // Using const assertion for the OrderStatus type
+        id: "ord_123456",
+        userId: "user_123",
+        userName: "Test User",
+        email: "test@example.com", // Add the missing email property
+        total: 120.00,
+        status: "pending" as const, // Using const assertion for the OrderStatus type
         items: [
           {
             product: {
-              id: 'test-1',
-              name: 'Test Product',
-              description: 'Test product description',
-              price: 89.95,
+              id: "prod_1",
+              name: "Pure Plant Protein",
+              description: "Premium plant-based protein powder",
+              price: 60.00,
               minQuantity: 1,
-              stock: 50,
-              category: 'protein',
-              image: '',
+              stock: 100,
+              category: "Protein",
+              image: "https://example.com/image.jpg"
             },
-            quantity: 1,
+            quantity: 2
           }
         ],
-        shippingAddress: {
-          name: 'Test User',
-          street: '123 Test Street',
-          city: 'Test City',
-          state: 'VIC',
-          postalCode: '3000',
-          country: 'Australia',
-          phone: '0400 000 000'
-        },
-        shippingOption: {
-          name: 'Standard Shipping',
-          price: 10.00,
-          id: 'standard',
-          carrier: 'australia-post' as const,
-          estimatedDeliveryDays: '3-5 business days',
-          description: 'Standard Australia Post shipping'
-        },
-        paymentMethod: 'bank-transfer' as const,
+        paymentMethod: "bank_transfer",
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
       const result = await sendOrderConfirmationEmail(mockOrder, adminEmail);

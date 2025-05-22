@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -78,7 +77,7 @@ const OrdersManagement = () => {
     userName: string;
     status: OrderStatus;
     paymentMethod: string;
-    invoiceStatus: string;
+    invoiceUrl: string;
     notes: string;
   }>();
 
@@ -151,7 +150,7 @@ const OrdersManagement = () => {
           userName: order.userName,
           status: order.status,
           paymentMethod: order.paymentMethod,
-          invoiceStatus: order.invoiceStatus || 'pending',
+          invoiceUrl: order.invoiceUrl || '',
           notes: order.notes || '',
         });
         setIsEditDialogOpen(true);
@@ -175,7 +174,7 @@ const OrdersManagement = () => {
         userName: data.userName,
         status: data.status,
         paymentMethod: data.paymentMethod,
-        invoiceStatus: data.invoiceStatus,
+        invoiceUrl: data.invoiceUrl,
         notes: data.notes,
       };
       
@@ -524,12 +523,12 @@ const OrdersManagement = () => {
                   <p className="capitalize">{selectedOrder.paymentMethod.replace('-', ' ')}</p>
                   
                   <p className="text-gray-500">Payment Status:</p>
-                  <p className="capitalize">{selectedOrder.invoiceStatus || 'pending'}</p>
+                  <p className="capitalize">{selectedOrder.invoiceUrl || 'pending'}</p>
                   
-                  {selectedOrder.invoiceNumber && (
+                  {selectedOrder.invoiceUrl && (
                     <>
-                      <p className="text-gray-500">Invoice Number:</p>
-                      <p>{selectedOrder.invoiceNumber}</p>
+                      <p className="text-gray-500">Invoice URL:</p>
+                      <p>{selectedOrder.invoiceUrl}</p>
                     </>
                   )}
                 </div>
@@ -647,26 +646,13 @@ const OrdersManagement = () => {
               
               <FormField
                 control={editForm.control}
-                name="invoiceStatus"
+                name="invoiceUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Invoice Status</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select invoice status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="overdue">Overdue</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Invoice URL</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
                   </FormItem>
                 )}
               />

@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import AuthProvider from '@/providers/AuthProvider';
-import { ThemeProvider } from '@/components/theme-provider';
+import { AuthProvider } from '@/providers/AuthProvider';
+import { ThemeProvider } from '@/components/ui/theme-provider';
 import './App.css';
 
 // Pages
@@ -67,18 +67,18 @@ function App() {
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
 
-              {/* Admin routes */}
-              <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
-              <Route path="/admin/products" element={<ProtectedRoute requireAdmin><ProductsManagement /></ProtectedRoute>} />
-              <Route path="/admin/products/import" element={<ProtectedRoute requireAdmin><ProductImport /></ProtectedRoute>} />
-              <Route path="/admin/products/categories" element={<ProtectedRoute requireAdmin><CategoriesManagement /></ProtectedRoute>} />
-              <Route path="/admin/orders" element={<ProtectedRoute requireAdmin><OrdersManagement /></ProtectedRoute>} />
-              <Route path="/admin/users" element={<ProtectedRoute requireAdmin><UsersManagement /></ProtectedRoute>} />
-              <Route path="/admin/analytics" element={<ProtectedRoute requireAdmin><AnalyticsManagement /></ProtectedRoute>} />
-              <Route path="/admin/settings" element={<ProtectedRoute requireAdmin><SettingsManagement /></ProtectedRoute>} />
-              <Route path="/admin/settings/shipping" element={<ProtectedRoute requireAdmin><ShippingSettings /></ProtectedRoute>} />
-              <Route path="/admin/email-settings" element={<ProtectedRoute requireAdmin><EmailSettings /></ProtectedRoute>} />
-              <Route path="/admin/marketing" element={<ProtectedRoute requireAdmin><MarketingMaterialsManagement /></ProtectedRoute>} />
+              {/* Admin routes - fixed requireAdmin to requiresAdmin */}
+              <Route path="/admin" element={<ProtectedRoute requiresAdmin><Admin /></ProtectedRoute>} />
+              <Route path="/admin/products" element={<ProtectedRoute requiresAdmin><ProductsManagement /></ProtectedRoute>} />
+              <Route path="/admin/products/import" element={<ProtectedRoute requiresAdmin><ProductImport /></ProtectedRoute>} />
+              <Route path="/admin/products/categories" element={<ProtectedRoute requiresAdmin><CategoriesManagement /></ProtectedRoute>} />
+              <Route path="/admin/orders" element={<ProtectedRoute requiresAdmin><OrdersManagement /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute requiresAdmin><UsersManagement /></ProtectedRoute>} />
+              <Route path="/admin/analytics" element={<ProtectedRoute requiresAdmin><AnalyticsManagement /></ProtectedRoute>} />
+              <Route path="/admin/settings" element={<ProtectedRoute requiresAdmin><SettingsManagement /></ProtectedRoute>} />
+              <Route path="/admin/settings/shipping" element={<ProtectedRoute requiresAdmin><ShippingSettings /></ProtectedRoute>} />
+              <Route path="/admin/email-settings" element={<ProtectedRoute requiresAdmin><EmailSettings /></ProtectedRoute>} />
+              <Route path="/admin/marketing" element={<ProtectedRoute requiresAdmin><MarketingMaterialsManagement /></ProtectedRoute>} />
               
               {/* 404 route */}
               <Route path="*" element={<NotFound />} />

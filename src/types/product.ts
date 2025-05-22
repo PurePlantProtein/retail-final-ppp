@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -361,7 +360,7 @@ export interface Order {
   id: string;
   userId: string;
   userName: string;
-  email: string;
+  email: string; // Make sure this is required as per the error
   items: OrderItem[];
   total: number;
   status: OrderStatus;
@@ -371,6 +370,7 @@ export interface Order {
   notes?: string;
   invoiceUrl?: string;
   invoiceStatus?: string;
+  shippingOption?: string; // Add this property to fix useCartCheckout.ts error
 }
 
 export interface MarketingMaterial {

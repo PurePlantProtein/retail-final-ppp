@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -100,7 +99,7 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
   };
 
   // Create and save order function
-  const createAndSaveOrder = (): Order => {
+  const createOrder = async () => {
     if (!selectedShippingOption || !shippingAddress) {
       throw new Error("Missing shipping information");
     }
@@ -110,7 +109,7 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     const orderId = bankDetails.reference;
     
     // Create the order object and normalize it to ensure all properties are correct
-    const order: Partial<Order> = {
+    const orderData: Partial<Order> = {
       id: orderId,
       userId: userId || 'guest',
       userName: userEmail || 'guest',
@@ -125,7 +124,7 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     };
     
     // Normalize the order to ensure all fields are correct
-    const normalizedOrder = normalizeOrder(order);
+    const normalizedOrder = normalizeOrder(orderData);
     
     console.log("Creating order:", normalizedOrder);
     
@@ -163,7 +162,7 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
       }
       
       // Process the bank transfer order
-      const order = createAndSaveOrder();
+      const order = createOrder();
       
       toast({
         title: "Order Placed Successfully",

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import Layout from '@/components/Layout';
@@ -41,7 +40,7 @@ import { MarketingMaterial } from '@/types/product';
 import { 
   Plus, 
   FileText, 
-  FilePdf, 
+  File, 
   FileImage,
   FileSpreadsheet,
   Trash,
@@ -174,7 +173,7 @@ const MarketingMaterialsManagement = () => {
   // Get appropriate icon for file type
   const getFileIcon = (fileType: string) => {
     if (fileType.includes('image')) return <FileImage className="h-6 w-6" />;
-    if (fileType.includes('pdf')) return <FilePdf className="h-6 w-6" />;
+    if (fileType.includes('pdf')) return <File className="h-6 w-6" />;
     if (fileType.includes('excel') || fileType.includes('spreadsheet')) return <FileSpreadsheet className="h-6 w-6" />;
     return <FileText className="h-6 w-6" />;
   };
