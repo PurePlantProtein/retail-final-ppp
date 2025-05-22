@@ -153,6 +153,8 @@ const Signup = () => {
     setIsLoading(true);
     
     try {
+      console.log("Starting account creation process...");
+      
       // Create the shipping address object
       const shippingData: ShippingAddress = {
         name,
@@ -166,19 +168,22 @@ const Signup = () => {
       
       // Sign up the user
       await signup(email, password, businessName, businessType);
+      console.log("Signup completed successfully");
       
       // Save shipping address
       setShippingAddress(shippingData);
+      console.log("Shipping address saved");
       
       toast({
         title: "Account created successfully",
         description: "Welcome to PP Protein Wholesale!",
       });
       
-      // No need to navigate here, the useEffect will handle it
+      // Navigate to products page
+      navigate('/products');
     } catch (error: any) {
+      console.error("Error during signup process:", error);
       setErrorMessage(error.message || "Error creating account");
-      console.error("Signup error:", error);
     } finally {
       setIsLoading(false);
     }
