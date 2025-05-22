@@ -7,7 +7,6 @@ import Layout from '@/components/Layout';
 import { ppProteinSampleProducts, importProducts } from '@/services/productService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Category } from '@/types/product';
 
 const ProductImport = () => {
   const [isImporting, setIsImporting] = useState(false);
