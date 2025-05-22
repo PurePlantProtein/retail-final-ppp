@@ -19,7 +19,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { loadPayPalScript, initPayPalButton } from '@/services/paypalService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateShippingOptions } from '@/services/shippingService';
-import { ShippingOption, ShippingAddress } from '@/types/product';
+import { ShippingOption, ShippingAddress, Order, PaymentMethod } from '@/types/product';
 import ShippingOptions from '@/components/ShippingOptions';
 import ShippingForm from '@/components/ShippingForm';
 import { 
@@ -35,7 +35,7 @@ const Cart = () => {
   const { shippingAddress: savedShippingAddress, setShippingAddress, isLoading: isLoadingShippingAddress } = useShipping();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [paymentMethod, setPaymentMethod] = useState<'bank-transfer' | 'paypal'>('paypal');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('paypal');
   const paypalButtonRef = useRef<HTMLDivElement>(null);
   const [isPaypalLoading, setIsPaypalLoading] = useState(false);
   const [bankDetails, setBankDetails] = useState({
@@ -51,6 +51,7 @@ const Cart = () => {
   const [shippingAddress, setShippingAddressState] = useState<ShippingAddress | null>(null);
   const [showShippingForm, setShowShippingForm] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'payment'>('cart');
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
 
   // Use saved shipping address if available
   useEffect(() => {
@@ -146,50 +147,30 @@ const Cart = () => {
     });
   };
 
-  const handleBankTransferCheckout = () => {
+  // Create and save order function
+  const createAndSaveOrder = (paymentMethod: PaymentMethod, paymentId?: string): Order => {
     if (!selectedShippingOption || !shippingAddress) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide shipping details before completing your order.",
-        variant: "destructive",
-      });
-      return;
+      throw new Error("Missing shipping information");
     }
-    
-    // This is where we would process a bank transfer
-    toast({
-      title: "Bank Transfer Order Placed",
-      description: "Please complete your bank transfer using the provided details. Your order will be processed after payment confirmation.",
-    });
-    
-    // For demo purposes, we'll just show a success message and clear the cart
-    toast({
-      title: "Order reference: " + bankDetails.reference,
-      description: "Please include this reference with your bank transfer.",
-    });
     
     const selectedOption = shippingOptions.find(option => option.id === selectedShippingOption);
     const shippingCost = selectedOption ? selectedOption.price : 0;
+    const orderId = paymentId || bankDetails.reference;
     
-    // Save order to local storage for demonstration
-    const order = {
-      id: bankDetails.reference,
+    // Create the order object
+    const order: Order = {
+      id: orderId,
       userId: user?.id || 'guest',
       userName: user?.email || 'guest',
       items: items,
       total: subtotal + shippingCost,
-      status: 'pending',
+      status: paymentMethod === 'paypal' ? 'processing' : 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      paymentMethod: 'bank-transfer',
+      paymentMethod: paymentMethod,
       shippingOption: selectedOption,
-      shippingAddress: {
-        street: shippingAddress.street,
-        city: shippingAddress.city,
-        state: shippingAddress.state,
-        postalCode: shippingAddress.postalCode,
-        country: shippingAddress.country,
-      }
+      shippingAddress: shippingAddress,
+      invoiceStatus: paymentMethod === 'paypal' ? 'paid' : 'draft'
     };
     
     // Store the order in local storage
@@ -197,57 +178,102 @@ const Cart = () => {
     orders.push(order);
     localStorage.setItem('orders', JSON.stringify(orders));
     
-    clearCart();
-    navigate('/orders');
+    return order;
+  };
+
+  const handleBankTransferCheckout = () => {
+    if (isProcessingOrder) return;
+    
+    setIsProcessingOrder(true);
+    
+    try {
+      if (!selectedShippingOption || !shippingAddress) {
+        toast({
+          title: "Missing Information",
+          description: "Please provide shipping details before completing your order.",
+          variant: "destructive",
+        });
+        setIsProcessingOrder(false);
+        return;
+      }
+      
+      // Process the bank transfer order
+      const order = createAndSaveOrder('bank-transfer');
+      
+      toast({
+        title: "Bank Transfer Order Placed",
+        description: "Please complete your bank transfer using the provided details. Your order will be processed after payment confirmation.",
+      });
+      
+      toast({
+        title: "Order reference: " + order.id,
+        description: "Please include this reference with your bank transfer.",
+      });
+      
+      // Clear the cart
+      clearCart();
+      
+      // Navigate to the orders page after a short delay
+      setTimeout(() => {
+        navigate('/orders');
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Error processing bank transfer order:", error);
+      toast({
+        title: "Order Error",
+        description: "There was a problem placing your order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingOrder(false);
+    }
   };
 
   const handlePaypalSuccess = (data: any) => {
-    if (!selectedShippingOption || !shippingAddress) {
+    if (isProcessingOrder) return;
+    
+    setIsProcessingOrder(true);
+    
+    try {
+      if (!selectedShippingOption || !shippingAddress) {
+        toast({
+          title: "Missing Information",
+          description: "Please provide shipping details before completing your order.",
+          variant: "destructive",
+        });
+        setIsProcessingOrder(false);
+        return;
+      }
+      
+      console.log("PayPal payment successful:", data);
+      
+      // Process the PayPal order
+      const order = createAndSaveOrder('paypal', data.orderID);
+      
       toast({
-        title: "Missing Information",
-        description: "Please provide shipping details before completing your order.",
+        title: "PayPal Payment Successful",
+        description: `Your payment (ID: ${data.orderID}) has been processed successfully.`,
+      });
+      
+      // Clear the cart
+      clearCart();
+      
+      // Navigate to the orders page after a short delay
+      setTimeout(() => {
+        navigate('/orders');
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Error processing PayPal order:", error);
+      toast({
+        title: "Order Error",
+        description: "There was a problem placing your order. Please try again.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsProcessingOrder(false);
     }
-    
-    console.log("PayPal payment successful:", data);
-    toast({
-      title: "PayPal Payment Successful",
-      description: `Your payment (ID: ${data.orderID}) has been processed successfully.`,
-    });
-    
-    const selectedOption = shippingOptions.find(option => option.id === selectedShippingOption);
-    const shippingCost = selectedOption ? selectedOption.price : 0;
-    
-    // Save order to local storage for demonstration
-    const order = {
-      id: data.orderID,
-      userId: user?.id || 'guest',
-      userName: user?.email || 'guest',
-      items: items,
-      total: subtotal + shippingCost,
-      status: 'processing',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      paymentMethod: 'paypal',
-      shippingOption: selectedOption,
-      shippingAddress: {
-        street: shippingAddress.street,
-        city: shippingAddress.city,
-        state: shippingAddress.state,
-        postalCode: shippingAddress.postalCode,
-        country: shippingAddress.country,
-      }
-    };
-    
-    // Store the order in local storage
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-    orders.push(order);
-    localStorage.setItem('orders', JSON.stringify(orders));
-    
-    clearCart();
-    navigate('/orders');
   };
 
   const handlePaypalError = (error: any) => {
@@ -559,8 +585,18 @@ const Cart = () => {
                             className="w-full" 
                             size="lg"
                             onClick={handleBankTransferCheckout}
+                            disabled={isProcessingOrder}
                           >
-                            <CreditCard className="mr-2 h-4 w-4" /> Complete Order
+                            {isProcessingOrder ? (
+                              <>
+                                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="mr-2 h-4 w-4" /> Complete Order
+                              </>
+                            )}
                           </Button>
                           <p className="text-xs text-center text-gray-500">
                             Include the reference number when making your bank transfer
@@ -568,7 +604,7 @@ const Cart = () => {
                         </TabsContent>
                         
                         <TabsContent value="paypal" className="mt-4">
-                          {isPaypalLoading ? (
+                          {isPaypalLoading || isProcessingOrder ? (
                             <div className="flex justify-center py-4">
                               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                             </div>
@@ -587,6 +623,7 @@ const Cart = () => {
                       variant="outline"
                       onClick={() => setCheckoutStep('shipping')}
                       className="mt-6"
+                      disabled={isProcessingOrder}
                     >
                       Back to Shipping
                     </Button>

@@ -38,6 +38,12 @@ export type ShippingOption = {
   description?: string;
 };
 
+// Order status
+export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+// Payment method
+export type PaymentMethod = 'paypal' | 'bank-transfer';
+
 export type Product = {
   id: string;
   name: string;
@@ -72,16 +78,13 @@ export type Order = {
     quantity: number;
   }[];
   total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: OrderStatus;
   createdAt: string;
   updatedAt: string;
-  paymentMethod: 'paypal' | 'bank-transfer';
+  paymentMethod: PaymentMethod;
   shippingOption?: ShippingOption;
-  shippingAddress?: {
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
+  shippingAddress?: ShippingAddress;
+  invoiceUrl?: string; // Field to store URL for Xero invoice
+  invoiceId?: string; // Field to store Xero invoice ID
+  invoiceStatus?: 'draft' | 'submitted' | 'paid';
 };
