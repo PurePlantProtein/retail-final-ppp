@@ -15,7 +15,7 @@ export const getProducts = async (): Promise<Product[]> => {
     throw new Error(error.message);
   }
 
-  return data || [];
+  return (data || []).map(mapProductForClient);
 };
 
 // Function to get products by category
@@ -31,7 +31,7 @@ export const getProductsByCategory = async (category: string): Promise<Product[]
     throw new Error(error.message);
   }
 
-  return data || [];
+  return (data || []).map(mapProductForClient);
 };
 
 // Function to get a product by ID
@@ -47,22 +47,14 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     throw new Error(error.message);
   }
 
-  return data || null;
+  return data ? mapProductForClient(data as any) : null;
 };
 
 // Function to add a new product
 export const addProduct = async (productData: any): Promise<Product> => {
-  // Transform camelCase to snake_case for DB compatibility
-  const transformedData = {
-    ...productData,
-    min_quantity: productData.minQuantity || productData.min_quantity,
-    bag_size: productData.bagSize || productData.bag_size,
-    number_of_servings: productData.numberOfServings || productData.number_of_servings,
-    serving_size: productData.servingSize || productData.serving_size,
-    amino_acid_profile: productData.aminoAcidProfile || productData.amino_acid_profile,
-    nutritional_info: productData.nutritionalInfo || productData.nutritional_info
-  };
-
+  // Transform data for storage
+  const transformedData = mapProductForStorage(productData);
+  
   const { data, error } = await supabase
     .from('products')
     .insert([transformedData])
@@ -74,21 +66,13 @@ export const addProduct = async (productData: any): Promise<Product> => {
     throw new Error(error.message);
   }
 
-  return data;
+  return mapProductForClient(data as any);
 };
 
 // Function to update an existing product
 export const updateProduct = async (id: string, productData: any): Promise<Product | null> => {
-  // Transform camelCase to snake_case for DB compatibility
-  const transformedData = {
-    ...productData,
-    min_quantity: productData.minQuantity || productData.min_quantity,
-    bag_size: productData.bagSize || productData.bag_size,
-    number_of_servings: productData.numberOfServings || productData.number_of_servings,
-    serving_size: productData.servingSize || productData.serving_size,
-    amino_acid_profile: productData.aminoAcidProfile || productData.amino_acid_profile,
-    nutritional_info: productData.nutritionalInfo || productData.nutritional_info
-  };
+  // Transform data for storage
+  const transformedData = mapProductForStorage(productData);
   
   const { data, error } = await supabase
     .from('products')
@@ -102,7 +86,7 @@ export const updateProduct = async (id: string, productData: any): Promise<Produ
     throw new Error(error.message);
   }
 
-  return data || null;
+  return data ? mapProductForClient(data as any) : null;
 };
 
 // Function to delete a product

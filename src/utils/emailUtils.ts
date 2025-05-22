@@ -49,7 +49,7 @@ export const createSampleOrder = (): Order => {
     createdAt: new Date().toISOString(),
     paymentMethod: 'bank-transfer',
     invoiceStatus: 'draft',
-    invoiceNumber: '2025-0001',
+    invoiceUrl: '2025-0001', // Store invoice number in invoiceUrl for compatibility
     shippingAddress: {
       name: 'John Smith',
       street: '123 Main St',

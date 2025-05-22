@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Mail, CheckCircle2 } from 'lucide-react';
 import { sendOrderConfirmationEmail } from '@/services/emailService';
+import { mapProductForClient } from '@/utils/productUtils';
 
 const EmailSettings = () => {
   const { emailSettings, updateEmailSettings } = useCart();
@@ -43,21 +44,30 @@ const EmailSettings = () => {
         id: "ord_123456",
         userId: "user_123",
         userName: "Test User",
-        email: "test@example.com", // Add the missing email property
+        email: "test@example.com", 
         total: 120.00,
-        status: "pending" as const, // Using const assertion for the OrderStatus type
+        status: "pending" as const,
         items: [
           {
-            product: {
+            product: mapProductForClient({
               id: "prod_1",
               name: "Pure Plant Protein",
               description: "Premium plant-based protein powder",
               price: 60.00,
-              minQuantity: 1,
+              min_quantity: 1,
               stock: 100,
               category: "Protein",
-              image: "https://example.com/image.jpg"
-            },
+              image: "https://example.com/image.jpg",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              weight: null,
+              bag_size: null,
+              number_of_servings: null,
+              serving_size: null,
+              ingredients: null,
+              amino_acid_profile: null,
+              nutritional_info: null
+            }),
             quantity: 2
           }
         ],

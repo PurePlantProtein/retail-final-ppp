@@ -1,5 +1,5 @@
 
-import { Order, OrderItem } from '@/types/product';
+import { Order, OrderItem, ShippingOption } from '@/types/product';
 import { mapProductForClient } from './productUtils';
 
 /**
@@ -11,7 +11,7 @@ export const normalizeOrder = (order: Partial<Order>): Order => {
     id: order.id || '',
     userId: order.userId || '',
     userName: order.userName || '',
-    email: order.email,
+    email: order.email || '',
     items: (order.items || []).map((item: OrderItem) => ({
       ...item,
       product: mapProductForClient(item.product)
@@ -21,11 +21,18 @@ export const normalizeOrder = (order: Partial<Order>): Order => {
     createdAt: order.createdAt || new Date().toISOString(),
     paymentMethod: order.paymentMethod || '',
     invoiceStatus: order.invoiceStatus,
-    invoiceNumber: order.invoiceNumber,
+    invoiceUrl: order.invoiceUrl,
     shippingAddress: order.shippingAddress,
     notes: order.notes,
-    invoiceUrl: order.invoiceUrl,
-    shippingOption: order.shippingOption,
+    // Handle shippingOption specially since we've broken it up into separate fields
+    shippingOption: order.shippingOption || (order.shippingOptionId ? {
+      id: order.shippingOptionId as string,
+      name: order.shippingOptionName as string,
+      price: order.shippingOptionPrice as number,
+      carrier: order.shippingCarrier as string,
+      description: '',
+      estimatedDeliveryDays: 0
+    } as ShippingOption : undefined),
     updatedAt: order.updatedAt || order.createdAt || new Date().toISOString(),
   };
 

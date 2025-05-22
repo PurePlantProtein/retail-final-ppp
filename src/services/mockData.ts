@@ -1,4 +1,4 @@
-import { Product, Order, OrderStatus } from '@/types/product';
+import { Product, Order, OrderStatus, AminoAcid, NutritionalValue } from '@/types/product';
 
 // Mock data for products
 let productsList: Product[] = [
@@ -18,17 +18,16 @@ let productsList: Product[] = [
     number_of_servings: 33,
     serving_size: '30g',
     ingredients: 'Whey Protein Isolate, Natural Flavors, Sucralose',
-    nutritional_info: {
-      calories: 120,
-      protein: 25,
-      carbs: 3,
-      fat: 1
-    },
-    amino_acid_profile: {
-      leucine: 2.5,
-      isoleucine: 1.5,
-      valine: 1.5
-    }
+    nutritional_info: [
+      { name: "Protein", perServing: "25g", per100g: "83g" },
+      { name: "Carbs", perServing: "3g", per100g: "10g" },
+      { name: "Fat", perServing: "1g", per100g: "3g" }
+    ] as NutritionalValue[],
+    amino_acid_profile: [
+      { name: "Leucine", amount: "2.5g" },
+      { name: "Isoleucine", amount: "1.5g" },
+      { name: "Valine", amount: "1.5g" }
+    ] as AminoAcid[]
   },
   {
     id: '2',
@@ -46,11 +45,11 @@ let productsList: Product[] = [
     number_of_servings: 166,
     serving_size: '3g',
     ingredients: 'Creatine Monohydrate',
-    nutritional_info: {
-      calories: 0,
-      creatine: 3
-    },
-    amino_acid_profile: {}
+    nutritional_info: [
+      { name: "Creatine", perServing: "3g", per100g: "100g" },
+      { name: "Calories", perServing: "0", per100g: "0" }
+    ] as NutritionalValue[],
+    amino_acid_profile: [] as AminoAcid[]
   },
   {
     id: '3',
@@ -339,7 +338,8 @@ let ordersList: Order[] = [
       phone: '555-123-4567'
     },
     notes: 'Please deliver between 9am and 5pm.',
-    invoiceUrl: 'https://example.com/invoice/101.pdf'
+    invoiceUrl: 'https://example.com/invoice/101.pdf',
+    updatedAt: '2024-07-01T10:00:00.000Z'
   },
   {
     id: '102',

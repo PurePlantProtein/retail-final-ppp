@@ -110,19 +110,24 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     const orderId = bankDetails.reference;
     
     // Create the order object and normalize it to ensure all properties are correct
-    const orderData: Partial<Order> = {
+    const orderData = {
       id: orderId,
       userId: userId || 'guest',
       userName: userEmail || 'guest',
       email: userEmail || 'guest@example.com', // Add a default email for guest users
       items: items.slice(), // Create a copy of the items array
       total: subtotal + shippingCost,
-      status: 'pending',
+      status: 'pending' as const,
       createdAt: new Date().toISOString(),
       paymentMethod: 'bank-transfer',
-      shippingOption: selectedOption, // This will be properly handled by normalizeOrder
       shippingAddress: {...shippingAddress}, // Create a copy
-      invoiceStatus: 'draft'
+      invoiceStatus: 'draft',
+      // Store selectedOption's properties directly instead of the object reference
+      // to avoid type issues when serializing/deserializing
+      shippingOptionId: selectedOption?.id,
+      shippingOptionName: selectedOption?.name,
+      shippingOptionPrice: selectedOption?.price,
+      shippingCarrier: selectedOption?.carrier,
     };
     
     // Normalize the order to ensure all fields are correct
