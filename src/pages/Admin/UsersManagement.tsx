@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -425,18 +426,23 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       
       // Create the user account - without automatically logging in
       // We'll use a different approach than direct signup to avoid affecting the current session
-      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
-        email: values.email,
-        password: values.password,
-        email_confirm: true, // Auto-confirm the email
-        user_metadata: {
-          business_name: values.businessName,
-          business_type: values.businessType,
-          role: values.role
-        }
-      });
+      let createdUser = null;
       
-      if (userError) {
+      try {
+        const { data, error } = await supabase.auth.admin.createUser({
+          email: values.email,
+          password: values.password,
+          email_confirm: true, // Auto-confirm the email
+          user_metadata: {
+            business_name: values.businessName,
+            business_type: values.businessType,
+            role: values.role
+          }
+        });
+        
+        if (error) throw error;
+        createdUser = data;
+      } catch (userError) {
         // If admin API fails (common in development), fall back to regular signup
         // but make sure we don't affect the current session
         console.log('Admin API failed, falling back to manual user creation');
@@ -470,6 +476,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
           }
           
           tempAuth = signupData;
+          createdUser = signupData;
           
           // Ensure profile record exists
           const { error: profileError } = await supabase
@@ -513,29 +520,24 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
               });
             }
           }
-          
-          // Use the tempAuth data if it exists and admin API failed
-          if (tempAuth && tempAuth.user) {
-            userData = tempAuth;
-          }
         }
-      } else {
-        // If admin API was successful, ensure profile exists
-        if (userData && userData.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert([
-              {
-                id: userData.user.id,
-                business_name: values.businessName,
-                business_type: values.businessType
-              }
-            ]);
-          
-          if (profileError) {
-            console.error('Error creating profile:', profileError);
-            // Continue anyway since the user was created
-          }
+      }
+      
+      // If we have a created user but they used the admin API, ensure profile exists
+      if (createdUser?.user && !createdUser.user.user_metadata?.from_fallback) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert([
+            {
+              id: createdUser.user.id,
+              business_name: values.businessName,
+              business_type: values.businessType
+            }
+          ]);
+        
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          // Continue anyway since the user was created
         }
       }
       
