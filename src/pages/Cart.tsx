@@ -28,6 +28,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion';
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/services/emailService';
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, clearCart, subtotal, emailSettings } = useCart();
@@ -148,23 +149,22 @@ const Cart = () => {
   };
 
   // Helper function to send order confirmation emails
-  const sendOrderConfirmationEmails = (order: Order) => {
-    // In a real app, this would be an API call to a backend service
-    console.log('Sending order confirmation emails:');
-    
+  const sendOrderConfirmationEmails = async (order: Order) => {
     if (emailSettings.notifyCustomer && user?.email) {
-      console.log(`- Customer email sent to: ${user.email}`);
-      console.log(`  Subject: Your Order Confirmation #${order.id}`);
-      console.log(`  Content: Thank you for your order! Your order #${order.id} has been received.`);
+      try {
+        await sendOrderConfirmationEmail(order, user.email);
+      } catch (error) {
+        console.error("Error sending customer email:", error);
+      }
     }
     
     if (emailSettings.notifyAdmin) {
-      console.log(`- Admin notification sent to: ${emailSettings.adminEmail}`);
-      console.log(`  Subject: New Order Received #${order.id}`);
-      console.log(`  Content: A new order #${order.id} has been placed by ${user?.email || 'a customer'}.`);
+      try {
+        await sendAdminOrderNotification(order, emailSettings.adminEmail);
+      } catch (error) {
+        console.error("Error sending admin email:", error);
+      }
     }
-
-    // In a real app with Supabase integration, this would call a backend API endpoint
   };
 
   // Create and save order function

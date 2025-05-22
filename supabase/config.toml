@@ -1,1 +1,37 @@
+
 project_id = "lswldgmfmeeepdivhznt"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[db]
+port = 54322
+shadow_port = 54320
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+port = 54325
+
+[storage]
+enabled = true
+port = 54328
+
+[analytics]
+enabled = false
+port = 54327
+
+[realtime]
+enabled = true
+
+[functions.send-order-email]
+verify_jwt = true
