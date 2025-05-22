@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -129,7 +128,8 @@ const UsersManagement = () => {
         
         return {
           id: profile.id,
-          email: profile.id, // Use ID as email if we don't have the actual email
+          // Use stored email if available, otherwise fall back to id
+          email: profile.email || profile.id,
           created_at: profile.created_at,
           business_name: profile.business_name || 'Unknown',
           business_type: profile.business_type || 'Not specified',
@@ -459,20 +459,21 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         console.error('Error inviting user:', error);
         
         // Fall back to creating a profile directly
-        // IMPORTANT FIX: Use a valid UUID as the ID instead of the email address
-        const uuid = crypto.randomUUID(); // Generate a valid UUID
+        // Use a valid UUID as the ID
+        const uuid = crypto.randomUUID();
         
-        const { data: profileData, error: profileError } = await supabase
+        const { error: profileError } = await supabase
           .from('profiles')
           .insert({
-            id: uuid,  // Use the generated UUID instead of email
-            email: values.email, // Store email in a separate column
+            id: uuid,
             business_name: values.businessName,
-            business_type: values.businessType
-          })
-          .select();
+            business_type: values.businessType,
+            // Don't try to insert email field if it doesn't exist in the table
+            // We'll handle this in the UI by using the ID as a fallback
+          });
         
         if (profileError) {
+          console.error('Error creating profile:', profileError);
           throw profileError;
         }
         
