@@ -89,26 +89,53 @@ const UsersManagement = () => {
     try {
       setIsLoading(true);
       
-      // Fetch users from auth.users through the admin API
-      const { data: authUsers, error: authError } = await supabase
+      // First, fetch auth users
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.error('Error fetching auth users:', authError);
+        throw authError;
+      }
+      
+      if (!authData || !authData.users) {
+        throw new Error('No user data returned from auth');
+      }
+      
+      // Then, fetch profiles to get additional user information
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
-
-      if (authError) throw authError;
-
-      if (authUsers) {
-        // Combine with user profiles if needed
-        const enrichedUsers = authUsers.map(profile => ({
-          id: profile.id,
-          email: '', // Email is not directly accessible in profiles
-          created_at: profile.created_at,
-          business_name: profile.business_name || 'Unknown',
-          business_type: profile.business_type || 'Not specified',
-          status: 'Active', // This would need to come from auth.users
-          role: profile.id === user?.id ? 'admin' : 'retailer' // For demo purposes
-        }));
-        setUsers(enrichedUsers);
+      
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
       }
+      
+      // Map the profiles by user ID for easy lookup
+      const profilesMap = (profilesData || []).reduce((map, profile) => {
+        map[profile.id] = profile;
+        return map;
+      }, {});
+      
+      // Combine auth users with their profile data
+      const combinedUsers = authData.users.map(authUser => {
+        const profile = profilesMap[authUser.id] || {};
+        
+        // Determine role (hardcoded for now)
+        const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(authUser.email);
+        
+        return {
+          id: authUser.id,
+          email: authUser.email || '',
+          created_at: authUser.created_at,
+          business_name: profile.business_name || authUser.user_metadata?.business_name || 'Unknown',
+          business_type: profile.business_type || authUser.user_metadata?.business_type || 'Not specified',
+          status: authUser.banned ? 'Suspended' : 'Active',
+          role: isUserAdmin ? 'admin' : 'retailer'
+        };
+      });
+      
+      setUsers(combinedUsers);
+      console.log('Fetched users:', combinedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -225,40 +252,35 @@ const UsersManagement = () => {
                   <TabsTrigger value="retailers">Retailers</TabsTrigger>
                   <TabsTrigger value="admins">Admins</TabsTrigger>
                 </TabsList>
-              
-                {/* Make sure TabsContent components are inside the Tabs component */}
-                <TabsContent value="all-users" className="mt-4">
+                <TabsContent value="all-users">
                   <UsersTable 
                     users={filteredUsers} 
                     updateUserRole={updateUserRole}
                     toggleUserStatus={toggleUserStatus}
                     currentUser={user}
+                    isLoading={isLoading}
                   />
                 </TabsContent>
-                <TabsContent value="retailers" className="mt-4">
+                <TabsContent value="retailers">
                   <UsersTable 
                     users={filteredUsers} 
                     updateUserRole={updateUserRole}
                     toggleUserStatus={toggleUserStatus}
                     currentUser={user}
+                    isLoading={isLoading}
                   />
                 </TabsContent>
-                <TabsContent value="admins" className="mt-4">
+                <TabsContent value="admins">
                   <UsersTable 
                     users={filteredUsers} 
                     updateUserRole={updateUserRole}
                     toggleUserStatus={toggleUserStatus}
                     currentUser={user}
+                    isLoading={isLoading}
                   />
                 </TabsContent>
               </Tabs>
             </div>
-
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            ) : null}
           </CardContent>
         </Card>
 
@@ -298,14 +320,24 @@ interface UsersTableProps {
   updateUserRole: (userId: string, newRole: string) => Promise<void>;
   toggleUserStatus: (userId: string, currentStatus: string) => Promise<void>;
   currentUser: any;
+  isLoading: boolean;
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({ 
   users, 
   updateUserRole, 
   toggleUserStatus, 
-  currentUser 
+  currentUser,
+  isLoading
 }) => {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
   if (users.length === 0) {
     return (
       <div className="text-center py-8">
@@ -321,6 +353,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
         <TableHeader>
           <TableRow>
             <TableHead>Business Name</TableHead>
+            <TableHead>Email</TableHead>
             <TableHead>Business Type</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
@@ -331,6 +364,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
           {users.map((user) => (
             <TableRow key={user.id}>
               <TableCell className="font-medium">{user.business_name}</TableCell>
+              <TableCell>{user.email}</TableCell>
               <TableCell>{user.business_type || 'Not specified'}</TableCell>
               <TableCell>
                 <Select
@@ -422,11 +456,40 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // In a real implementation, we would call the Supabase Admin API to create a user
-      // For demo purposes, we'll just simulate the response
+      // Create the user in Supabase Auth
+      const { data: userData, error: signUpError } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            business_name: values.businessName,
+            business_type: values.businessType,
+            role: values.role
+          }
+        }
+      });
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (signUpError) throw signUpError;
+      
+      if (!userData.user) {
+        throw new Error('Failed to create user');
+      }
+      
+      // Ensure profile is created
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert([
+          {
+            id: userData.user.id,
+            business_name: values.businessName,
+            business_type: values.businessType
+          }
+        ]);
+      
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        // Continue anyway since the user was created
+      }
       
       toast({
         title: "User created successfully",
