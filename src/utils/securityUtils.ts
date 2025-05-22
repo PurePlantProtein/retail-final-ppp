@@ -22,3 +22,12 @@ export const updateFavicon = (iconUrl: string | null): void => {
   // Save to localStorage for persistence
   localStorage.setItem('site_icon', iconUrl);
 };
+
+// Generate a secure reference for orders
+export const generateSecureOrderReference = (): string => {
+  // Generate a random string with specific prefix for orders
+  const prefix = 'ORD';
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `${prefix}-${timestamp}-${random}`;
+};

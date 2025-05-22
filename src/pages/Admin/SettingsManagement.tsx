@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -10,6 +9,7 @@ import ImageUploader from '@/components/ImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/components/ui/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { updateFavicon } from '@/utils/securityUtils';
 
 const SettingsManagement = () => {
   const [siteIcon, setSiteIcon] = useState<string>("");
@@ -37,15 +37,7 @@ const SettingsManagement = () => {
       title: "Site Logo Updated",
       description: "The site logo has been updated successfully.",
     });
-  };
-
-  // Function to update favicon dynamically
-  const updateFavicon = (url: string) => {
-    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
-    link.type = 'image/png';
-    link.rel = 'shortcut icon';
-    link.href = url;
-    document.getElementsByTagName('head')[0].appendChild(link);
+    // Don't update favicon here as this is for the logo
   };
 
   // Load saved values on component mount
