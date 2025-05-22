@@ -7,6 +7,7 @@ import { useShipping } from '@/contexts/ShippingContext';
 import { Order, ShippingOption, ShippingAddress } from '@/types/product';
 import { calculateShippingOptions } from '@/services/shippingService';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/services/emailService';
+import { normalizeOrder } from '@/utils/orderUtils';
 
 export const useCartCheckout = (userId?: string, userEmail?: string) => {
   const { items, subtotal, clearCart, emailSettings } = useCart();
@@ -108,29 +109,31 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     const shippingCost = selectedOption ? selectedOption.price : 0;
     const orderId = bankDetails.reference;
     
-    // Create the order object
-    const order: Order = {
+    // Create the order object and normalize it to ensure all properties are correct
+    const order: Partial<Order> = {
       id: orderId,
       userId: userId || 'guest',
       userName: userEmail || 'guest',
-      items: items.slice(), // Create a copy of the items array to prevent issues
+      items: items.slice(), // Create a copy of the items array
       total: subtotal + shippingCost,
       status: 'pending',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
       paymentMethod: 'bank-transfer',
       shippingOption: selectedOption,
-      shippingAddress: {...shippingAddress}, // Create a copy to prevent reference issues
+      shippingAddress: {...shippingAddress}, // Create a copy
       invoiceStatus: 'draft'
     };
     
-    console.log("Creating order:", order);
+    // Normalize the order to ensure all fields are correct
+    const normalizedOrder = normalizeOrder(order);
+    
+    console.log("Creating order:", normalizedOrder);
     
     // Get existing orders from localStorage or initialize empty array
     const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
     
     // Add new order
-    existingOrders.push(order);
+    existingOrders.push(normalizedOrder);
     
     // Store the orders in local storage
     localStorage.setItem('orders', JSON.stringify(existingOrders));
@@ -138,9 +141,9 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     console.log("Orders saved:", existingOrders);
 
     // Send email confirmation
-    sendOrderConfirmationEmails(order);
+    sendOrderConfirmationEmails(normalizedOrder);
     
-    return order;
+    return normalizedOrder;
   };
 
   const handleBankTransferCheckout = () => {

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,21 +17,34 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
-  const [quantity, setQuantity] = useState(product.minQuantity);
+  const [quantity, setQuantity] = useState(product.min_quantity);
+
+  // Set up property aliases for cleaner code
+  useEffect(() => {
+    if (product) {
+      // Add the camelCase aliases to make the code easier to work with
+      product.minQuantity = product.min_quantity;
+      product.bagSize = product.bag_size;
+      product.numberOfServings = product.number_of_servings;
+      product.servingSize = product.serving_size;
+      product.aminoAcidProfile = product.amino_acid_profile as any;
+      product.nutritionalInfo = product.nutritional_info as any;
+    }
+  }, [product]);
 
   const handleIncrementQuantity = () => {
     setQuantity(prev => prev + 1);
   };
 
   const handleDecrementQuantity = () => {
-    if (quantity > product.minQuantity) {
+    if (quantity > product.min_quantity) {
       setQuantity(prev => prev - 1);
     }
   };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value) && value >= product.minQuantity) {
+    if (!isNaN(value) && value >= product.min_quantity) {
       setQuantity(value);
     }
   };
@@ -62,7 +76,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {product.name}
           </CardTitle>
         </Link>
-        <p className="text-gray-500 text-sm">Min order: {product.minQuantity} units</p>
+        <p className="text-gray-500 text-sm">Min order: {product.min_quantity} units</p>
       </CardHeader>
       <CardContent className="pb-2 flex-grow">
         <p className="text-gray-600 text-sm line-clamp-2">{product.description}</p>
@@ -88,7 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 type="number"
                 value={quantity}
                 onChange={handleQuantityChange}
-                min={product.minQuantity}
+                min={product.min_quantity}
                 max={product.stock}
                 className="h-8 text-center"
               />
@@ -105,7 +119,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <Button 
               onClick={handleAddToCart} 
               className="w-full"
-              disabled={quantity < product.minQuantity || quantity > product.stock}
+              disabled={quantity < product.min_quantity || quantity > product.stock}
             >
               Add to Cart
             </Button>

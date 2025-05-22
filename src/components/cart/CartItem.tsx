@@ -58,7 +58,7 @@ const CartItem = ({ product, quantity, onRemove, onUpdateQuantity }: CartItemPro
                   size="icon" 
                   className="h-8 w-8"
                   onClick={() => onUpdateQuantity(product.id, quantity - 1)}
-                  disabled={quantity <= product.minQuantity}
+                  disabled={quantity <= product.min_quantity}
                 >
                   <Minus className="h-3 w-3" />
                 </Button>
