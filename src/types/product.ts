@@ -14,6 +14,19 @@ export type NutritionalValue = {
   per100g: string;
 };
 
+// Shipping carriers
+export type ShippingCarrier = 'australia-post' | 'transdirect' | 'other';
+
+// Shipping option type
+export type ShippingOption = {
+  id: string;
+  name: string;
+  carrier: ShippingCarrier;
+  price: number;
+  estimatedDeliveryDays: string;
+  description?: string;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -30,6 +43,13 @@ export type Product = {
   ingredients?: string;
   aminoAcidProfile?: AminoAcid[];
   nutritionalInfo?: NutritionalValue[];
+  // Shipping related fields
+  weight?: number; // in kg
+  dimensions?: {
+    length: number; // in cm
+    width: number;  // in cm
+    height: number; // in cm
+  };
 };
 
 export type Order = {
@@ -45,4 +65,12 @@ export type Order = {
   createdAt: string;
   updatedAt: string;
   paymentMethod: 'paypal' | 'bank-transfer';
+  shippingOption?: ShippingOption;
+  shippingAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
 };

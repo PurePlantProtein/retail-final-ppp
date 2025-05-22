@@ -1,3 +1,4 @@
+
 import { Product, Order } from '@/types/product';
 
 export const mockProducts: Product[] = [
@@ -9,7 +10,13 @@ export const mockProducts: Product[] = [
     minQuantity: 10,
     image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
     stock: 500,
-    category: 'clothing'
+    category: 'clothing',
+    weight: 0.2, // weight in kg
+    dimensions: {
+      length: 30,
+      width: 25,
+      height: 5
+    }
   },
   {
     id: '2',
@@ -19,7 +26,13 @@ export const mockProducts: Product[] = [
     minQuantity: 5,
     image: 'https://images.unsplash.com/photo-1589003077984-894e133dabab?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
     stock: 120,
-    category: 'electronics'
+    category: 'electronics',
+    weight: 0.8,
+    dimensions: {
+      length: 20,
+      width: 10,
+      height: 8
+    }
   },
   {
     id: '3',
@@ -29,7 +42,13 @@ export const mockProducts: Product[] = [
     minQuantity: 5,
     image: 'https://images.unsplash.com/photo-1559525839-d3d301140615?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
     stock: 200,
-    category: 'food'
+    category: 'food',
+    weight: 1.0,
+    dimensions: {
+      length: 15,
+      width: 10,
+      height: 20
+    }
   },
   {
     id: '4',
@@ -39,7 +58,13 @@ export const mockProducts: Product[] = [
     minQuantity: 2,
     image: 'https://images.unsplash.com/photo-1505843513577-22bb7d21e455?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
     stock: 50,
-    category: 'furniture'
+    category: 'furniture',
+    weight: 15.0,
+    dimensions: {
+      length: 60,
+      width: 60,
+      height: 120
+    }
   },
   {
     id: '5',
@@ -49,7 +74,13 @@ export const mockProducts: Product[] = [
     minQuantity: 3,
     image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
     stock: 75,
-    category: 'electronics'
+    category: 'electronics',
+    weight: 0.15,
+    dimensions: {
+      length: 5,
+      width: 4,
+      height: 2
+    }
   },
   {
     id: '6',
@@ -59,7 +90,13 @@ export const mockProducts: Product[] = [
     minQuantity: 4,
     image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
     stock: 100,
-    category: 'other'
+    category: 'other',
+    weight: 2.5,
+    dimensions: {
+      length: 40,
+      width: 30,
+      height: 20
+    }
   }
 ];
 
