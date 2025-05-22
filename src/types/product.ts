@@ -250,23 +250,20 @@ export const Constants = {
 export type Category = string;
 
 export interface AminoAcid {
-  name: string;
-  amount: string;
+  [key: string]: number;
 }
 
 export interface NutritionalValue {
-  name: string;
-  perServing: string;
-  per100g: string;
+  [key: string]: number;
 }
 
 export interface ShippingOption {
   id: string;
   name: string;
   price: number;
-  estimatedDays: string;
-  provider?: string;
-  description?: string;
+  description: string;
+  estimatedDeliveryDays: number;
+  carrier: string;
 }
 
 export interface Product {
@@ -318,17 +315,14 @@ export interface Order {
   id: string;
   userId: string;
   userName: string;
-  email?: string;
+  email: string;
   items: OrderItem[];
   total: number;
   status: OrderStatus;
   createdAt: string;
   paymentMethod: string;
-  invoiceStatus?: string;
-  invoiceNumber?: string;
   shippingAddress?: ShippingAddress;
   notes?: string;
   invoiceUrl?: string;
-  shippingOption?: ShippingOption;
-  updatedAt?: string;
+  invoiceStatus?: string;
 }

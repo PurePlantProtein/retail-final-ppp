@@ -338,7 +338,8 @@ let ordersList: Order[] = [
       country: 'USA',
       phone: '555-123-4567'
     },
-    notes: 'Please deliver between 9am and 5pm.'
+    notes: 'Please deliver between 9am and 5pm.',
+    invoiceUrl: 'https://example.com/invoice/101.pdf'
   },
   {
     id: '102',
@@ -362,7 +363,8 @@ let ordersList: Order[] = [
       country: 'USA',
       phone: '555-987-6543'
     },
-    notes: 'Leave package at the front door.'
+    notes: 'Leave package at the front door.',
+    invoiceUrl: 'https://example.com/invoice/102.pdf'
   },
   {
     id: '103',
@@ -443,6 +445,16 @@ export const getOrders = async (): Promise<Order[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve(ordersList);
+    }, 500);
+  });
+};
+
+// Add a new function to fetch orders by user ID
+export const getUserOrders = async (userId: string): Promise<Order[]> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const userOrders = ordersList.filter(order => order.userId === userId);
+      resolve(userOrders);
     }, 500);
   });
 };
