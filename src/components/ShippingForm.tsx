@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useShipping } from "@/contexts/ShippingContext";
+import { ShippingAddress } from "@/types/product";
 
 // Australian states
 const AUS_STATES = [
@@ -52,24 +54,40 @@ const shippingFormSchema = z.object({
 type ShippingFormValues = z.infer<typeof shippingFormSchema>;
 
 interface ShippingFormProps {
-  onSubmit: (values: ShippingFormValues) => void;
-  defaultValues?: Partial<ShippingFormValues>;
+  onSubmit: (values: ShippingAddress) => void;
+  defaultValues?: Partial<ShippingAddress>;
 }
 
 const ShippingForm: React.FC<ShippingFormProps> = ({
   onSubmit,
-  defaultValues = {
-    country: "Australia"
-  }
+  defaultValues
 }) => {
+  const { shippingAddress, setShippingAddress } = useShipping();
+  
   const form = useForm<ShippingFormValues>({
     resolver: zodResolver(shippingFormSchema),
-    defaultValues
+    defaultValues: defaultValues || {
+      country: "Australia",
+      ...(shippingAddress || {})
+    }
   });
+  
+  // Update form with saved shipping address
+  useEffect(() => {
+    if (shippingAddress && !defaultValues) {
+      form.reset(shippingAddress);
+    }
+  }, [shippingAddress, form, defaultValues]);
+
+  const handleSubmit = (data: ShippingFormValues) => {
+    // Save address to context when form is submitted
+    setShippingAddress(data);
+    onSubmit(data);
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"

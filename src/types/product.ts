@@ -17,6 +17,17 @@ export type NutritionalValue = {
 // Shipping carriers
 export type ShippingCarrier = 'australia-post' | 'transdirect' | 'other';
 
+// Shipping address type
+export type ShippingAddress = {
+  name: string;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+};
+
 // Shipping option type
 export type ShippingOption = {
   id: string;

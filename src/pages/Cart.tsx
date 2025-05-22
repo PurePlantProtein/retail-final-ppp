@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -13,13 +12,14 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useShipping } from '@/contexts/ShippingContext';
 import Layout from '@/components/Layout';
 import { Trash2, Plus, Minus, CreditCard, Truck } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { loadPayPalScript, initPayPalButton } from '@/services/paypalService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateShippingOptions } from '@/services/shippingService';
-import { ShippingOption } from '@/types/product';
+import { ShippingOption, ShippingAddress } from '@/types/product';
 import ShippingOptions from '@/components/ShippingOptions';
 import ShippingForm from '@/components/ShippingForm';
 import { 
@@ -32,6 +32,7 @@ import {
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, clearCart, subtotal } = useCart();
   const { user } = useAuth();
+  const { shippingAddress: savedShippingAddress, setShippingAddress, isLoading: isLoadingShippingAddress } = useShipping();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [paymentMethod, setPaymentMethod] = useState<'bank-transfer' | 'paypal'>('paypal');
@@ -47,17 +48,16 @@ const Cart = () => {
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [selectedShippingOption, setSelectedShippingOption] = useState<string | undefined>();
   const [isLoadingShippingOptions, setIsLoadingShippingOptions] = useState(false);
-  const [shippingAddress, setShippingAddress] = useState<{
-    name: string;
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-    phone: string;
-  } | null>(null);
+  const [shippingAddress, setShippingAddressState] = useState<ShippingAddress | null>(null);
   const [showShippingForm, setShowShippingForm] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'payment'>('cart');
+
+  // Use saved shipping address if available
+  useEffect(() => {
+    if (!isLoadingShippingAddress && savedShippingAddress && !shippingAddress) {
+      setShippingAddressState(savedShippingAddress);
+    }
+  }, [savedShippingAddress, isLoadingShippingAddress, shippingAddress]);
 
   // Calculate total weight for shipping
   const totalWeight = items.reduce((weight, item) => {
@@ -133,10 +133,10 @@ const Cart = () => {
     }
   }, [paymentMethod, subtotal, user, checkoutStep, shippingOptions, selectedShippingOption]);
 
-  const handleShippingFormSubmit = (data: any) => {
-    setShippingAddress({
-      ...data,
-    });
+  const handleShippingFormSubmit = (data: ShippingAddress) => {
+    setShippingAddressState(data);
+    // Save to context (will also save to localStorage)
+    setShippingAddress(data);
     setShowShippingForm(false);
     setCheckoutStep('payment');
     
