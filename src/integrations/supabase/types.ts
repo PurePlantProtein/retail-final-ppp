@@ -42,6 +42,7 @@ export type Database = {
           serving_size: string | null
           stock: number
           updated_at: string
+          weight: number | null
         }
         Insert: {
           amino_acid_profile?: Json | null
@@ -60,6 +61,7 @@ export type Database = {
           serving_size?: string | null
           stock?: number
           updated_at?: string
+          weight?: number | null
         }
         Update: {
           amino_acid_profile?: Json | null
@@ -78,6 +80,7 @@ export type Database = {
           serving_size?: string | null
           stock?: number
           updated_at?: string
+          weight?: number | null
         }
         Relationships: []
       }
