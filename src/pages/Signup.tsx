@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -459,7 +458,7 @@ const Signup = () => {
           <div className="h-full overflow-y-auto p-10 relative z-10">
             <div className="max-w-lg mx-auto">
               <img 
-                src="https://ppprotein.com.au/cdn/shop/files/PPP-Wholesale_1400x.png?v=1697533847" 
+                src="/lovable-uploads/ca77458f-0931-4215-a7c7-151ddc81bd55.png" 
                 alt="PP Protein Products" 
                 className="w-full h-64 object-cover rounded-xl mb-8" 
               />

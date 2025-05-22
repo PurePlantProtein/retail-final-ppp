@@ -420,57 +420,123 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Since Supabase Admin API requires service_role key which we don't have in browser,
-      // we'll use the regular signup flow and then update profiles directly
-      
-      // Store current auth state so we can restore it later
+      // Get current authentication state before making changes
       const currentSession = await supabase.auth.getSession();
-      const sessionExists = !!currentSession.data.session;
       
-      // Clean up any existing auth state to prevent conflicts
-      try {
-        // Sign out to ensure we're not affected by auto sign-in
-        await supabase.auth.signOut();
-      } catch (signOutErr) {
-        console.error('Error signing out before user creation:', signOutErr);
-        // Continue anyway as this is just a precautionary step
-      }
-      
-      // Create the user with standard signup
-      const { data: signupData, error: signupError } = await supabase.auth.signUp({
+      // Create the user account - without automatically logging in
+      // We'll use a different approach than direct signup to avoid affecting the current session
+      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
         email: values.email,
         password: values.password,
-        options: {
-          data: {
-            business_name: values.businessName,
-            business_type: values.businessType,
-            role: values.role
-          }
+        email_confirm: true, // Auto-confirm the email
+        user_metadata: {
+          business_name: values.businessName,
+          business_type: values.businessType,
+          role: values.role
         }
       });
       
-      if (signupError) throw signupError;
-      
-      if (!signupData.user) {
-        throw new Error('Failed to create user');
-      }
-      
-      console.log('Created user:', signupData.user);
-      
-      // Ensure profile record exists
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert([
-          {
-            id: signupData.user.id,
-            business_name: values.businessName,
-            business_type: values.businessType
+      if (userError) {
+        // If admin API fails (common in development), fall back to regular signup
+        // but make sure we don't affect the current session
+        console.log('Admin API failed, falling back to manual user creation');
+        
+        // Store current auth state to restore later
+        const sessionExists = !!currentSession.data.session;
+        let tempAuth = null;
+        
+        try {
+          // Sign out current user temporarily without triggering a full page reload
+          await supabase.auth.signOut({ scope: 'local' });
+          
+          // Create the user with standard signup
+          const { data: signupData, error: signupError } = await supabase.auth.signUp({
+            email: values.email,
+            password: values.password,
+            options: {
+              data: {
+                business_name: values.businessName,
+                business_type: values.businessType,
+                role: values.role
+              },
+              emailRedirectTo: window.location.origin + '/login'
+            }
+          });
+          
+          if (signupError) throw signupError;
+          
+          if (!signupData.user) {
+            throw new Error('Failed to create user');
           }
-        ]);
-      
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-        // Continue anyway since the user was created
+          
+          tempAuth = signupData;
+          
+          // Ensure profile record exists
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert([
+              {
+                id: signupData.user.id,
+                business_name: values.businessName,
+                business_type: values.businessType
+              }
+            ]);
+          
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+            // Continue anyway since the user was created
+          }
+          
+          // Sign out the new user
+          await supabase.auth.signOut({ scope: 'local' });
+          
+        } catch (fallbackError) {
+          console.error('Error in fallback user creation:', fallbackError);
+          throw fallbackError;
+        } finally {
+          // If there was a session before, restore it
+          if (sessionExists && currentSession.data.session?.refresh_token) {
+            try {
+              // This will restore the admin's session
+              await supabase.auth.setSession({
+                access_token: currentSession.data.session.access_token,
+                refresh_token: currentSession.data.session.refresh_token
+              });
+            } catch (restoreErr) {
+              console.error('Error restoring previous session:', restoreErr);
+              // Don't throw here - we'll still consider the user creation successful
+              // but will need to reload for a clean state
+              toast({
+                title: "Session restoration failed",
+                description: "Your session has been reset. Please refresh the page.",
+                variant: "destructive",
+              });
+            }
+          }
+          
+          // Use the tempAuth data if it exists and admin API failed
+          if (tempAuth && tempAuth.user) {
+            userData = tempAuth;
+          }
+        }
+      } else {
+        // If admin API was successful, ensure profile exists
+        if (userData && userData.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert([
+              {
+                id: userData.user.id,
+                business_name: values.businessName,
+                business_type: values.businessType
+              }
+            ]);
+          
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+            // Continue anyway since the user was created
+          }
+        }
       }
       
       toast({
@@ -480,24 +546,6 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 
       // Reset form
       form.reset();
-      
-      // Sign out the new user
-      await supabase.auth.signOut();
-      
-      // If there was a session before, try to restore it
-      if (sessionExists && currentSession.data.session?.refresh_token) {
-        try {
-          await supabase.auth.setSession({
-            access_token: currentSession.data.session.access_token,
-            refresh_token: currentSession.data.session.refresh_token
-          });
-        } catch (restoreErr) {
-          console.error('Error restoring previous session:', restoreErr);
-          // Force reload to get a clean state
-          window.location.reload();
-          return;
-        }
-      }
       
       // Close dialog and refresh users list
       onClose();
