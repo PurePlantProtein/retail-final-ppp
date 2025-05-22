@@ -16,6 +16,7 @@ const Admin = () => {
   useEffect(() => {
     if (!user) {
       navigate('/login');
+      return;
     } else if (!isAdmin) {
       toast({
         title: "Access Denied",
@@ -23,10 +24,11 @@ const Admin = () => {
         variant: "destructive",
       });
       navigate('/products');
+      return;
     }
   }, [user, isAdmin, navigate, toast]);
 
-  if (!isAdmin) return null;
+  if (!user || !isAdmin) return null;
 
   return (
     <Layout>

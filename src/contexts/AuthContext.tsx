@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,50 +55,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile data
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        // Don't throw here - we'll still set the user's role based on email
+      }
+      
+      // Determine role based on email (in a real app, this would come from the database)
+      const role = ADMIN_EMAILS.includes(user?.email || '') ? 'admin' : 'retailer';
       
       if (data) {
-        // Determine role based on email (in a real app, this would come from the database)
-        const role = ADMIN_EMAILS.includes(user?.email || '') ? 'admin' : 'retailer';
         setProfile({ ...data, role });
+      } else {
+        // Create a minimal profile if one doesn't exist
+        setProfile({ 
+          id: userId, 
+          business_name: user?.user_metadata?.business_name || 'Unknown Business',
+          role
+        });
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error in fetchProfile:', error);
     }
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          // Use setTimeout to prevent auth deadlocks
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
+    const setupAuth = async () => {
+      // Set up auth state listener FIRST
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          console.log('Auth state changed:', event, session?.user?.email);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            // Use setTimeout to prevent auth deadlocks
+            setTimeout(() => {
+              fetchProfile(session.user.id);
+            }, 0);
+          } else {
+            setProfile(null);
+          }
         }
-      }
-    );
+      );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
+      // THEN check for existing session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        }
+      } catch (err) {
+        console.error('Error getting session:', err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    };
+    
+    setupAuth();
   }, []);
 
   const login = async (email: string, password: string) => {

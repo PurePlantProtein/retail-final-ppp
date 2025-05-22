@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -89,7 +88,7 @@ const UsersManagement = () => {
     try {
       setIsLoading(true);
       
-      // Fetch profiles data first to get all user information
+      // First, get all profiles from profiles table as our primary data source
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -98,65 +97,26 @@ const UsersManagement = () => {
         console.error('Error fetching profiles:', profilesError);
         throw profilesError;
       }
-      
-      // Map the profiles by user ID for easy lookup
-      const profilesMap = (profilesData || []).reduce((map, profile) => {
-        map[profile.id] = profile;
-        return map;
-      }, {});
-      
-      // Attempt to fetch auth users using the client API - may have limited permissions
-      try {
-        const { data, error } = await supabase.auth.admin.listUsers();
+
+      // Convert profiles to users format
+      const users: User[] = profilesData.map(profile => {
+        // Determine role based on email - this is a temporary approach
+        // In a production system, you would store roles in a database table
+        const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.id);
         
-        if (error) {
-          console.error('Error fetching auth users:', error);
-          // If admin API fails, we'll still display users based on profiles
-        } else if (data && data.users) {
-          // Add auth users to the list if we have access to them
-          const combinedUsers = data.users.map(authUser => {
-            const profile = profilesMap[authUser.id] || {};
-            
-            // Determine role (hardcoded for now)
-            const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(authUser.email);
-            
-            return {
-              id: authUser.id,
-              email: authUser.email || '',
-              created_at: authUser.created_at,
-              business_name: profile.business_name || authUser.user_metadata?.business_name || 'Unknown',
-              business_type: profile.business_type || authUser.user_metadata?.business_type || 'Not specified',
-              status: authUser.banned ? 'Suspended' : 'Active',
-              role: isUserAdmin ? 'admin' : 'retailer'
-            };
-          });
-          
-          setUsers(combinedUsers);
-          console.log('Fetched users from admin API:', combinedUsers);
-          setIsLoading(false);
-          return;
-        }
-      } catch (adminApiError) {
-        console.error('Admin API error:', adminApiError);
-        // Continue with using profiles as fallback
-      }
-      
-      // Fallback: Use profiles data to represent users
-      // This is necessary because most client-side apps won't have admin API access
-      const profileUsers = profilesData.map(profile => {
         return {
           id: profile.id,
-          email: 'profile-' + profile.id.substring(0, 8),  // We don't have email from profiles only
+          email: profile.id, // Use ID as email if we don't have the actual email
           created_at: profile.created_at,
           business_name: profile.business_name || 'Unknown',
           business_type: profile.business_type || 'Not specified',
-          status: 'Active', // We don't have status from profiles only
-          role: ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.id) ? 'admin' : 'retailer'
+          status: 'Active',
+          role: isUserAdmin ? 'admin' : 'retailer'
         };
       });
       
-      setUsers(profileUsers);
-      console.log('Fetched users from profiles (fallback):', profileUsers);
+      console.log('Fetched users from profiles:', users);
+      setUsers(users);
       
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -443,6 +403,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user: currentUser } = useAuth();
 
   const form = useForm<z.infer<typeof userCreateSchema>>({
     resolver: zodResolver(userCreateSchema),
@@ -459,33 +420,49 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Create the user in Supabase Auth using the admin API
-      // Important: Use admin.createUser instead of auth.signUp to prevent auto-login
-      const { data: userData, error: createUserError } = await supabase.auth.admin.createUser({
+      // Since Supabase Admin API requires service_role key which we don't have in browser,
+      // we'll use the regular signup flow and then update profiles directly
+      
+      // Store current auth state so we can restore it later
+      const currentSession = await supabase.auth.getSession();
+      const sessionExists = !!currentSession.data.session;
+      
+      // Clean up any existing auth state to prevent conflicts
+      try {
+        // Sign out to ensure we're not affected by auto sign-in
+        await supabase.auth.signOut();
+      } catch (signOutErr) {
+        console.error('Error signing out before user creation:', signOutErr);
+        // Continue anyway as this is just a precautionary step
+      }
+      
+      // Create the user with standard signup
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
-        email_confirm: true, // Auto-confirm email
-        user_metadata: {
-          business_name: values.businessName,
-          business_type: values.businessType,
-          role: values.role
+        options: {
+          data: {
+            business_name: values.businessName,
+            business_type: values.businessType,
+            role: values.role
+          }
         }
       });
       
-      if (createUserError) throw createUserError;
+      if (signupError) throw signupError;
       
-      if (!userData.user) {
+      if (!signupData.user) {
         throw new Error('Failed to create user');
       }
       
-      console.log('Created user:', userData.user);
+      console.log('Created user:', signupData.user);
       
-      // Ensure profile is created
+      // Ensure profile record exists
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert([
           {
-            id: userData.user.id,
+            id: signupData.user.id,
             business_name: values.businessName,
             business_type: values.businessType
           }
@@ -504,77 +481,34 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       // Reset form
       form.reset();
       
+      // Sign out the new user
+      await supabase.auth.signOut();
+      
+      // If there was a session before, try to restore it
+      if (sessionExists && currentSession.data.session?.refresh_token) {
+        try {
+          await supabase.auth.setSession({
+            access_token: currentSession.data.session.access_token,
+            refresh_token: currentSession.data.session.refresh_token
+          });
+        } catch (restoreErr) {
+          console.error('Error restoring previous session:', restoreErr);
+          // Force reload to get a clean state
+          window.location.reload();
+          return;
+        }
+      }
+      
       // Close dialog and refresh users list
       onClose();
       onUserCreated();
     } catch (error: any) {
       console.error('Error creating user:', error);
-      
-      // Handle permission errors - might not have admin access
-      if (error.message && error.message.includes('permission')) {
-        // Try regular signup as fallback
-        try {
-          const { data: signupData, error: signUpError } = await supabase.auth.signUp({
-            email: values.email,
-            password: values.password,
-            options: {
-              data: {
-                business_name: values.businessName,
-                business_type: values.businessType,
-                role: values.role
-              }
-            }
-          });
-          
-          if (signUpError) throw signUpError;
-          
-          if (!signupData.user) {
-            throw new Error('Failed to create user using signup');
-          }
-          
-          // Manually create profile entry
-          await supabase
-            .from('profiles')
-            .upsert([
-              {
-                id: signupData.user.id,
-                business_name: values.businessName,
-                business_type: values.businessType
-              }
-            ]);
-            
-          toast({
-            title: "User created successfully",
-            description: "Note: Regular signup used due to permissions. You may be logged in as the new user. Please log out and back in to your admin account.",
-          });
-          
-          // Reset form
-          form.reset();
-          
-          // Close dialog
-          onClose();
-          
-          // Set timeout before refreshing to allow profile creation to complete
-          setTimeout(() => {
-            onUserCreated();
-          }, 1000);
-          
-          return;
-        } catch (signupError: any) {
-          console.error('Fallback signup error:', signupError);
-          toast({
-            title: "Failed to create user",
-            description: signupError.message || "An unexpected error occurred.",
-            variant: "destructive",
-          });
-        }
-      } else {
-        toast({
-          title: "Failed to create user",
-          description: error.message || "An unexpected error occurred.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Failed to create user",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
