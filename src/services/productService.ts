@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Category, AminoAcid, NutritionalValue } from '@/types/product';
 
@@ -13,7 +12,9 @@ const transformProduct = (item: any): Product => {
     stock: item.stock,
     image: item.image || 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png',
     category: (item.category as Category) || 'other',
-    // New fields
+    // Ensure weight is properly transformed - convert to number if present
+    weight: item.weight ? Number(item.weight) : undefined,
+    // Other fields
     servingSize: item.serving_size,
     numberOfServings: item.number_of_servings,
     bagSize: item.bag_size,
@@ -106,6 +107,8 @@ export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<v
       stock: product.stock,
       image: product.image,
       category: product.category,
+      // Ensure weight is included when importing
+      weight: product.weight,
       serving_size: product.servingSize,
       number_of_servings: product.numberOfServings,
       bag_size: product.bagSize,
@@ -132,7 +135,9 @@ export const createProduct = async (product: Omit<Product, 'id'>): Promise<Produ
     stock: product.stock,
     image: product.image,
     category: product.category,
-    // New fields
+    // Make sure weight is properly included in the data sent to the database
+    weight: product.weight,
+    // Other fields
     serving_size: product.servingSize,
     number_of_servings: product.numberOfServings,
     bag_size: product.bagSize,
@@ -169,7 +174,10 @@ export const updateProduct = async (id: string, product: Partial<Omit<Product, '
   if (product.image !== undefined) updateData.image = product.image;
   if (product.category !== undefined) updateData.category = product.category;
   
-  // New fields
+  // Ensure weight is properly handled when updating - even if it's 0
+  if (product.weight !== undefined) updateData.weight = product.weight;
+  
+  // Other fields
   if (product.servingSize !== undefined) updateData.serving_size = product.servingSize;
   if (product.numberOfServings !== undefined) updateData.number_of_servings = product.numberOfServings;
   if (product.bagSize !== undefined) updateData.bag_size = product.bagSize;

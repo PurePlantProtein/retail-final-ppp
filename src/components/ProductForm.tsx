@@ -46,8 +46,8 @@ const productSchema = z.object({
   stock: z.coerce.number().int().nonnegative({ message: "Stock must be a non-negative integer" }),
   image: z.string().url({ message: "Image must be a valid URL" }),
   category: z.string().min(1, { message: "Please select a category" }),
-  // New fields
-  weight: z.coerce.number().nonnegative().optional(),
+  // Ensure weight is properly validated as a number
+  weight: z.coerce.number().nonnegative({ message: "Weight must be a non-negative number" }).optional(),
   servingSize: z.string().optional(),
   numberOfServings: z.coerce.number().int().nonnegative().optional(),
   bagSize: z.string().optional(),
@@ -509,7 +509,14 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
                           type="number" 
                           step="0.01" 
                           placeholder="e.g., 1.5" 
-                          {...field} 
+                          {...field}
+                          // This ensures empty string is converted to undefined instead of 0
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value === '' ? undefined : Number(value));
+                          }}
+                          // Display empty string instead of 0 when no value
+                          value={field.value === undefined || field.value === 0 ? '' : field.value}
                         />
                       </FormControl>
                       <FormDescription>
