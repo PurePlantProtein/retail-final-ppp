@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Card, 
@@ -16,18 +16,16 @@ import { useShipping } from '@/contexts/ShippingContext';
 import Layout from '@/components/Layout';
 import { Trash2, Plus, Minus, CreditCard, Truck } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { loadPayPalScript, initPayPalButton } from '@/services/paypalService';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { calculateShippingOptions } from '@/services/shippingService';
-import { ShippingOption, ShippingAddress, Order, PaymentMethod } from '@/types/product';
-import ShippingOptions from '@/components/ShippingOptions';
-import ShippingForm from '@/components/ShippingForm';
 import { 
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion';
+import { calculateShippingOptions } from '@/services/shippingService';
+import { ShippingOption, ShippingAddress, Order, PaymentMethod } from '@/types/product';
+import ShippingOptions from '@/components/ShippingOptions';
+import ShippingForm from '@/components/ShippingForm';
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/services/emailService';
 
 const Cart = () => {
@@ -36,12 +34,10 @@ const Cart = () => {
   const { shippingAddress: savedShippingAddress, setShippingAddress, isLoading: isLoadingShippingAddress } = useShipping();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('paypal');
-  const paypalButtonRef = useRef<HTMLDivElement>(null);
-  const [isPaypalLoading, setIsPaypalLoading] = useState(false);
-  const [bankDetails, setBankDetails] = useState({
-    accountName: '',
-    accountNumber: '',
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
+  const [bankDetails] = useState({
+    accountName: 'Pure Plant Protein',
+    accountNumber: '12345678',
     reference: `ORDER-${Date.now()}`
   });
   
@@ -52,7 +48,6 @@ const Cart = () => {
   const [shippingAddress, setShippingAddressState] = useState<ShippingAddress | null>(null);
   const [showShippingForm, setShowShippingForm] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'payment'>('cart');
-  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
 
   // Use saved shipping address if available
   useEffect(() => {
@@ -100,41 +95,6 @@ const Cart = () => {
     }
   }, [shippingAddress, items, totalWeight, toast]);
 
-  // Initialize PayPal SDK
-  useEffect(() => {
-    if (paymentMethod === 'paypal' && subtotal > 0 && user && checkoutStep === 'payment') {
-      // Use sandbox Client ID (replace with your actual client ID)
-      const clientId = "Aev56QXMEJq8AJhog4PGc3XGepFcoKONnrr6g093b45VZLpJEZ5I07Y8gMhJYGdfg7T5rQw1i7HRhQG1";
-      
-      setIsPaypalLoading(true);
-      loadPayPalScript(clientId)
-        .then(() => {
-          if (paypalButtonRef.current) {
-            const selectedOption = shippingOptions.find(option => option.id === selectedShippingOption);
-            const shippingCost = selectedOption ? selectedOption.price : 0;
-            const totalWithShipping = subtotal + shippingCost;
-            
-            initPayPalButton(
-              'paypal-button-container',
-              totalWithShipping,
-              (data) => handlePaypalSuccess(data),
-              (error) => handlePaypalError(error)
-            );
-          }
-          setIsPaypalLoading(false);
-        })
-        .catch(error => {
-          console.error("Failed to load PayPal SDK:", error);
-          toast({
-            title: "PayPal Error",
-            description: "Failed to load PayPal payment system",
-            variant: "destructive",
-          });
-          setIsPaypalLoading(false);
-        });
-    }
-  }, [paymentMethod, subtotal, user, checkoutStep, shippingOptions, selectedShippingOption]);
-
   const handleShippingFormSubmit = (data: ShippingAddress) => {
     setShippingAddressState(data);
     // Save to context (will also save to localStorage)
@@ -168,14 +128,14 @@ const Cart = () => {
   };
 
   // Create and save order function
-  const createAndSaveOrder = (paymentMethod: PaymentMethod, paymentId?: string): Order => {
+  const createAndSaveOrder = (): Order => {
     if (!selectedShippingOption || !shippingAddress) {
       throw new Error("Missing shipping information");
     }
     
     const selectedOption = shippingOptions.find(option => option.id === selectedShippingOption);
     const shippingCost = selectedOption ? selectedOption.price : 0;
-    const orderId = paymentId || bankDetails.reference;
+    const orderId = bankDetails.reference;
     
     // Create the order object
     const order: Order = {
@@ -184,13 +144,13 @@ const Cart = () => {
       userName: user?.email || 'guest',
       items: items.slice(), // Create a copy of the items array to prevent issues
       total: subtotal + shippingCost,
-      status: paymentMethod === 'paypal' ? 'processing' : 'pending',
+      status: 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      paymentMethod: paymentMethod,
+      paymentMethod: 'bank-transfer',
       shippingOption: selectedOption,
       shippingAddress: {...shippingAddress}, // Create a copy to prevent reference issues
-      invoiceStatus: paymentMethod === 'paypal' ? 'paid' : 'draft'
+      invoiceStatus: 'draft'
     };
     
     console.log("Creating order:", order);
@@ -229,7 +189,7 @@ const Cart = () => {
       }
       
       // Process the bank transfer order
-      const order = createAndSaveOrder('bank-transfer');
+      const order = createAndSaveOrder();
       
       toast({
         title: "Order Placed Successfully",
@@ -251,58 +211,6 @@ const Cart = () => {
       });
       setIsProcessingOrder(false);
     }
-  };
-
-  const handlePaypalSuccess = (data: any) => {
-    if (isProcessingOrder) return;
-    
-    setIsProcessingOrder(true);
-    
-    try {
-      if (!selectedShippingOption || !shippingAddress) {
-        toast({
-          title: "Missing Information",
-          description: "Please provide shipping details before completing your order.",
-          variant: "destructive",
-        });
-        setIsProcessingOrder(false);
-        return;
-      }
-      
-      console.log("PayPal payment successful:", data);
-      
-      // Process the PayPal order
-      const order = createAndSaveOrder('paypal', data.orderID);
-      
-      toast({
-        title: "PayPal Payment Successful",
-        description: `Your payment has been processed successfully.`,
-      });
-      
-      // Clear the cart
-      clearCart();
-      
-      // Navigate to the success page with order details
-      navigate('/order-success', { state: { orderDetails: order } });
-      
-    } catch (error) {
-      console.error("Error processing PayPal order:", error);
-      toast({
-        title: "Order Error",
-        description: "There was a problem placing your order. Please try again.",
-        variant: "destructive",
-      });
-      setIsProcessingOrder(false);
-    }
-  };
-
-  const handlePaypalError = (error: any) => {
-    console.error("PayPal payment error:", error);
-    toast({
-      title: "Payment Failed",
-      description: "There was an issue processing your PayPal payment.",
-      variant: "destructive",
-    });
   };
 
   // Calculate the selected shipping cost
@@ -579,64 +487,36 @@ const Cart = () => {
                       </AccordionItem>
                     </Accordion>
                     
-                    <div className="mt-6">
-                      <Tabs 
-                        defaultValue="paypal" 
+                    <div className="mt-6 space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Bank Details</p>
+                        <div className="space-y-1.5 text-sm">
+                          <p><span className="font-medium">Bank:</span> Pure Plant Protein Bank</p>
+                          <p><span className="font-medium">Account Name:</span> Pure Plant Protein</p>
+                          <p><span className="font-medium">Account #:</span> 12345678</p>
+                          <p><span className="font-medium">Reference:</span> {bankDetails.reference}</p>
+                        </div>
+                      </div>
+                      <Button 
                         className="w-full" 
-                        value={paymentMethod}
-                        onValueChange={(value) => setPaymentMethod(value as 'bank-transfer' | 'paypal')}
+                        size="lg"
+                        onClick={handleBankTransferCheckout}
+                        disabled={isProcessingOrder}
                       >
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="bank-transfer">Bank Transfer</TabsTrigger>
-                          <TabsTrigger value="paypal">PayPal</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="bank-transfer" className="mt-4 space-y-4">
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Bank Details</p>
-                            <div className="space-y-1.5 text-sm">
-                              <p><span className="font-medium">Bank:</span> Pure Plant Protein Bank</p>
-                              <p><span className="font-medium">Account Name:</span> Pure Plant Protein</p>
-                              <p><span className="font-medium">Account #:</span> 12345678</p>
-                              <p><span className="font-medium">Reference:</span> {bankDetails.reference}</p>
-                            </div>
-                          </div>
-                          <Button 
-                            className="w-full" 
-                            size="lg"
-                            onClick={handleBankTransferCheckout}
-                            disabled={isProcessingOrder}
-                          >
-                            {isProcessingOrder ? (
-                              <>
-                                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                                Processing...
-                              </>
-                            ) : (
-                              <>
-                                <CreditCard className="mr-2 h-4 w-4" /> Complete Order
-                              </>
-                            )}
-                          </Button>
-                          <p className="text-xs text-center text-gray-500">
-                            Include the reference number when making your bank transfer
-                          </p>
-                        </TabsContent>
-                        
-                        <TabsContent value="paypal" className="mt-4">
-                          {isPaypalLoading || isProcessingOrder ? (
-                            <div className="flex justify-center py-4">
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                            </div>
-                          ) : (
-                            <div 
-                              id="paypal-button-container" 
-                              ref={paypalButtonRef}
-                              className="min-h-[40px]"
-                            ></div>
-                          )}
-                        </TabsContent>
-                      </Tabs>
+                        {isProcessingOrder ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="mr-2 h-4 w-4" /> Complete Order
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-center text-gray-500">
+                        Include the reference number when making your bank transfer
+                      </p>
                     </div>
                     
                     <Button
@@ -689,7 +569,7 @@ const Cart = () => {
                 </CardContent>
                 <CardFooter className="flex-col">
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    Secure checkout powered by PayPal & Bank Transfer
+                    Secure checkout powered by Bank Transfer
                   </p>
                 </CardFooter>
               </Card>
