@@ -16,7 +16,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import {
   Select,
@@ -30,7 +29,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, UserCog, ShieldCheck, ShieldX, AlertCircle, Plus, X, Loader2 } from 'lucide-react';
+import { Search, UserCog, ShieldCheck, AlertCircle, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
@@ -57,7 +56,7 @@ type User = {
 };
 
 const UsersManagement = () => {
-  const { isAdmin, user, currentSession } = useAuth();
+  const { isAdmin, user, session } = useAuth(); // Use session instead of currentSession
   const { toast } = useToast();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
@@ -65,7 +64,6 @@ const UsersManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all-users');
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -106,7 +104,7 @@ const UsersManagement = () => {
         // This might fail due to permissions, but we'll try anyway
         const { data: authUsers } = await fetch(`https://lswldgmfmeeepdivhznt.supabase.co/auth/v1/admin/users`, {
           headers: {
-            'Authorization': `Bearer ${currentSession?.access_token}`,
+            'Authorization': `Bearer ${session?.access_token}`,
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzd2xkZ21mbWVlZXBkaXZoem50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2MDUyNzEsImV4cCI6MjA2MjE4MTI3MX0.4vHkxo6rv8xFBBoaTXTPhbnl1bcG7RG33c_A6wLSIx4'
           }
         }).then(res => res.json());
@@ -296,6 +294,7 @@ const UsersManagement = () => {
           isOpen={isCreateUserDialogOpen}
           onClose={() => setIsCreateUserDialogOpen(false)}
           onUserCreated={fetchUsers}
+          session={session} // Pass the session to the CreateUserDialog
         />
       </div>
     </Layout>
@@ -418,16 +417,18 @@ interface CreateUserDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onUserCreated: () => void;
+  session: any; // Add session to props
 }
 
 const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ 
   isOpen, 
   onClose, 
-  onUserCreated 
+  onUserCreated,
+  session 
 }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user: currentUser, currentSession } = useAuth();
+  const { user: currentUser } = useAuth();
 
   const form = useForm<z.infer<typeof userCreateSchema>>({
     resolver: zodResolver(userCreateSchema),
@@ -496,6 +497,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       });
     } finally {
       setIsSubmitting(false);
+      onClose();
     }
   };
 
