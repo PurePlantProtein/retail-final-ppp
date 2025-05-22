@@ -65,6 +65,7 @@ const Profile = () => {
   // Fetch profile data
   useEffect(() => {
     if (user && authProfile) {
+      console.log("Setting form values from profile:", authProfile);
       form.reset({
         business_name: authProfile.business_name || '',
         business_address: authProfile.business_address || '',
@@ -78,25 +79,44 @@ const Profile = () => {
     if (!user) return;
     
     setIsSubmitting(true);
+    console.log("Submitting profile update:", data);
+    
     try {
+      const updateData = {
+        business_name: data.business_name,
+        business_address: data.business_address,
+        phone: data.phone,
+        business_type: data.business_type,
+        updated_at: new Date().toISOString(),
+      };
+      
+      console.log("Updating profile with data:", updateData);
+      
       const { error } = await supabase
         .from('profiles')
-        .update({
-          business_name: data.business_name,
-          business_address: data.business_address,
-          phone: data.phone,
-          business_type: data.business_type,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating profile:", error);
+        throw error;
+      }
+
+      // Update local state in the auth context
+      if (typeof window !== "undefined") {
+        // Force a small delay to ensure Supabase has updated the record
+        setTimeout(() => {
+          // Refresh the page to pick up the changes
+          window.location.reload();
+        }, 1000);
+      }
 
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
       });
     } catch (error) {
+      console.error("Submission error:", error);
       toast({
         title: "Update failed",
         description: error instanceof Error ? error.message : "Something went wrong",
@@ -107,8 +127,28 @@ const Profile = () => {
     }
   };
 
-  const handleShippingFormSubmit = (shippingData: any) => {
+  const handleShippingFormSubmit = async (shippingData: any) => {
     setShippingAddress(shippingData);
+    
+    // Also save the business address to the profile if it's not already set
+    if (user && (!authProfile?.business_address || authProfile.business_address === '')) {
+      try {
+        const addressString = `${shippingData.street}, ${shippingData.city}, ${shippingData.state} ${shippingData.postalCode}`;
+        
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            business_address: addressString,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error updating business address:", error);
+      }
+    }
+    
     toast({
       title: "Shipping address updated",
       description: "Your default shipping address has been successfully updated.",
@@ -173,7 +213,11 @@ const Profile = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Business Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select a business type" />
@@ -225,7 +269,11 @@ const Profile = () => {
                     />
                     
                     <div className="pt-4">
-                      <Button type="submit" className="w-full" disabled={isSubmitting}>
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-[#25a18e] hover:bg-[#1e8a77]" 
+                        disabled={isSubmitting}
+                      >
                         {isSubmitting ? "Updating..." : "Update Profile"}
                       </Button>
                     </div>

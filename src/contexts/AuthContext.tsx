@@ -10,6 +10,7 @@ export type UserProfile = {
   business_address?: string;
   phone?: string;
   business_type?: string;
+  email?: string;
   role: 'admin' | 'retailer';
 };
 
@@ -22,6 +23,7 @@ type AuthContextType = {
   logout: () => Promise<void>;
   isAdmin: boolean;
   session: Session | null; // Adding this property to the type
+  refreshProfile: () => Promise<void>; // Add this new function
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,16 +76,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (data) {
         setProfile({ ...data, role });
+        console.log('User profile loaded:', { ...data, role });
       } else {
         // Create a minimal profile if one doesn't exist
         setProfile({ 
           id: userId, 
           business_name: user?.user_metadata?.business_name || 'Unknown Business',
+          email: user?.email,
           role
         });
+        console.log('Created minimal profile with email:', user?.email);
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
+    }
+  };
+
+  // Add a function to refresh the profile
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
     }
   };
 
@@ -233,6 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     isAdmin: ADMIN_EMAILS.includes(user?.email || ''),
     session, // Add the session to the context value
+    refreshProfile, // Add the new function
   };
 
   return (
