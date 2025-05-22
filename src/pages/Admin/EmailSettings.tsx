@@ -42,8 +42,10 @@ const EmailSettings = () => {
       // Create a mock order for testing the email
       const mockOrder = {
         id: `TEST-${Date.now().toString().slice(-6)}`,
+        userId: 'test-user-id',
         userName: 'Test User',
         total: 99.95,
+        status: 'pending',
         items: [
           {
             product: {
@@ -74,6 +76,8 @@ const EmailSettings = () => {
           description: 'Standard Australia Post shipping'
         },
         paymentMethod: 'bank-transfer',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         date: new Date().toISOString()
       };
       

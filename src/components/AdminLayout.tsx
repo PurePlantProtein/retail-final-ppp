@@ -28,6 +28,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       icon: <BarChart3 className="h-5 w-5" /> 
     },
     { 
+      name: 'Email Settings', 
+      path: '/admin/email-settings', 
+      icon: <Mail className="h-5 w-5" /> 
+    },
+    { 
       name: 'Settings', 
       path: '/admin/settings', 
       icon: <Settings className="h-5 w-5" /> 
