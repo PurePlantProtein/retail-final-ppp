@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +48,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               src={product.image}
               alt={product.name}
               className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+              }}
             />
           </AspectRatio>
         </div>

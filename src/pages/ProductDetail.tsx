@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -127,6 +126,10 @@ const ProductDetail = () => {
                   src={product.image} 
                   alt={product.name}
                   className="w-full h-auto object-cover aspect-square"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+                  }}
                 />
               </CardContent>
             </Card>

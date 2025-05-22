@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -7,12 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import ProductForm from '@/components/ProductForm';
-import { getProducts, deleteProduct, createProduct } from '@/services/productService';
+import { getProducts, deleteProduct, createProduct, updateProduct } from '@/services/productService';
 import { Product } from '@/types/product';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, Trash, Plus, AlertCircle, Copy } from 'lucide-react';
+import { Edit, Trash, Plus, AlertCircle, Copy, CloudArrowUp } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 const ProductsManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,6 +22,7 @@ const ProductsManagement = () => {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('list');
   const [error, setError] = useState<string | null>(null);
+  const [migratingImages, setMigratingImages] = useState(false);
   
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
@@ -129,6 +130,77 @@ const ProductsManagement = () => {
     }
   };
 
+  const migrateProductImages = async () => {
+    setMigratingImages(true);
+    setError(null);
+    
+    try {
+      let successCount = 0;
+      let failureCount = 0;
+      
+      // Process products in batches to avoid timeout
+      for (const product of products) {
+        if (!product.image || product.image.includes('storage.googleapis.com')) {
+          // Skip products that don't have an image or are already in Supabase Storage
+          continue;
+        }
+        
+        try {
+          // Download the image
+          const response = await fetch(product.image);
+          if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+          
+          const blob = await response.blob();
+          
+          // Create a unique filename
+          const fileExt = product.image.split('.').pop()?.split('?')[0] || 'png';
+          const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+          
+          // Upload to Supabase Storage
+          const { data, error: uploadError } = await supabase.storage
+            .from('product_images')
+            .upload(fileName, blob);
+            
+          if (uploadError) throw uploadError;
+          
+          // Get the public URL
+          const { data: publicUrlData } = supabase.storage
+            .from('product_images')
+            .getPublicUrl(fileName);
+            
+          const publicUrl = publicUrlData.publicUrl;
+          
+          // Update the product with the new image URL
+          await updateProduct(product.id, { image: publicUrl });
+          
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to migrate image for product ${product.id}:`, err);
+          failureCount++;
+        }
+      }
+      
+      // Refresh products after migration
+      await loadProducts();
+      
+      toast({
+        title: "Migration Complete",
+        description: `Successfully migrated ${successCount} images. Failed: ${failureCount}.`,
+        variant: successCount > 0 ? "default" : "destructive",
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to migrate images";
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setMigratingImages(false);
+    }
+  };
+
   if (!isAdmin) {
     return null;
   }
@@ -138,10 +210,22 @@ const ProductsManagement = () => {
       <div className="max-w-6xl mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Product Management</h1>
-          <Button onClick={() => setActiveTab('add')} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add New Product
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => migrateProductImages()} disabled={migratingImages} className="flex items-center gap-2">
+              {migratingImages ? (
+                <>Processing...</>
+              ) : (
+                <>
+                  <CloudArrowUp className="h-4 w-4" />
+                  Migrate Images to Storage
+                </>
+              )}
+            </Button>
+            <Button onClick={() => setActiveTab('add')} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add New Product
+            </Button>
+          </div>
         </div>
         
         {error && (
@@ -177,6 +261,10 @@ const ProductsManagement = () => {
                         src={product.image} 
                         alt={product.name} 
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+                        }}
                       />
                     </div>
                     <CardHeader className="pb-2">

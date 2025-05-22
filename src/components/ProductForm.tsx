@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ImageUploader from '@/components/ImageUploader';
 
 const defaultCategories: Category[] = ['food', 'accessories', 'supplements', 'clothing', 'electronics', 'furniture', 'protein', 'other'];
 
@@ -135,7 +135,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       price: 0,
       minQuantity: 1,
       stock: 0,
-      image: 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_360x.png',
+      image: '',
       category: '',
       // New fields
       servingSize: '',
@@ -286,6 +286,11 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
     setNutritionalValues(newNutritionalValues);
   };
 
+  // Handle image upload
+  const handleImageUploaded = (url: string) => {
+    form.setValue('image', url);
+  };
+
   return (
     <Card className="p-6">
       {error && (
@@ -307,19 +312,159 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
             
             <TabsContent value="basic">
               <div className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Product Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="PP Protein Vanilla Whey" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Product Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="PP Protein Vanilla Whey" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Price ($)</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Category</FormLabel>
+                            <div className="flex gap-2">
+                              <Select 
+                                onValueChange={field.onChange} 
+                                value={field.value}
+                                disabled={isLoading}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select category" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {categories.map(category => (
+                                    <SelectItem key={category} value={category}>
+                                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
+                                <DialogTrigger asChild>
+                                  <Button type="button" variant="outline" size="icon">
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Add New Category</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="grid gap-4 py-4">
+                                    <div className="grid gap-2">
+                                      <Label htmlFor="new-category">Category Name</Label>
+                                      <Input
+                                        id="new-category"
+                                        value={newCategoryName}
+                                        onChange={(e) => setNewCategoryName(e.target.value)}
+                                        placeholder="Enter category name"
+                                      />
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button 
+                                      type="button" 
+                                      onClick={handleAddCategory}
+                                    >
+                                      Add Category
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <FormField
+                        control={form.control}
+                        name="minQuantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Minimum Order Quantity</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Minimum quantity per order
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="stock"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Available Stock</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Current inventory quantity
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="image"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Product Image</FormLabel>
+                          <FormControl>
+                            <ImageUploader 
+                              currentImageUrl={field.value} 
+                              onImageUploaded={handleImageUploaded}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Upload a product image (max 2MB)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
                 <FormField
                   control={form.control}
@@ -334,137 +479,6 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
                           {...field} 
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Price ($)</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <div className="flex gap-2">
-                          <Select 
-                            onValueChange={field.onChange} 
-                            value={field.value}
-                            disabled={isLoading}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categories.map(category => (
-                                <SelectItem key={category} value={category}>
-                                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
-                            <DialogTrigger asChild>
-                              <Button type="button" variant="outline" size="icon">
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Add New Category</DialogTitle>
-                              </DialogHeader>
-                              <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                  <Label htmlFor="new-category">Category Name</Label>
-                                  <Input
-                                    id="new-category"
-                                    value={newCategoryName}
-                                    onChange={(e) => setNewCategoryName(e.target.value)}
-                                    placeholder="Enter category name"
-                                  />
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button 
-                                  type="button" 
-                                  onClick={handleAddCategory}
-                                >
-                                  Add Category
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="minQuantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Minimum Order Quantity</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Minimum quantity per order
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="stock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Available Stock</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Current inventory quantity
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="image"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Image URL</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://example.com/image.png" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Enter a direct link to the product image
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
