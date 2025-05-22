@@ -57,7 +57,7 @@ type User = {
 };
 
 const UsersManagement = () => {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, currentSession } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
@@ -98,8 +98,32 @@ const UsersManagement = () => {
         throw profilesError;
       }
 
+      console.log('Raw profiles data:', profilesData);
+      
+      // Also fetch auth users if possible (will work if user has admin rights)
+      let authUsersData: any[] = [];
+      try {
+        // This might fail due to permissions, but we'll try anyway
+        const { data: authUsers } = await fetch(`https://lswldgmfmeeepdivhznt.supabase.co/auth/v1/admin/users`, {
+          headers: {
+            'Authorization': `Bearer ${currentSession?.access_token}`,
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzd2xkZ21mbWVlZXBkaXZoem50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2MDUyNzEsImV4cCI6MjA2MjE4MTI3MX0.4vHkxo6rv8xFBBoaTXTPhbnl1bcG7RG33c_A6wLSIx4'
+          }
+        }).then(res => res.json());
+        
+        if (authUsers && Array.isArray(authUsers)) {
+          authUsersData = authUsers;
+          console.log('Auth users data:', authUsersData);
+        }
+      } catch (err) {
+        console.log('Could not fetch auth users, using profiles only:', err);
+      }
+
       // Convert profiles to users format
       const users: User[] = profilesData.map(profile => {
+        // Find matching auth user if available
+        const matchingAuthUser = authUsersData.find(au => au.id === profile.id);
+        
         // Determine role based on email - this is a temporary approach
         // In a production system, you would store roles in a database table
         const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.id);
@@ -403,7 +427,7 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, currentSession } = useAuth();
 
   const form = useForm<z.infer<typeof userCreateSchema>>({
     resolver: zodResolver(userCreateSchema),
@@ -420,98 +444,56 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Try using direct API call with custom headers to avoid session conflicts
-      const response = await fetch(`https://lswldgmfmeeepdivhznt.supabase.co/auth/v1/admin/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzd2xkZ21mbWVlZXBkaXZoem50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2MDUyNzEsImV4cCI6MjA2MjE4MTI3MX0.4vHkxo6rv8xFBBoaTXTPhbnl1bcG7RG33c_A6wLSIx4',
-          'Authorization': `Bearer ${supabase.auth.getSession().then(res => res.data.session?.access_token)}`,
-        },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-          email_confirm: true,
-          user_metadata: {
-            business_name: values.businessName,
-            business_type: values.businessType,
-            role: values.role
-          }
-        }),
+      // Use email invite method which doesn't affect the current session
+      const { error } = await supabase.auth.admin.inviteUserByEmail(values.email, {
+        data: {
+          business_name: values.businessName,
+          business_type: values.businessType,
+          role: values.role
+        }
       });
       
-      // Create profile entry separately without affecting the current session
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData && userData.user) {
-        // We're still logged in, now create the profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: values.email,  // Use email as ID for now, will be updated when user signs in
-            business_name: values.businessName,
-            business_type: values.businessType
-          });
+      if (error) {
+        console.error('Error inviting user:', error);
         
-        if (profileError && !profileError.message.includes('duplicate')) {
-          console.error('Error creating profile:', profileError);
-          // Don't throw here, we'll still consider the user creation successful
-        }
-      }
-      
-      toast({
-        title: "User created successfully",
-        description: `${values.businessName} (${values.email}) has been added as a ${values.role}.`,
-      });
-
-      // Reset form
-      form.reset();
-      
-      // Close dialog and refresh users list
-      onClose();
-      onUserCreated();
-    } catch (error: any) {
-      console.error('Error creating user:', error);
-      
-      // Fallback to email invitation method which won't affect the current session
-      try {
-        // This method sends an invitation email rather than creating the user directly
-        const { error } = await supabase.auth.admin.inviteUserByEmail(values.email, {
-          data: {
-            business_name: values.businessName,
-            business_type: values.businessType,
-            role: values.role
-          }
-        });
-        
-        if (error) {
-          throw error;
-        }
-        
-        // Create profile entry
-        await supabase
+        // Fall back to creating a profile directly
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .insert({
             id: values.email,  // Use email as ID for now
             business_name: values.businessName,
             business_type: values.businessType
-          });
+          })
+          .select();
         
+        if (profileError) {
+          throw profileError;
+        }
+        
+        toast({
+          title: "User created",
+          description: `${values.businessName} (${values.email}) has been added. An invitation will be sent to their email.`,
+        });
+      } else {
         toast({
           title: "Invitation sent",
           description: `An invitation has been sent to ${values.email}.`,
         });
-        
-        // Reset form and close dialog
-        form.reset();
-        onClose();
-        onUserCreated();
-      } catch (fallbackError: any) {
-        toast({
-          title: "Failed to create user",
-          description: fallbackError.message || "An unexpected error occurred.",
-          variant: "destructive",
-        });
       }
+      
+      // Reset form and close dialog
+      form.reset();
+      
+      // Important: Refresh the users list
+      onUserCreated();
+      
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      toast({
+        title: "Failed to create user",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
