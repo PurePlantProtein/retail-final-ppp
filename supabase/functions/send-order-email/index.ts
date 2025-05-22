@@ -50,7 +50,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { orderDetails, emailType, recipientEmail }: OrderEmailRequest = await req.json();
     
-    let from = "Pure Plant Protein <sales@ppprotein.com.au>";
+    let from = "Pure Plant Protein <orders@retail.ppprotein.com.au>";
     let subject = "";
     let html = "";
     

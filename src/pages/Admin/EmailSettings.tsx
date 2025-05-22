@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Mail, CheckCircle2 } from 'lucide-react';
+import { sendOrderConfirmationEmail } from '@/services/emailService';
 
 const EmailSettings = () => {
   const { emailSettings, updateEmailSettings } = useCart();
@@ -38,22 +39,52 @@ const EmailSettings = () => {
       setIsTesting(true);
       setTestStatus(null);
       
-      const { data, error } = await fetch('/api/test-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // Create a mock order for testing the email
+      const mockOrder = {
+        id: `TEST-${Date.now().toString().slice(-6)}`,
+        userName: 'Test User',
+        total: 99.95,
+        items: [
+          {
+            product: {
+              name: 'Test Product',
+              price: 89.95,
+              id: 'test-1',
+              description: 'Test product description',
+              image: '',
+            },
+            quantity: 1,
+          }
+        ],
+        shippingAddress: {
+          name: 'Test User',
+          street: '123 Test Street',
+          city: 'Test City',
+          state: 'VIC',
+          postalCode: '3000',
+          country: 'Australia',
+          phone: '0400 000 000'
         },
-        body: JSON.stringify({
-          email: adminEmail,
-        }),
-      }).then(res => res.json());
+        shippingOption: {
+          name: 'Standard Shipping',
+          price: 10.00,
+          id: 'standard',
+          carrier: 'australia-post',
+          estimatedDeliveryDays: '3-5 business days',
+          description: 'Standard Australia Post shipping'
+        },
+        paymentMethod: 'bank-transfer',
+        date: new Date().toISOString()
+      };
       
-      if (error) throw new Error(error);
+      const result = await sendOrderConfirmationEmail(mockOrder, adminEmail);
+      
+      if (!result.success) throw new Error(result.message);
       
       setTestStatus('success');
       toast({
         title: "Test Email Sent",
-        description: "A test email has been sent to the admin email address.",
+        description: `A test email has been sent to ${adminEmail}.`,
       });
     } catch (error) {
       console.error("Error sending test email:", error);
@@ -127,6 +158,13 @@ const EmailSettings = () => {
                 />
               </div>
 
+              <div className="p-4 border rounded-md bg-amber-50 border-amber-200">
+                <h3 className="font-medium text-amber-800 mb-1">Email Configuration Complete</h3>
+                <p className="text-sm text-amber-700">
+                  Your email system is configured to send from <strong>orders@retail.ppprotein.com.au</strong>. This domain has been verified with Resend.
+                </p>
+              </div>
+
               {testStatus === 'success' && (
                 <div className="bg-green-50 text-green-800 p-3 rounded-md flex gap-2 items-start">
                   <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
@@ -174,12 +212,18 @@ const EmailSettings = () => {
                   <p className="text-sm text-muted-foreground mb-2">
                     Sent to customers when they place an order. Includes order details, shipping information, and payment status.
                   </p>
+                  <p className="text-sm text-muted-foreground">
+                    Sender: <strong>orders@retail.ppprotein.com.au</strong>
+                  </p>
                 </div>
 
                 <div className="p-4 border rounded-md">
                   <h3 className="font-medium mb-1">Admin Notification Email</h3>
                   <p className="text-sm text-muted-foreground mb-2">
                     Sent to the admin email address when a new order is received. Includes all order details and customer information.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Sender: <strong>orders@retail.ppprotein.com.au</strong>
                   </p>
                 </div>
               </div>
