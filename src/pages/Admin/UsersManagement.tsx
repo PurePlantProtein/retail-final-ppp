@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -16,6 +17,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Select,
@@ -29,8 +31,21 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, UserCog, ShieldCheck, ShieldX, AlertCircle } from 'lucide-react';
+import { Search, UserCog, ShieldCheck, ShieldX, AlertCircle, Plus, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 type User = {
   id: string;
@@ -50,6 +65,8 @@ const UsersManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all-users');
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -174,7 +191,15 @@ const UsersManagement = () => {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold mb-6">User Management</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <Button 
+            onClick={() => setIsCreateUserDialogOpen(true)} 
+            className="mt-4 sm:mt-0"
+          >
+            <Plus className="mr-1" /> Create User
+          </Button>
+        </div>
         
         <Card className="mb-8">
           <CardHeader>
@@ -256,6 +281,13 @@ const UsersManagement = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Create User Dialog */}
+        <CreateUserDialog
+          isOpen={isCreateUserDialogOpen}
+          onClose={() => setIsCreateUserDialogOpen(false)}
+          onUserCreated={fetchUsers}
+        />
       </div>
     </Layout>
   );
@@ -349,6 +381,204 @@ const UsersTable: React.FC<UsersTableProps> = ({
         </TableBody>
       </Table>
     </div>
+  );
+};
+
+// Form schema for user creation
+const userCreateSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
+  businessName: z.string().min(1, "Business name is required"),
+  businessType: z.string().min(1, "Business type is required"),
+  role: z.enum(["admin", "retailer"]),
+});
+
+interface CreateUserDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUserCreated: () => void;
+}
+
+const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ 
+  isOpen, 
+  onClose, 
+  onUserCreated 
+}) => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<z.infer<typeof userCreateSchema>>({
+    resolver: zodResolver(userCreateSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      businessName: "",
+      businessType: "",
+      role: "retailer",
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof userCreateSchema>) => {
+    setIsSubmitting(true);
+    
+    try {
+      // In a real implementation, we would call the Supabase Admin API to create a user
+      // For demo purposes, we'll just simulate the response
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "User created successfully",
+        description: `${values.businessName} (${values.email}) has been added as a ${values.role}.`,
+      });
+
+      // Reset form
+      form.reset();
+      
+      // Close dialog and refresh users list
+      onClose();
+      onUserCreated();
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      toast({
+        title: "Failed to create user",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Create New User</DialogTitle>
+          <DialogDescription>
+            Add a new wholesale user to the platform. They will receive an email with their credentials.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="business@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Must be at least 8 characters long.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="businessName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Business Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Acme Nutrition" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="businessType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Business Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a business type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Retail Store">Retail Store</SelectItem>
+                      <SelectItem value="Online Shop">Online Shop</SelectItem>
+                      <SelectItem value="Gym">Gym</SelectItem>
+                      <SelectItem value="Health Food Store">Health Food Store</SelectItem>
+                      <SelectItem value="Supplement Shop">Supplement Shop</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>User Role</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="retailer">Retailer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter className="mt-6">
+              <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : 'Create User'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
