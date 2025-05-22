@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -23,8 +22,10 @@ import CategoriesManagement from "./pages/Admin/CategoriesManagement";
 import UsersManagement from "./pages/Admin/UsersManagement";
 import SettingsManagement from "./pages/Admin/SettingsManagement";
 import AnalyticsManagement from "./pages/Admin/AnalyticsManagement";
-import OrdersManagement from "./pages/Admin/OrdersManagement";  // Import our new component
+import OrdersManagement from "./pages/Admin/OrdersManagement";
+import EmailSettings from "./pages/Admin/EmailSettings";
 import Orders from "./pages/Orders";
+import OrderSuccess from "./pages/OrderSuccess";
 import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
 import ShippingPolicy from "./pages/ShippingPolicy";
@@ -92,6 +93,15 @@ const App = () => {
                     element={
                       <ProtectedRoute>
                         <Cart />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/order-success" 
+                    element={
+                      <ProtectedRoute>
+                        <OrderSuccess />
                       </ProtectedRoute>
                     } 
                   />
@@ -215,6 +225,15 @@ const App = () => {
                   />
                   
                   <Route 
+                    path="/admin/email-settings" 
+                    element={
+                      <ProtectedRoute>
+                        <EmailSettings />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
                     path="/admin/analytics" 
                     element={
                       <ProtectedRoute>
@@ -223,7 +242,6 @@ const App = () => {
                     } 
                   />
                   
-                  {/* Update the admin orders route to use our new OrdersManagement component */}
                   <Route 
                     path="/admin/orders" 
                     element={

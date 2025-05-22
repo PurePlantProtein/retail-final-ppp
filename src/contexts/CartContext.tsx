@@ -8,6 +8,13 @@ type CartItem = {
   quantity: number;
 };
 
+// Added email notification settings
+type EmailSettings = {
+  adminEmail: string;
+  notifyAdmin: boolean;
+  notifyCustomer: boolean;
+};
+
 type CartContextType = {
   items: CartItem[];
   addToCart: (product: Product, quantity: number) => void;
@@ -16,12 +23,25 @@ type CartContextType = {
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
+  emailSettings: EmailSettings;
+  updateEmailSettings: (settings: Partial<EmailSettings>) => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// Default email settings
+const defaultEmailSettings: EmailSettings = {
+  adminEmail: 'admin@pureplantprotein.com',
+  notifyAdmin: true,
+  notifyCustomer: true
+};
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [emailSettings, setEmailSettings] = useState<EmailSettings>(() => {
+    const savedSettings = localStorage.getItem('emailSettings');
+    return savedSettings ? JSON.parse(savedSettings) : defaultEmailSettings;
+  });
   const { toast } = useToast();
 
   // Load cart from localStorage
@@ -40,6 +60,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
+
+  // Save email settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('emailSettings', JSON.stringify(emailSettings));
+  }, [emailSettings]);
+
+  const updateEmailSettings = (settings: Partial<EmailSettings>) => {
+    setEmailSettings(prevSettings => ({
+      ...prevSettings,
+      ...settings
+    }));
+  };
+
+  // Mock email sending function - in a real app, this would call a backend API
+  const sendOrderEmails = (order: any, customerEmail: string) => {
+    console.log('Sending order confirmation emails:');
+    
+    if (emailSettings.notifyCustomer) {
+      console.log(`- Customer email sent to: ${customerEmail}`);
+      console.log(`  Subject: Your Order Confirmation #${order.id}`);
+      console.log(`  Content: Thank you for your order! Your order #${order.id} has been received.`);
+    }
+    
+    if (emailSettings.notifyAdmin) {
+      console.log(`- Admin notification sent to: ${emailSettings.adminEmail}`);
+      console.log(`  Subject: New Order Received #${order.id}`);
+      console.log(`  Content: A new order #${order.id} has been placed by ${customerEmail}.`);
+    }
+
+    // In a real app with Supabase integration, this would be an API call to a backend service
+    // that would use a library like Resend, SendGrid, etc. to send the emails
+  };
 
   const addToCart = (product: Product, quantity: number) => {
     setItems((prevItems) => {
@@ -111,6 +163,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearCart,
     totalItems,
     subtotal,
+    emailSettings,
+    updateEmailSettings,
   };
 
   return (

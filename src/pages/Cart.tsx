@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/accordion';
 
 const Cart = () => {
-  const { items, updateQuantity, removeFromCart, clearCart, subtotal } = useCart();
+  const { items, updateQuantity, removeFromCart, clearCart, subtotal, emailSettings } = useCart();
   const { user } = useAuth();
   const { shippingAddress: savedShippingAddress, setShippingAddress, isLoading: isLoadingShippingAddress } = useShipping();
   const navigate = useNavigate();
@@ -147,6 +147,26 @@ const Cart = () => {
     });
   };
 
+  // Helper function to send order confirmation emails
+  const sendOrderConfirmationEmails = (order: Order) => {
+    // In a real app, this would be an API call to a backend service
+    console.log('Sending order confirmation emails:');
+    
+    if (emailSettings.notifyCustomer && user?.email) {
+      console.log(`- Customer email sent to: ${user.email}`);
+      console.log(`  Subject: Your Order Confirmation #${order.id}`);
+      console.log(`  Content: Thank you for your order! Your order #${order.id} has been received.`);
+    }
+    
+    if (emailSettings.notifyAdmin) {
+      console.log(`- Admin notification sent to: ${emailSettings.adminEmail}`);
+      console.log(`  Subject: New Order Received #${order.id}`);
+      console.log(`  Content: A new order #${order.id} has been placed by ${user?.email || 'a customer'}.`);
+    }
+
+    // In a real app with Supabase integration, this would call a backend API endpoint
+  };
+
   // Create and save order function
   const createAndSaveOrder = (paymentMethod: PaymentMethod, paymentId?: string): Order => {
     if (!selectedShippingOption || !shippingAddress) {
@@ -185,6 +205,9 @@ const Cart = () => {
     localStorage.setItem('orders', JSON.stringify(existingOrders));
     
     console.log("Orders saved:", existingOrders);
+
+    // Send email confirmation
+    sendOrderConfirmationEmails(order);
     
     return order;
   };
@@ -209,22 +232,15 @@ const Cart = () => {
       const order = createAndSaveOrder('bank-transfer');
       
       toast({
-        title: "Bank Transfer Order Placed",
-        description: "Please complete your bank transfer using the provided details. Your order will be processed after payment confirmation.",
-      });
-      
-      toast({
-        title: "Order reference: " + order.id,
-        description: "Please include this reference with your bank transfer.",
+        title: "Order Placed Successfully",
+        description: "Your order has been placed. Please complete your bank transfer.",
       });
       
       // Clear the cart
       clearCart();
       
-      // Navigate to the orders page after a short delay
-      setTimeout(() => {
-        navigate('/orders');
-      }, 2000);
+      // Navigate to the success page with order details
+      navigate('/order-success', { state: { orderDetails: order } });
       
     } catch (error) {
       console.error("Error processing bank transfer order:", error);
@@ -233,7 +249,6 @@ const Cart = () => {
         description: "There was a problem placing your order. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsProcessingOrder(false);
     }
   };
@@ -261,16 +276,14 @@ const Cart = () => {
       
       toast({
         title: "PayPal Payment Successful",
-        description: `Your payment (ID: ${data.orderID}) has been processed successfully.`,
+        description: `Your payment has been processed successfully.`,
       });
       
       // Clear the cart
       clearCart();
       
-      // Navigate to the orders page after a short delay
-      setTimeout(() => {
-        navigate('/orders');
-      }, 2000);
+      // Navigate to the success page with order details
+      navigate('/order-success', { state: { orderDetails: order } });
       
     } catch (error) {
       console.error("Error processing PayPal order:", error);
@@ -279,7 +292,6 @@ const Cart = () => {
         description: "There was a problem placing your order. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsProcessingOrder(false);
     }
   };
