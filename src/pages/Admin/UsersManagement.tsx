@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -124,11 +125,11 @@ const UsersManagement = () => {
         
         // Determine role based on email - this is a temporary approach
         // In a production system, you would store roles in a database table
-        const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.id);
+        const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.email || profile.id);
         
         return {
           id: profile.id,
-          // Use stored email if available, otherwise fall back to id
+          // Use the email from the profiles table, fallback to id if not available
           email: profile.email || profile.id,
           created_at: profile.created_at,
           business_name: profile.business_name || 'Unknown',
@@ -459,17 +460,16 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         console.error('Error inviting user:', error);
         
         // Fall back to creating a profile directly
-        // Use a valid UUID as the ID
+        // Generate a valid UUID as the ID
         const uuid = crypto.randomUUID();
         
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
             id: uuid,
+            email: values.email, // Store the email in the email column
             business_name: values.businessName,
             business_type: values.businessType,
-            // Don't try to insert email field if it doesn't exist in the table
-            // We'll handle this in the UI by using the ID as a fallback
           });
         
         if (profileError) {
