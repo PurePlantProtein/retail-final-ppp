@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { isSessionExpired, SESSION_TIMEOUT_MS } from '@/utils/securityUtils';
+import { isSessionExpired } from '@/utils/securityUtils';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -24,7 +24,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (session) {
       // Check for session expiration
       const lastActivity = parseInt(localStorage.getItem('lastUserActivity') || '0');
-      if (isSessionExpired(lastActivity)) {
+      if (lastActivity > 0 && isSessionExpired(lastActivity)) {
         toast({
           title: "Session expired",
           description: "Your session has expired due to inactivity. Please log in again.",
@@ -33,9 +33,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         navigate('/login');
         return;
       }
-      
-      // Update the last activity timestamp
-      localStorage.setItem('lastUserActivity', Date.now().toString());
     }
   }, [session, navigate]);
   

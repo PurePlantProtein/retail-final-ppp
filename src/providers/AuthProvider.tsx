@@ -31,13 +31,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Track user activity to handle session timeouts
   const updateActivity = useCallback(() => {
-    setLastActivity(Date.now());
+    const timestamp = Date.now();
+    setLastActivity(timestamp);
+    localStorage.setItem('lastUserActivity', timestamp.toString());
   }, []);
 
   // Check for session expiration
   useEffect(() => {
     const checkSession = () => {
-      if (session && isSessionExpired(lastActivity)) {
+      const storedLastActivity = parseInt(localStorage.getItem('lastUserActivity') || '0');
+      if (session && storedLastActivity > 0 && isSessionExpired(storedLastActivity)) {
         toast({
           title: "Session expired",
           description: "Your session has expired due to inactivity. Please log in again.",
@@ -47,17 +50,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    const interval = setInterval(checkSession, 60000); // Check every minute
+    const interval = setInterval(checkSession, 30000); // Check every 30 seconds
     
     // Add event listeners to track user activity
     const events = ['mousedown', 'keypress', 'scroll', 'touchstart'];
     events.forEach(event => window.addEventListener(event, updateActivity));
     
+    // Initialize lastUserActivity if not set
+    if (!localStorage.getItem('lastUserActivity')) {
+      updateActivity();
+    }
+    
     return () => {
       clearInterval(interval);
       events.forEach(event => window.removeEventListener(event, updateActivity));
     };
-  }, [session, lastActivity, updateActivity]);
+  }, [session, updateActivity]);
 
   useEffect(() => {
     const setupAuth = async () => {
@@ -72,6 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setTimeout(() => {
               fetchProfile(session.user.id);
             }, 0);
+            // Update the activity timestamp
+            updateActivity();
           } else {
             setProfile(null);
           }
@@ -86,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           await fetchProfile(session.user.id);
+          updateActivity(); // Update activity timestamp on session retrieval
         }
       } catch (err) {
         console.error('Error getting session:', err);
@@ -125,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       
       // Reset the last activity timestamp
-      setLastActivity(Date.now());
+      updateActivity();
       
       toast({
         title: "Login successful",
@@ -183,6 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Clean up auth state
       cleanupAuthState();
+      localStorage.removeItem('lastUserActivity');
       
       // Attempt global sign out
       await supabase.auth.signOut({ scope: 'global' });

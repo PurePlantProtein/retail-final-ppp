@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -8,7 +9,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
-import { Star } from 'lucide-react';
+import { Star, AlertCircle } from 'lucide-react';
+import { cleanupAuthState } from '@/utils/authUtils';
 
 // Helper function for manual account creation (for testing only)
 const createAdminAccount = async () => {
@@ -63,6 +65,21 @@ const Login = () => {
   // Get the redirect path from location state or default to /products
   const from = (location.state as { from?: string })?.from || '/products';
   
+  // Clean up any existing session data on login page mount
+  useEffect(() => {
+    // Clean up existing auth state when landing on login page
+    cleanupAuthState();
+    localStorage.removeItem('lastUserActivity');
+    
+    // Check URL parameters for session_expired flag
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('session_expired') === 'true') {
+      setErrorMessage("Your session has expired. Please log in again.");
+      // Clear the flag from the URL
+      navigate('/login', { replace: true });
+    }
+  }, []);
+  
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
@@ -114,8 +131,9 @@ const Login = () => {
             </div>
 
             {errorMessage && (
-              <div className="p-3 text-white bg-[#ff4d6d] rounded-md text-sm mb-4">
-                {errorMessage}
+              <div className="p-3 text-white bg-[#ff4d6d] rounded-md text-sm mb-4 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{errorMessage}</span>
               </div>
             )}
 
