@@ -1,4 +1,3 @@
-
 import { Product, Order } from '@/types/product';
 
 export const mockProducts: Product[] = [
@@ -167,8 +166,24 @@ export const getOrderById = (id: string): Promise<Order | undefined> => {
   });
 };
 
-export const getUserOrders = (userId: string): Promise<Order[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(mockOrders.filter(o => o.userId === userId)), 500);
-  });
+// Mock function to get user orders
+export const getUserOrders = async (userId: string): Promise<Order[]> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  try {
+    // Get orders from localStorage
+    const ordersFromStorage = localStorage.getItem('orders');
+    if (!ordersFromStorage) {
+      return [];
+    }
+    
+    const allOrders: Order[] = JSON.parse(ordersFromStorage);
+    
+    // Filter orders by userId
+    return allOrders.filter(order => order.userId === userId);
+  } catch (error) {
+    console.error("Error retrieving orders from localStorage:", error);
+    return [];
+  }
 };

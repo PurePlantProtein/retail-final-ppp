@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -143,19 +143,46 @@ const Orders = () => {
                               <p className="capitalize">{order.paymentMethod.replace('-', ' ')}</p>
                             </div>
                             <div className="flex justify-between">
+                              <p>Invoice Status:</p>
+                              <p className="capitalize">{order.invoiceStatus || 'pending'}</p>
+                            </div>
+                            <div className="flex justify-between">
                               <p>Order Total:</p>
                               <p className="font-medium">${order.total.toFixed(2)}</p>
                             </div>
                           </div>
                         </AccordionContent>
                       </AccordionItem>
+                      
+                      {order.shippingAddress && (
+                        <AccordionItem value="shipping">
+                          <AccordionTrigger>
+                            Shipping Details
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="bg-muted p-4 rounded-md">
+                              <p className="font-medium">{order.shippingAddress.name}</p>
+                              <p>{order.shippingAddress.street}</p>
+                              <p>{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}</p>
+                              <p>{order.shippingAddress.country}</p>
+                              <p>Phone: {order.shippingAddress.phone}</p>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
                     </Accordion>
                     
                     <Separator />
                     
                     <div className="flex flex-wrap gap-4">
                       <Button variant="outline">Track Order</Button>
-                      <Button variant="outline">Download Invoice</Button>
+                      {order.invoiceUrl ? (
+                        <Button variant="outline" asChild>
+                          <a href={order.invoiceUrl} target="_blank" rel="noopener noreferrer">View Invoice</a>
+                        </Button>
+                      ) : (
+                        <Button variant="outline" disabled>Invoice Pending</Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -167,7 +194,7 @@ const Orders = () => {
             <CardContent className="pt-6 flex flex-col items-center py-16">
               <p className="mb-6 text-gray-500">You don't have any orders yet</p>
               <Button asChild>
-                <a href="/products">Browse Products</a>
+                <Link to="/products">Browse Products</Link>
               </Button>
             </CardContent>
           </Card>

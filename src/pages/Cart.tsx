@@ -162,21 +162,29 @@ const Cart = () => {
       id: orderId,
       userId: user?.id || 'guest',
       userName: user?.email || 'guest',
-      items: items,
+      items: items.slice(), // Create a copy of the items array to prevent issues
       total: subtotal + shippingCost,
       status: paymentMethod === 'paypal' ? 'processing' : 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       paymentMethod: paymentMethod,
       shippingOption: selectedOption,
-      shippingAddress: shippingAddress,
+      shippingAddress: {...shippingAddress}, // Create a copy to prevent reference issues
       invoiceStatus: paymentMethod === 'paypal' ? 'paid' : 'draft'
     };
     
-    // Store the order in local storage
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-    orders.push(order);
-    localStorage.setItem('orders', JSON.stringify(orders));
+    console.log("Creating order:", order);
+    
+    // Get existing orders from localStorage or initialize empty array
+    const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    
+    // Add new order
+    existingOrders.push(order);
+    
+    // Store the orders in local storage
+    localStorage.setItem('orders', JSON.stringify(existingOrders));
+    
+    console.log("Orders saved:", existingOrders);
     
     return order;
   };
@@ -216,7 +224,7 @@ const Cart = () => {
       // Navigate to the orders page after a short delay
       setTimeout(() => {
         navigate('/orders');
-      }, 1000);
+      }, 2000);
       
     } catch (error) {
       console.error("Error processing bank transfer order:", error);
@@ -262,7 +270,7 @@ const Cart = () => {
       // Navigate to the orders page after a short delay
       setTimeout(() => {
         navigate('/orders');
-      }, 1000);
+      }, 2000);
       
     } catch (error) {
       console.error("Error processing PayPal order:", error);

@@ -44,6 +44,16 @@ export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | '
 // Payment method
 export type PaymentMethod = 'paypal' | 'bank-transfer';
 
+// Xero integration fields
+export type XeroInvoice = {
+  invoiceId: string;
+  invoiceNumber: string;
+  invoiceUrl: string;
+  amountDue: number;
+  amountPaid: number;
+  dueDate: string;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -84,7 +94,15 @@ export type Order = {
   paymentMethod: PaymentMethod;
   shippingOption?: ShippingOption;
   shippingAddress?: ShippingAddress;
-  invoiceUrl?: string; // Field to store URL for Xero invoice
-  invoiceId?: string; // Field to store Xero invoice ID
-  invoiceStatus?: 'draft' | 'submitted' | 'paid';
+  // Xero invoice fields
+  invoiceUrl?: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  invoiceStatus?: 'draft' | 'submitted' | 'paid' | 'void';
+  // Additional Xero fields
+  xeroDetails?: XeroInvoice;
+  // Additional meta fields
+  notes?: string;
+  taxAmount?: number;
+  discountAmount?: number;
 };
