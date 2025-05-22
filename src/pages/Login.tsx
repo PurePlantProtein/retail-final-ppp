@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -37,7 +38,7 @@ const createAdminAccount = async () => {
 };
 
 const Testimonial = ({ name, content, rating = 5 }) => (
-  <div className="p-4 bg-white rounded-lg shadow-sm mb-4">
+  <div className="p-4 bg-white/90 rounded-lg shadow-sm mb-4 backdrop-blur-sm">
     <div className="flex items-center mb-2">
       <div className="flex space-x-0.5 text-yellow-500">
         {[...Array(rating)].map((_, i) => (
@@ -173,17 +174,19 @@ const Login = () => {
         </div>
         
         {/* Right side - Image and Testimonials */}
-        <div className="hidden md:block md:w-[55%] bg-gradient-to-br from-[#f8f9fa] to-[#e2d1c3] relative">
-          <div className="absolute inset-0 bg-[#25a18e]/10"></div>
+        <div 
+          className="hidden md:block md:w-[55%] relative"
+          style={{
+            backgroundImage: `url('/lovable-uploads/c2b672fa-71b7-46f8-8547-17eff1aa4139.png')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        >
+          <div className="absolute inset-0 bg-[#25a18e]/30 backdrop-blur-sm"></div>
           <div className="h-full overflow-y-auto p-10 relative z-10">
             <div className="max-w-lg mx-auto">
-              <img 
-                src="/lovable-uploads/ca77458f-0931-4215-a7c7-151ddc81bd55.png" 
-                alt="PP Protein Products" 
-                className="w-full h-64 object-cover rounded-xl mb-8" 
-              />
-              
-              <h2 className="text-2xl font-bold mb-6 text-gray-800">What our customers are saying</h2>
+              <h2 className="text-2xl font-bold mb-6 text-white drop-shadow-md">What our customers are saying</h2>
               
               <Testimonial 
                 name="Sarah T., Health Food Store" 
