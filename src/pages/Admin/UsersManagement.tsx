@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import {
@@ -10,24 +10,35 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, AlertCircle, Plus } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import UsersTable, { User } from '@/components/admin/UsersTable';
+import { Plus } from 'lucide-react';
+import UsersTable from '@/components/admin/UsersTable';
 import CreateUserDialog from '@/components/admin/CreateUserDialog';
+import UserSearchAndFilter from '@/components/admin/users/UserSearchAndFilter';
+import UserApprovalRequests from '@/components/admin/users/UserApprovalRequests';
+import { useUsersManagement } from '@/hooks/useUsersManagement';
 
 const UsersManagement = () => {
-  const { isAdmin, user, session, refreshProfile } = useAuth();
+  const { isAdmin, user, session } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [users, setUsers] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all-users');
-  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  
+  const {
+    searchTerm,
+    setSearchTerm,
+    isLoading,
+    activeTab,
+    setActiveTab,
+    isCreateUserDialogOpen,
+    setIsCreateUserDialogOpen,
+    fetchUsers,
+    updateUserRole,
+    toggleUserStatus,
+    updateUserDetails,
+    deleteUser,
+    getFilteredUsers
+  } = useUsersManagement();
 
   useEffect(() => {
     if (!user) {
@@ -44,188 +55,9 @@ const UsersManagement = () => {
     }
     
     fetchUsers();
-  }, [user, isAdmin, navigate, toast]);
+  }, [user, isAdmin, navigate, toast, fetchUsers]);
 
-  const fetchUsers = async () => {
-    try {
-      setIsLoading(true);
-      
-      // First, get all profiles from profiles table as our primary data source
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
-      
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        throw profilesError;
-      }
-
-      console.log('Raw profiles data:', profilesData);
-      
-      // Also fetch auth users if possible (will work if user has admin rights)
-      let authUsersData: any[] = [];
-      try {
-        // This might fail due to permissions, but we'll try anyway
-        const { data: authUsers, error } = await supabase.auth.admin.listUsers();
-        
-        if (error) {
-          console.log('Could not fetch auth users using admin API:', error);
-        } else if (authUsers && authUsers.users && Array.isArray(authUsers.users)) {
-          authUsersData = authUsers.users;
-          console.log('Auth users data:', authUsersData);
-        }
-      } catch (err) {
-        console.log('Could not fetch auth users, using profiles only:', err);
-      }
-
-      // Convert profiles to users format
-      const users: User[] = profilesData.map(profile => {
-        // Find matching auth user if available
-        const matchingAuthUser = authUsersData.find(au => au.id === profile.id);
-        
-        // Determine role based on email - this is a temporary approach
-        // In a production system, you would store roles in a database table
-        const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.email || '');
-        
-        return {
-          id: profile.id,
-          email: profile.email || profile.id,
-          created_at: profile.created_at,
-          business_name: profile.business_name || 'Unknown',
-          business_type: profile.business_type || 'Not specified',
-          business_address: profile.business_address,
-          phone: profile.phone,
-          status: 'Active',
-          role: isUserAdmin ? 'admin' : 'retailer'
-        };
-      });
-      
-      console.log('Fetched users from profiles:', users);
-      setUsers(users);
-      
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load users. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const updateUserRole = async (userId: string, newRole: string) => {
-    try {
-      // In a real implementation, you would update the role in the database
-      toast({
-        title: "Role Updated",
-        description: `User role updated to ${newRole}.`,
-      });
-      
-      setUsers(prevUsers => 
-        prevUsers.map(u => 
-          u.id === userId ? { ...u, role: newRole } : u
-        )
-      );
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user role.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const toggleUserStatus = async (userId: string, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === 'Active' ? 'Suspended' : 'Active';
-      
-      toast({
-        title: "Status Updated",
-        description: `User status updated to ${newStatus}.`,
-      });
-      
-      setUsers(prevUsers => 
-        prevUsers.map(u => 
-          u.id === userId ? { ...u, status: newStatus } : u
-        )
-      );
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user status.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateUserDetails = async (userId: string, userData: Partial<User>) => {
-    try {
-      // Update user in Supabase profiles table
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          business_name: userData.business_name,
-          business_type: userData.business_type,
-          business_address: userData.business_address,
-          phone: userData.phone,
-        })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      // Update local state
-      setUsers(prevUsers =>
-        prevUsers.map(u =>
-          u.id === userId ? { ...u, ...userData } : u
-        )
-      );
-
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Error updating user details:', error);
-      return Promise.reject(error);
-    }
-  };
-
-  const deleteUser = async (userId: string) => {
-    try {
-      // In a production environment, you would need to handle this properly
-      // Either by soft-deleting or by using Supabase admin functions to delete the auth user
-      
-      // For now, we'll just remove from profiles table
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
-      
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      return Promise.reject(error);
-    }
-  };
-
-  // Filter users based on search term and active tab
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      user.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.business_type?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (activeTab === 'all-users') return matchesSearch;
-    if (activeTab === 'retailers') return matchesSearch && user.role === 'retailer';
-    if (activeTab === 'admins') return matchesSearch && user.role === 'admin';
-    return matchesSearch;
-  });
+  const filteredUsers = getFilteredUsers();
 
   if (!isAdmin) {
     return null;
@@ -252,24 +84,12 @@ const UsersManagement = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search users..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
-                <TabsList className="grid grid-cols-3 w-full md:w-[400px]">
-                  <TabsTrigger value="all-users">All Users</TabsTrigger>
-                  <TabsTrigger value="retailers">Retailers</TabsTrigger>
-                  <TabsTrigger value="admins">Admins</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
+            <UserSearchAndFilter 
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
             
             <UsersTable 
               users={filteredUsers} 
@@ -283,25 +103,7 @@ const UsersManagement = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>User Approval Requests</CardTitle>
-            <CardDescription>
-              New retailer accounts requiring approval.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-6 text-center">
-              <div>
-                <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-lg font-medium">No pending approval requests</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  New signup requests will appear here for your approval.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <UserApprovalRequests />
 
         {/* Create User Dialog */}
         <CreateUserDialog
