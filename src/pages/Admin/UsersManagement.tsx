@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -56,7 +57,7 @@ type User = {
 };
 
 const UsersManagement = () => {
-  const { isAdmin, user, session } = useAuth(); // Use session instead of currentSession
+  const { isAdmin, user, session } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
@@ -294,7 +295,7 @@ const UsersManagement = () => {
           isOpen={isCreateUserDialogOpen}
           onClose={() => setIsCreateUserDialogOpen(false)}
           onUserCreated={fetchUsers}
-          session={session} // Pass the session to the CreateUserDialog
+          session={session}
         />
       </div>
     </Layout>
@@ -417,7 +418,7 @@ interface CreateUserDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onUserCreated: () => void;
-  session: any; // Add session to props
+  session: any;
 }
 
 const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ 
@@ -458,10 +459,14 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         console.error('Error inviting user:', error);
         
         // Fall back to creating a profile directly
+        // IMPORTANT FIX: Use a valid UUID as the ID instead of the email address
+        const uuid = crypto.randomUUID(); // Generate a valid UUID
+        
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .insert({
-            id: values.email,  // Use email as ID for now
+            id: uuid,  // Use the generated UUID instead of email
+            email: values.email, // Store email in a separate column
             business_name: values.businessName,
             business_type: values.businessType
           })
