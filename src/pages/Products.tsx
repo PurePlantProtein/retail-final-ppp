@@ -131,10 +131,10 @@ const Products = () => {
         </div>
         
         {isLoading ? (
-          <div className="product-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {Array(6).fill(0).map((_, index) => (
               <div key={index} className="space-y-3">
-                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-56 w-full" />
                 <Skeleton className="h-6 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-4 w-full" />
@@ -143,7 +143,7 @@ const Products = () => {
             ))}
           </div>
         ) : filteredProducts.length > 0 ? (
-          <div className="product-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

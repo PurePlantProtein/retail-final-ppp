@@ -17,10 +17,11 @@ const Index = () => {
   }, [navigate, user]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to PP Protein Wholesale</h1>
+        <h1 className="text-4xl font-bold mb-4">Pure Plant Protein Wholesale</h1>
         <p className="text-xl text-gray-600">Redirecting...</p>
+        <div className="mt-4 animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
       </div>
     </div>
   );
