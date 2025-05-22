@@ -5,7 +5,7 @@ import Layout from '@/components/Layout';
 import { AdminLayout } from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mail } from 'lucide-react';
+import { Mail, Truck } from 'lucide-react';
 
 const SettingsManagement = () => {
   return (
@@ -72,10 +72,14 @@ const SettingsManagement = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p>Set up shipping zones, methods, and calculate shipping rates.</p>
+                <p>Set up shipping zones, methods, and free shipping rules.</p>
               </CardContent>
               <CardFooter>
-                <Button>Manage Shipping Settings</Button>
+                <Button asChild>
+                  <Link to="/admin/shipping-settings">
+                    <Truck className="mr-2 h-4 w-4" /> Manage Shipping Settings
+                  </Link>
+                </Button>
               </CardFooter>
             </Card>
           </div>

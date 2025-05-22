@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -32,6 +31,7 @@ import FAQ from "./pages/FAQ";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import ShippingSettings from '@/pages/Admin/ShippingSettings';
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -44,7 +44,7 @@ import { ShippingProvider } from "./contexts/ShippingContext";
 // Create a client
 const queryClient = new QueryClient();
 
-const App = () => {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -229,6 +229,15 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <EmailSettings />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/shipping-settings" 
+                  element={
+                    <ProtectedRoute>
+                      <ShippingSettings />
                     </ProtectedRoute>
                   } 
                 />

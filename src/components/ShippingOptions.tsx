@@ -3,7 +3,7 @@ import React from 'react';
 import { ShippingOption } from '@/types/product';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Truck } from 'lucide-react';
 
 interface ShippingOptionsProps {
   shippingOptions: ShippingOption[];
@@ -35,6 +35,9 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
     );
   }
 
+  // Check if free shipping is available
+  const hasFreeShipping = shippingOptions.some(option => option.id === 'free-shipping');
+
   return (
     <RadioGroup 
       value={selectedOption} 
@@ -44,13 +47,20 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
       {shippingOptions.map((option) => (
         <div 
           key={option.id} 
-          className="flex items-center justify-between rounded-md border p-3 cursor-pointer hover:bg-accent"
+          className={`flex items-center justify-between rounded-md border p-3 cursor-pointer hover:bg-accent ${
+            option.id === 'free-shipping' ? 'border-green-500 bg-green-50' : ''
+          }`}
         >
           <div className="flex items-start gap-4">
             <RadioGroupItem value={option.id} id={option.id} className="mt-1" />
             <div>
-              <Label htmlFor={option.id} className="text-base font-medium cursor-pointer">
+              <Label htmlFor={option.id} className="text-base font-medium cursor-pointer flex items-center">
                 {option.name}
+                {option.id === 'free-shipping' && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                    FREE
+                  </span>
+                )}
               </Label>
               <p className="text-sm text-muted-foreground">
                 {option.description}
@@ -69,7 +79,9 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
             </div>
           </div>
           <div className="font-medium">
-            ${option.price.toFixed(2)}
+            {option.price > 0 ? `$${option.price.toFixed(2)}` : (
+              <span className="text-green-600 font-bold">FREE</span>
+            )}
           </div>
         </div>
       ))}

@@ -1,4 +1,3 @@
-
 import { ShippingOption, ShippingCarrier, Product } from '@/types/product';
 
 // Mock data for Australia Post shipping options
@@ -57,6 +56,21 @@ const transdirectOptions: ShippingOption[] = [
   }
 ];
 
+// Get shipping settings from localStorage
+const getShippingSettings = () => {
+  const settingsJson = localStorage.getItem('shippingSettings');
+  if (settingsJson) {
+    return JSON.parse(settingsJson);
+  }
+  
+  // Default settings
+  return {
+    freeShippingThreshold: 12, // Default: 12 protein products
+    freeShippingMessage: 'Free shipping for orders with 12+ protein products',
+    freeShippingDays: '5-7 business days',
+  };
+};
+
 // Calculate shipping options based on cart weight, dimensions, destination, and products
 export const calculateShippingOptions = (
   totalWeight: number,
@@ -69,35 +83,36 @@ export const calculateShippingOptions = (
   return new Promise((resolve) => {
     // Simulate API call to shipping providers
     setTimeout(() => {
-      // In a real implementation, we would call Australia Post and Transdirect APIs here
-      // and calculate actual shipping rates based on weight, dimensions, and destination
+      // Get shipping settings
+      const settings = getShippingSettings();
       
-      // For now, return mock data
-      let availableOptions: ShippingOption[] = [...australiaPostOptions, ...transdirectOptions];
+      // Check if free shipping is applicable
+      const qualifiesForFreeShipping = products && isEligibleForFreeShipping(products, settings.freeShippingThreshold);
+      console.log('Free shipping eligible:', qualifiesForFreeShipping);
       
-      // Check if free shipping is applicable (12+ protein products)
-      const qualifiesForFreeShipping = products && isEligibleForFreeShipping(products);
-      
+      // If free shipping is applicable, only return the free shipping option
       if (qualifiesForFreeShipping) {
-        // Add free shipping option at the beginning of the array to make it the default option
+        // Create free shipping option
         const freeShippingOption: ShippingOption = {
           id: 'free-shipping',
           name: 'Free Shipping',
           carrier: 'australia-post',
           price: 0,
-          estimatedDeliveryDays: '5-7 business days',
-          description: 'Free shipping for orders with 12+ protein products'
+          estimatedDeliveryDays: settings.freeShippingDays,
+          description: settings.freeShippingMessage
         };
         
-        availableOptions = [freeShippingOption, ...availableOptions];
+        // Only return free shipping when eligible
+        resolve([freeShippingOption]);
+        return;
       }
+      
+      // Otherwise return standard shipping options
+      let availableOptions: ShippingOption[] = [...australiaPostOptions, ...transdirectOptions];
       
       // Apply simple business rules to adjust prices based on weight
       if (totalWeight > 5) {
         availableOptions = availableOptions.map(option => {
-          // Don't increase price of free shipping
-          if (option.id === 'free-shipping') return option;
-          
           return {
             ...option,
             price: option.price * 1.5 // 50% price increase for heavy packages
@@ -106,7 +121,6 @@ export const calculateShippingOptions = (
       }
       
       // Filter or adjust options based on postal code and state
-      // For example, same day delivery might only be available in certain postal codes
       if (destination.postalCode.startsWith('3') && destination.state === 'VIC') {
         // Faster delivery for Melbourne metro
         availableOptions = availableOptions.filter(option => true);
@@ -131,23 +145,24 @@ export const calculateShippingOptions = (
 
 // Helper function to check if order qualifies for free shipping
 export const isEligibleForFreeShipping = (
-  items: { product: Product; quantity: number }[]
+  items: { product: Product; quantity: number }[],
+  threshold: number
 ): boolean => {
   // Count protein products
   const proteinProductCount = items.reduce((total, item) => {
     // Check if product category is protein (case insensitive)
     if (item.product.category && 
-        item.product.category.toLowerCase() === 'protein') {
+        item.product.category.toLowerCase().includes('protein')) {
       return total + item.quantity;
     }
     return total;
   }, 0);
   
   // Debug log to help troubleshoot
-  console.log('Protein product count:', proteinProductCount);
+  console.log('Protein product count:', proteinProductCount, 'Threshold:', threshold);
   
-  // Free shipping for orders with 12+ protein products
-  return proteinProductCount >= 12;
+  // Free shipping for orders with threshold number of protein products
+  return proteinProductCount >= threshold;
 };
 
 // Get shipping option by ID
@@ -157,9 +172,35 @@ export const getShippingOptionById = (
   return new Promise((resolve) => {
     setTimeout(() => {
       const allOptions = [...australiaPostOptions, ...transdirectOptions];
+      
+      // Also check for free shipping option
+      if (id === 'free-shipping') {
+        const settings = getShippingSettings();
+        resolve({
+          id: 'free-shipping',
+          name: 'Free Shipping',
+          carrier: 'australia-post',
+          price: 0,
+          estimatedDeliveryDays: settings.freeShippingDays,
+          description: settings.freeShippingMessage
+        });
+        return;
+      }
+      
       resolve(allOptions.find(option => option.id === id));
     }, 200);
   });
+};
+
+// Update shipping settings
+export const updateShippingSettings = (settings: {
+  freeShippingThreshold?: number;
+  freeShippingMessage?: string;
+  freeShippingDays?: string;
+}) => {
+  const currentSettings = getShippingSettings();
+  const updatedSettings = { ...currentSettings, ...settings };
+  localStorage.setItem('shippingSettings', JSON.stringify(updatedSettings));
 };
 
 // In a real implementation, we would have functions to:
