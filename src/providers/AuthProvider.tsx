@@ -161,6 +161,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Clean up existing state
       cleanupAuthState();
       
+      console.log("Signing up with:", { email, businessName, businessType });
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -172,13 +174,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Signup error:", error);
+        throw error;
+      }
+      
+      console.log("Signup success:", data);
+      
+      // Reset the last activity timestamp
+      updateActivity();
       
       toast({
         title: "Account created",
         description: "Welcome to PP Protein Wholesale!",
       });
     } catch (error: any) {
+      console.error("Signup error caught:", error);
       toast({
         title: "Sign up failed",
         description: error.message || "Something went wrong",

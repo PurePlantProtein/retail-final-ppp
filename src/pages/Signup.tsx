@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -169,10 +170,15 @@ const Signup = () => {
       // Save shipping address
       setShippingAddress(shippingData);
       
+      toast({
+        title: "Account created successfully",
+        description: "Welcome to PP Protein Wholesale!",
+      });
+      
       // No need to navigate here, the useEffect will handle it
     } catch (error: any) {
       setErrorMessage(error.message || "Error creating account");
-      console.error(error);
+      console.error("Signup error:", error);
     } finally {
       setIsLoading(false);
     }

@@ -46,7 +46,7 @@ if (typeof window !== 'undefined') {
   // Set the favicon from localStorage if it exists
   const savedIcon = localStorage.getItem('site_icon');
   if (savedIcon) {
-    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
     link.type = 'image/png';
     link.rel = 'shortcut icon';
     link.href = savedIcon;
