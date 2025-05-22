@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -178,7 +179,7 @@ const Login = () => {
           <div className="h-full overflow-y-auto p-10 relative z-10">
             <div className="max-w-lg mx-auto">
               <img 
-                src="https://ppprotein.com.au/cdn/shop/products/apple-crumble-protein-donut-mix-160g-pp-protein-573315_1000x.jpg?v=1647926271" 
+                src="/lovable-uploads/16fffa7c-63cc-41bd-a21b-c5d84de34738.png" 
                 alt="PP Protein Products" 
                 className="w-full h-64 object-cover rounded-xl mb-8" 
               />
