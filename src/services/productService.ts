@@ -1,10 +1,9 @@
+
 import { Database } from '@/types/product';
 import { Product } from '@/types/product';
 import { Category } from '@/types/product';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/integrations/supabase/client';
 import { mapProductForClient, mapProductForStorage } from '@/utils/productUtils';
-
-const supabase = createClientComponentClient<Database>();
 
 export const getProducts = async (): Promise<Product[]> => {
   const { data: products, error } = await supabase
