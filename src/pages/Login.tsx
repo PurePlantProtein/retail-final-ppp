@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -38,7 +37,7 @@ const createAdminAccount = async () => {
   }
 };
 
-const Testimonial = ({ name, content, rating = 5 }) => (
+const Testimonial = ({ name, role, content, rating = 5 }) => (
   <div className="p-4 bg-white/90 rounded-lg shadow-sm mb-4 backdrop-blur-sm">
     <div className="flex items-center mb-2">
       <div className="flex space-x-0.5 text-yellow-500">
@@ -48,7 +47,10 @@ const Testimonial = ({ name, content, rating = 5 }) => (
       </div>
     </div>
     <p className="text-gray-700 mb-3 text-sm">{content}</p>
-    <p className="font-medium text-gray-900">{name}</p>
+    <div>
+      <p className="font-medium text-gray-900">{name}</p>
+      <p className="text-xs text-gray-500">{role}</p>
+    </div>
   </div>
 );
 
@@ -113,6 +115,27 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  const testimonials = [
+    { 
+      name: "Peter Murray",
+      role: "Osteopath",
+      content: "Meeting your daily protein intake is invaluable. I rely on PPP every day to ensure my recovery needs are met. Maintaining a healthy musculoskeletal system is crucial for optimising performance and minimising injury risks!",
+      rating: 5
+    },
+    { 
+      name: "Ayden Musgrave",
+      role: "Exercise Physiologist",
+      content: "As an exercise physiologist, I recommend PPP for optimal recovery and long-term health. It's a complete protein source with clean, natural ingredients, perfect for supporting an active lifestyle.",
+      rating: 5
+    },
+    { 
+      name: "Nicole Marie",
+      role: "Coeliac Dietitian",
+      content: "The Premium Plant Protein Powders are hands down the best plant protein powder I have found to date. It's not grainy and doesn't have that bad aftertaste you typically get with other plant proteins. I also love how smooth they are!",
+      rating: 4
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -201,25 +224,24 @@ const Login = () => {
           }}
         >
           <div className="absolute inset-0 bg-[#25a18e]/30 backdrop-blur-sm"></div>
-          <div className="h-full overflow-y-auto p-10 relative z-10">
-            <div className="max-w-lg mx-auto">
+          <div className="h-full flex flex-col justify-end p-10 relative z-10">
+            <div className="max-w-lg mx-auto mb-8">
               <h2 className="text-2xl font-bold mb-6 text-white drop-shadow-md">What our customers are saying</h2>
               
-              <Testimonial 
-                name="Sarah T., Health Food Store" 
-                content="PP Protein wholesale has transformed our store's protein section. The products are always high quality and our customers love them. The ordering process is seamless!"
-              />
-              
-              <Testimonial 
-                name="Michael R., Gym Owner" 
-                content="Our gym members have been thrilled with the PP Protein products we stock. The wholesale pricing allows us to offer great deals while maintaining good margins."
-              />
-              
-              <Testimonial 
-                name="Jennifer K., Nutritionist" 
-                content="I recommend PP Protein products to all my clients. The wholesale platform makes it easy for me to purchase in bulk for my practice."
-                rating={4}
-              />
+              <div className="overflow-hidden">
+                <div className="animate-marquee flex">
+                  {testimonials.concat(testimonials).map((testimonial, index) => (
+                    <div key={index} className="min-w-[350px] mr-6 flex-shrink-0">
+                      <Testimonial 
+                        name={testimonial.name} 
+                        role={testimonial.role}
+                        content={testimonial.content}
+                        rating={testimonial.rating}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
