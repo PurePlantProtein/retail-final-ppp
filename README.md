@@ -1,3 +1,4 @@
+
 # Welcome to your Lovable project
 
 ## Project info
@@ -71,3 +72,35 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Security Guidelines
+
+This project implements several security measures:
+
+1. **Authentication and Authorization**
+   - JWT-based authentication with Supabase
+   - Role-based access control for admin vs retailer users
+   - Session timeout for inactivity
+
+2. **Data Protection**
+   - Input sanitization to prevent XSS attacks
+   - Content Security Policies
+   - Rate limiting on sensitive operations
+
+3. **Payment Security**
+   - Secure bank transfer instructions
+   - Unique reference codes for payments
+   - No storage of payment information in the frontend
+
+4. **Best Practices**
+   - HTTPS enforcement
+   - Protection against common web vulnerabilities (XSS, CSRF)
+   - Secure HTTP headers
+
+## Recommended Security Practices
+
+- Keep all dependencies updated regularly
+- Use HTTPS for all production environments
+- Implement regular data backups
+- Monitor for suspicious activity
+- Follow security updates from Supabase

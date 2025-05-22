@@ -21,6 +21,9 @@ port = 54324
 [auth]
 enabled = true
 port = 54325
+# Enable CAPTCHA protection
+enable_captcha = true
+captcha_provider = "hcaptcha"
 
 [storage]
 enabled = true
@@ -35,3 +38,4 @@ enabled = true
 
 [functions.send-order-email]
 verify_jwt = true
+

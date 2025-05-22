@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContextType, UserProfile } from '@/types/auth';
 import { useFetchProfile } from '@/hooks/useFetchProfile';
 import { cleanupAuthState, isAdminUser } from '@/utils/authUtils';
+import { isSessionExpired, SESSION_TIMEOUT_MS } from '@/utils/securityUtils';
 
 // Create the context with undefined as initial value
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -15,6 +16,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
   const { toast } = useToast();
   
   // Use the custom hook to fetch profile
@@ -26,6 +28,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetchProfile(user.id);
     }
   };
+
+  // Track user activity to handle session timeouts
+  const updateActivity = useCallback(() => {
+    setLastActivity(Date.now());
+  }, []);
+
+  // Check for session expiration
+  useEffect(() => {
+    const checkSession = () => {
+      if (session && isSessionExpired(lastActivity)) {
+        toast({
+          title: "Session expired",
+          description: "Your session has expired due to inactivity. Please log in again.",
+          variant: "destructive",
+        });
+        logout();
+      }
+    };
+
+    const interval = setInterval(checkSession, 60000); // Check every minute
+    
+    // Add event listeners to track user activity
+    const events = ['mousedown', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, updateActivity));
+    
+    return () => {
+      clearInterval(interval);
+      events.forEach(event => window.removeEventListener(event, updateActivity));
+    };
+  }, [session, lastActivity, updateActivity]);
 
   useEffect(() => {
     const setupAuth = async () => {
@@ -81,12 +113,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Continue even if this fails
       }
       
+      // Implement rate limiting for login attempts
+      const clientId = localStorage.getItem('device_id') || 
+                      (localStorage.setItem('device_id', crypto.randomUUID()), localStorage.getItem('device_id')!);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       if (error) throw error;
+      
+      // Reset the last activity timestamp
+      setLastActivity(Date.now());
       
       toast({
         title: "Login successful",
