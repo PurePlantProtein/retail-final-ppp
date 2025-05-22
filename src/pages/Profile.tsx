@@ -39,7 +39,7 @@ const businessTypes = [
 ];
 
 const Profile = () => {
-  const { user, profile: authProfile, isLoading } = useAuth();
+  const { user, profile: authProfile, isLoading, refreshProfile } = useAuth();
   const { shippingAddress, setShippingAddress } = useShipping();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
@@ -102,15 +102,9 @@ const Profile = () => {
         throw error;
       }
 
-      // Update local state in the auth context
-      if (typeof window !== "undefined") {
-        // Force a small delay to ensure Supabase has updated the record
-        setTimeout(() => {
-          // Refresh the page to pick up the changes
-          window.location.reload();
-        }, 1000);
-      }
-
+      // Use the refreshProfile method from AuthContext to update the local state
+      await refreshProfile();
+      
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
@@ -144,6 +138,9 @@ const Profile = () => {
           .eq('id', user.id);
 
         if (error) throw error;
+        
+        // Refresh profile after updating
+        await refreshProfile();
       } catch (error) {
         console.error("Error updating business address:", error);
       }
