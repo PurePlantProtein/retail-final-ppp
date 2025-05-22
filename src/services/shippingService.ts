@@ -1,5 +1,4 @@
-
-import { ShippingOption, ShippingCarrier } from '@/types/product';
+import { ShippingOption, ShippingCarrier, Product } from '@/types/product';
 
 // Mock data for Australia Post shipping options
 const australiaPostOptions: ShippingOption[] = [
@@ -57,13 +56,14 @@ const transdirectOptions: ShippingOption[] = [
   }
 ];
 
-// Calculate shipping options based on cart weight, dimensions, and destination
+// Calculate shipping options based on cart weight, dimensions, destination, and products
 export const calculateShippingOptions = (
   totalWeight: number,
   destination: { 
     postalCode: string; 
     state: string;
-  }
+  },
+  products?: { product: Product; quantity: number }[]
 ): Promise<ShippingOption[]> => {
   return new Promise((resolve) => {
     // Simulate API call to shipping providers
@@ -74,12 +74,34 @@ export const calculateShippingOptions = (
       // For now, return mock data
       let availableOptions: ShippingOption[] = [...australiaPostOptions, ...transdirectOptions];
       
+      // Check if free shipping is applicable (12+ protein products)
+      const qualifiesForFreeShipping = products && isEligibleForFreeShipping(products);
+      
+      if (qualifiesForFreeShipping) {
+        // Add free shipping option
+        const freeShippingOption: ShippingOption = {
+          id: 'free-shipping',
+          name: 'Free Shipping',
+          carrier: 'australia-post',
+          price: 0,
+          estimatedDeliveryDays: '5-7 business days',
+          description: 'Free shipping for orders with 12+ protein products'
+        };
+        
+        availableOptions = [freeShippingOption, ...availableOptions];
+      }
+      
       // Apply simple business rules to adjust prices based on weight
       if (totalWeight > 5) {
-        availableOptions = availableOptions.map(option => ({
-          ...option,
-          price: option.price * 1.5 // 50% price increase for heavy packages
-        }));
+        availableOptions = availableOptions.map(option => {
+          // Don't increase price of free shipping
+          if (option.id === 'free-shipping') return option;
+          
+          return {
+            ...option,
+            price: option.price * 1.5 // 50% price increase for heavy packages
+          };
+        });
       }
       
       // Filter or adjust options based on postal code and state
@@ -104,6 +126,22 @@ export const calculateShippingOptions = (
       resolve(availableOptions);
     }, 500);
   });
+};
+
+// Helper function to check if order qualifies for free shipping
+export const isEligibleForFreeShipping = (
+  items: { product: Product; quantity: number }[]
+): boolean => {
+  // Count protein products
+  const proteinProductCount = items.reduce((total, item) => {
+    if (item.product.category === 'protein') {
+      return total + item.quantity;
+    }
+    return total;
+  }, 0);
+  
+  // Free shipping for orders with 12+ protein products
+  return proteinProductCount >= 12;
 };
 
 // Get shipping option by ID

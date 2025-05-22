@@ -11,7 +11,7 @@ import { createProduct, updateProduct, getCategories } from '@/services/productS
 import { useToast } from '@/components/ui/use-toast';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Plus, Minus } from 'lucide-react';
+import { AlertCircle, Plus, Minus, Weight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Dialog, 
@@ -42,11 +42,12 @@ const productSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
   description: z.string().min(10, { message: "Description must be at least 10 characters" }),
   price: z.coerce.number().positive({ message: "Price must be a positive number" }),
-  minQuantity: z.coerce.number().int().positive({ message: "Minimum quantity must be a positive integer" }),
+  minQuantity: z.coerce.number().int().positive({ message: "Minimum quantity must be a positive integer" }).default(12),
   stock: z.coerce.number().int().nonnegative({ message: "Stock must be a non-negative integer" }),
   image: z.string().url({ message: "Image must be a valid URL" }),
   category: z.string().min(1, { message: "Please select a category" }),
   // New fields
+  weight: z.coerce.number().nonnegative().optional(),
   servingSize: z.string().optional(),
   numberOfServings: z.coerce.number().int().nonnegative().optional(),
   bagSize: z.string().optional(),
@@ -118,11 +119,12 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       name: product.name,
       description: product.description,
       price: product.price,
-      minQuantity: product.minQuantity,
+      minQuantity: product.minQuantity || 12, // Default to 12 as per MOQ requirement
       stock: product.stock,
       image: product.image,
       category: product.category,
       // New fields
+      weight: product.weight || 0,
       servingSize: product.servingSize || '',
       numberOfServings: product.numberOfServings || 0,
       bagSize: product.bagSize || '',
@@ -133,11 +135,12 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       name: '',
       description: '',
       price: 0,
-      minQuantity: 1,
+      minQuantity: 12, // Default to 12 as per MOQ requirement
       stock: 0,
       image: '',
       category: '',
       // New fields
+      weight: 0,
       servingSize: '',
       numberOfServings: 0,
       bagSize: '',
@@ -173,10 +176,11 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
           name: formData.name,
           description: formData.description,
           price: formData.price,
-          minQuantity: formData.minQuantity,
+          minQuantity: formData.minQuantity || 12, // Default to 12 as per MOQ requirement
           stock: formData.stock,
           image: formData.image,
           category: formData.category as Category,
+          weight: formData.weight || 0,
           servingSize: formData.servingSize,
           numberOfServings: formData.numberOfServings,
           bagSize: formData.bagSize,
@@ -305,6 +309,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="shipping">Shipping Details</TabsTrigger>
               <TabsTrigger value="nutrition">Nutrition Details</TabsTrigger>
               <TabsTrigger value="amino">Amino Acid Profile</TabsTrigger>
               <TabsTrigger value="nutritional">Nutritional Info</TabsTrigger>
@@ -417,7 +422,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
                               <Input type="number" {...field} />
                             </FormControl>
                             <FormDescription>
-                              Minimum quantity per order
+                              Minimum 12 bags per order
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -483,6 +488,44 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
                     </FormItem>
                   )}
                 />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="shipping">
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Weight className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-medium">Shipping Information</h3>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="weight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Weight (kg)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="e.g., 1.5" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The weight of the product in kilograms (required for shipping calculations)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Alert className="bg-blue-50 border-blue-200">
+                  <AlertCircle className="h-4 w-4 text-blue-500" />
+                  <AlertDescription className="text-blue-700">
+                    Customers who order 12 or more units of protein powder qualify for free shipping.
+                  </AlertDescription>
+                </Alert>
               </div>
             </TabsContent>
 

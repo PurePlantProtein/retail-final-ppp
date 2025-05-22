@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -10,7 +11,7 @@ import { getProducts, deleteProduct, createProduct, updateProduct } from '@/serv
 import { Product } from '@/types/product';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, Trash, Plus, AlertCircle, Copy, CloudUpload } from 'lucide-react';
+import { Edit, Trash, Plus, AlertCircle, Copy, CloudUpload, Weight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -275,6 +276,13 @@ const ProductsManagement = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Weight className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-700">
+                          {product.weight ? `${product.weight} kg` : 'Weight not specified'}
+                        </span>
+                      </div>
+                      
                       <p className="text-sm text-gray-500 mb-4 line-clamp-2">{product.description}</p>
                       <div className="flex flex-wrap gap-2">
                         <Button 
