@@ -30,9 +30,18 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from '@/contexts/AuthContext';
-import { getOrders, updateOrderStatus } from '@/services/mockData';
+import { getOrders, updateOrderStatus, getOrderById } from '@/services/mockData';
 import { Order, OrderStatus } from '@/types/product';
+import { Eye } from 'lucide-react';
 
 const OrdersManagement = () => {
   const { isAdmin } = useAuth();
@@ -41,6 +50,10 @@ const OrdersManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 5;
+  
+  // New state for order details modal
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -77,6 +90,22 @@ const OrdersManagement = () => {
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error('Failed to update order status');
+    }
+  };
+
+  // New function to view order details
+  const handleViewOrderDetails = async (orderId: string) => {
+    try {
+      const order = await getOrderById(orderId);
+      if (order) {
+        setSelectedOrder(order);
+        setIsOrderDetailsOpen(true);
+      } else {
+        toast.error('Order not found');
+      }
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      toast.error('Failed to fetch order details');
     }
   };
 
@@ -132,7 +161,7 @@ const OrdersManagement = () => {
                         <TableHead>Date</TableHead>
                         <TableHead>Total</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -148,21 +177,31 @@ const OrdersManagement = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Select
-                              defaultValue={order.status}
-                              onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="Update status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="processing">Processing</SelectItem>
-                                <SelectItem value="shipped">Shipped</SelectItem>
-                                <SelectItem value="delivered">Delivered</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleViewOrderDetails(order.id)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Select
+                                defaultValue={order.status}
+                                onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
+                              >
+                                <SelectTrigger className="w-[140px]">
+                                  <SelectValue placeholder="Update status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="processing">Processing</SelectItem>
+                                  <SelectItem value="shipped">Shipped</SelectItem>
+                                  <SelectItem value="delivered">Delivered</SelectItem>
+                                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -228,6 +267,160 @@ const OrdersManagement = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Order Details Modal */}
+      <Dialog open={isOrderDetailsOpen} onOpenChange={setIsOrderDetailsOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Order Details</DialogTitle>
+            <DialogDescription>
+              Order #{selectedOrder?.id} • {selectedOrder?.createdAt ? new Date(selectedOrder.createdAt).toLocaleDateString() : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <div className="space-y-6 py-4">
+              {/* Customer Information */}
+              <div>
+                <h3 className="text-lg font-medium">Customer Information</h3>
+                <p className="text-sm text-gray-500">{selectedOrder.userName}</p>
+              </div>
+
+              <Separator />
+
+              {/* Order Status */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Status</h3>
+                  <Badge className={getStatusColor(selectedOrder.status)}>
+                    {selectedOrder.status}
+                  </Badge>
+                </div>
+                <div className="mt-2">
+                  <Select
+                    value={selectedOrder.status}
+                    onValueChange={(value) => handleStatusChange(selectedOrder.id, value as OrderStatus)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Update status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="shipped">Shipped</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Order Items */}
+              <div>
+                <h3 className="text-lg font-medium mb-4">Order Items</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedOrder.items.map((item, index) => (
+                      <TableRow key={`${selectedOrder.id}-${item.product.id}-${index}`}>
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <img 
+                              src={item.product.image} 
+                              alt={item.product.name} 
+                              className="h-10 w-10 rounded-md object-cover"
+                            />
+                            <div>
+                              <p className="font-medium">{item.product.name}</p>
+                              <p className="text-xs text-gray-500">#{item.product.id}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>${item.product.price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          ${(item.product.price * item.quantity).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-right font-medium">Total</TableCell>
+                      <TableCell className="text-right font-bold">
+                        ${selectedOrder.total.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {/* Shipping Address (if available) */}
+              {selectedOrder.shippingAddress && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Shipping Address</h3>
+                    <div className="bg-gray-50 p-4 rounded-md">
+                      <p className="font-medium">{selectedOrder.shippingAddress.name}</p>
+                      <p>{selectedOrder.shippingAddress.street}</p>
+                      <p>
+                        {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.postalCode}
+                      </p>
+                      <p>{selectedOrder.shippingAddress.country}</p>
+                      <p>Phone: {selectedOrder.shippingAddress.phone}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Payment Information */}
+              <Separator />
+              <div>
+                <h3 className="text-lg font-medium mb-2">Payment Information</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <p className="text-gray-500">Payment Method:</p>
+                  <p className="capitalize">{selectedOrder.paymentMethod.replace('-', ' ')}</p>
+                  
+                  <p className="text-gray-500">Payment Status:</p>
+                  <p className="capitalize">{selectedOrder.invoiceStatus || 'pending'}</p>
+                  
+                  {selectedOrder.invoiceNumber && (
+                    <>
+                      <p className="text-gray-500">Invoice Number:</p>
+                      <p>{selectedOrder.invoiceNumber}</p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Additional Notes (if available) */}
+              {selectedOrder.notes && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Notes</h3>
+                    <p className="text-gray-700">{selectedOrder.notes}</p>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end gap-2 mt-6">
+                <Button variant="outline" onClick={() => setIsOrderDetailsOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
