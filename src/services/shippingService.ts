@@ -1,3 +1,4 @@
+
 import { ShippingOption, ShippingCarrier, Product } from '@/types/product';
 
 // Mock data for Australia Post shipping options
@@ -78,7 +79,7 @@ export const calculateShippingOptions = (
       const qualifiesForFreeShipping = products && isEligibleForFreeShipping(products);
       
       if (qualifiesForFreeShipping) {
-        // Add free shipping option
+        // Add free shipping option at the beginning of the array to make it the default option
         const freeShippingOption: ShippingOption = {
           id: 'free-shipping',
           name: 'Free Shipping',
@@ -134,11 +135,16 @@ export const isEligibleForFreeShipping = (
 ): boolean => {
   // Count protein products
   const proteinProductCount = items.reduce((total, item) => {
-    if (item.product.category === 'protein') {
+    // Check if product category is protein (case insensitive)
+    if (item.product.category && 
+        item.product.category.toLowerCase() === 'protein') {
       return total + item.quantity;
     }
     return total;
   }, 0);
+  
+  // Debug log to help troubleshoot
+  console.log('Protein product count:', proteinProductCount);
   
   // Free shipping for orders with 12+ protein products
   return proteinProductCount >= 12;

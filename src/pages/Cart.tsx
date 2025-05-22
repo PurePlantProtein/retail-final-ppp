@@ -78,7 +78,8 @@ const Cart = () => {
         {
           postalCode: shippingAddress.postalCode,
           state: shippingAddress.state
-        }
+        },
+        items // Pass the cart items to check for free shipping eligibility
       ).then(options => {
         setShippingOptions(options);
         setSelectedShippingOption(options[0]?.id);
