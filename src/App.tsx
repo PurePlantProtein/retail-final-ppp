@@ -42,203 +42,201 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <CartProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  
-                  {/* Protected Routes */}
-                  <Route 
-                    path="/" 
-                    element={
-                      <ProtectedRoute>
-                        <Navigate to="/products" replace />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/products" 
-                    element={
-                      <ProtectedRoute>
-                        <Products />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/products/:id" 
-                    element={
-                      <ProtectedRoute>
-                        <ProductDetail />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/cart" 
-                    element={
-                      <ProtectedRoute>
-                        <Cart />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/profile" 
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/orders" 
-                    element={
-                      <ProtectedRoute>
-                        <Orders />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/faq" 
-                    element={
-                      <ProtectedRoute>
-                        <FAQ />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/shipping" 
-                    element={
-                      <ProtectedRoute>
-                        <ShippingPolicy />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/terms" 
-                    element={
-                      <ProtectedRoute>
-                        <Terms />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/privacy" 
-                    element={
-                      <ProtectedRoute>
-                        <Privacy />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  {/* Admin Routes */}
-                  <Route 
-                    path="/admin" 
-                    element={
-                      <ProtectedRoute>
-                        <Admin />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/admin/products" 
-                    element={
-                      <ProtectedRoute>
-                        <ProductsManagement />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/admin/products/import" 
-                    element={
-                      <ProtectedRoute>
-                        <ProductImport />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/admin/products/categories" 
-                    element={
-                      <ProtectedRoute>
-                        <CategoriesManagement />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/admin/users" 
-                    element={
-                      <ProtectedRoute>
-                        <UsersManagement />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/admin/users/approvals" 
-                    element={
-                      <ProtectedRoute>
-                        <UsersManagement />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/admin/settings" 
-                    element={
-                      <ProtectedRoute>
-                        <SettingsManagement />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/admin/analytics" 
-                    element={
-                      <ProtectedRoute>
-                        <AnalyticsManagement />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  <Route 
-                    path="/admin/orders" 
-                    element={
-                      <ProtectedRoute>
-                        <Orders />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  {/* Catch-all route */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </CartProvider>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                
+                {/* Protected Routes */}
+                <Route 
+                  path="/" 
+                  element={
+                    <ProtectedRoute>
+                      <Navigate to="/products" replace />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/products" 
+                  element={
+                    <ProtectedRoute>
+                      <Products />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/products/:id" 
+                  element={
+                    <ProtectedRoute>
+                      <ProductDetail />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/cart" 
+                  element={
+                    <ProtectedRoute>
+                      <Cart />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/profile" 
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/orders" 
+                  element={
+                    <ProtectedRoute>
+                      <Orders />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/faq" 
+                  element={
+                    <ProtectedRoute>
+                      <FAQ />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/shipping" 
+                  element={
+                    <ProtectedRoute>
+                      <ShippingPolicy />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/terms" 
+                  element={
+                    <ProtectedRoute>
+                      <Terms />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/privacy" 
+                  element={
+                    <ProtectedRoute>
+                      <Privacy />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Admin Routes */}
+                <Route 
+                  path="/admin" 
+                  element={
+                    <ProtectedRoute>
+                      <Admin />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/products" 
+                  element={
+                    <ProtectedRoute>
+                      <ProductsManagement />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/products/import" 
+                  element={
+                    <ProtectedRoute>
+                      <ProductImport />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/products/categories" 
+                  element={
+                    <ProtectedRoute>
+                      <CategoriesManagement />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/users" 
+                  element={
+                    <ProtectedRoute>
+                      <UsersManagement />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/users/approvals" 
+                  element={
+                    <ProtectedRoute>
+                      <UsersManagement />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/settings" 
+                  element={
+                    <ProtectedRoute>
+                      <SettingsManagement />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/analytics" 
+                  element={
+                    <ProtectedRoute>
+                      <AnalyticsManagement />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/orders" 
+                  element={
+                    <ProtectedRoute>
+                      <Orders />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Catch-all route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </CartProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 
