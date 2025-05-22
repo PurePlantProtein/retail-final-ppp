@@ -1,4 +1,4 @@
-import { Product, Order } from '@/types/product';
+import { Product, Order, OrderStatus } from '@/types/product';
 
 export const mockProducts: Product[] = [
   {
@@ -156,14 +156,62 @@ export const getProductsByCategory = (category: string): Promise<Product[]> => {
 
 export const getOrders = (): Promise<Order[]> => {
   return new Promise((resolve) => {
-    setTimeout(() => resolve(mockOrders), 500);
+    // Try to get orders from localStorage first
+    const ordersFromStorage = localStorage.getItem('orders');
+    let allOrders = ordersFromStorage ? JSON.parse(ordersFromStorage) : [];
+    
+    // If there are no orders in localStorage, use the mockOrders
+    if (allOrders.length === 0) {
+      allOrders = mockOrders;
+    }
+    
+    setTimeout(() => resolve(allOrders), 500);
   });
 };
 
 export const getOrderById = (id: string): Promise<Order | undefined> => {
   return new Promise((resolve) => {
-    setTimeout(() => resolve(mockOrders.find(o => o.id === id)), 300);
+    // Try to get orders from localStorage first
+    const ordersFromStorage = localStorage.getItem('orders');
+    let allOrders = ordersFromStorage ? JSON.parse(ordersFromStorage) : mockOrders;
+    
+    setTimeout(() => resolve(allOrders.find((o: Order) => o.id === id)), 300);
   });
+};
+
+// New function to update order status
+export const updateOrderStatus = async (orderId: string, newStatus: OrderStatus): Promise<boolean> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  try {
+    // Get orders from localStorage
+    const ordersFromStorage = localStorage.getItem('orders');
+    if (!ordersFromStorage) {
+      return false;
+    }
+    
+    const allOrders: Order[] = JSON.parse(ordersFromStorage);
+    
+    // Find the target order
+    const updatedOrders = allOrders.map(order => 
+      order.id === orderId 
+        ? { 
+            ...order, 
+            status: newStatus, 
+            updatedAt: new Date().toISOString() 
+          } 
+        : order
+    );
+    
+    // Save updated orders back to localStorage
+    localStorage.setItem('orders', JSON.stringify(updatedOrders));
+    
+    return true;
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    return false;
+  }
 };
 
 // Mock function to get user orders

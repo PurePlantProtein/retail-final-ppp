@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -22,6 +23,7 @@ import CategoriesManagement from "./pages/Admin/CategoriesManagement";
 import UsersManagement from "./pages/Admin/UsersManagement";
 import SettingsManagement from "./pages/Admin/SettingsManagement";
 import AnalyticsManagement from "./pages/Admin/AnalyticsManagement";
+import OrdersManagement from "./pages/Admin/OrdersManagement";  // Import our new component
 import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
@@ -221,11 +223,12 @@ const App = () => {
                     } 
                   />
                   
+                  {/* Update the admin orders route to use our new OrdersManagement component */}
                   <Route 
                     path="/admin/orders" 
                     element={
                       <ProtectedRoute>
-                        <Orders />
+                        <OrdersManagement />
                       </ProtectedRoute>
                     } 
                   />
