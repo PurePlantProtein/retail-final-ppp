@@ -39,20 +39,23 @@ const EmailSettings = () => {
       setIsTesting(true);
       setTestStatus(null);
       
-      // Create a mock order for testing the email
+      // Create a mock order for testing the email that conforms to Order type
       const mockOrder = {
         id: `TEST-${Date.now().toString().slice(-6)}`,
         userId: 'test-user-id',
         userName: 'Test User',
         total: 99.95,
-        status: 'pending',
+        status: 'pending' as const, // Using const assertion for the OrderStatus type
         items: [
           {
             product: {
-              name: 'Test Product',
-              price: 89.95,
               id: 'test-1',
+              name: 'Test Product',
               description: 'Test product description',
+              price: 89.95,
+              minQuantity: 1,
+              stock: 50,
+              category: 'protein',
               image: '',
             },
             quantity: 1,
@@ -71,14 +74,13 @@ const EmailSettings = () => {
           name: 'Standard Shipping',
           price: 10.00,
           id: 'standard',
-          carrier: 'australia-post',
+          carrier: 'australia-post' as const,
           estimatedDeliveryDays: '3-5 business days',
           description: 'Standard Australia Post shipping'
         },
-        paymentMethod: 'bank-transfer',
+        paymentMethod: 'bank-transfer' as const,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        date: new Date().toISOString()
       };
       
       const result = await sendOrderConfirmationEmail(mockOrder, adminEmail);

@@ -46,6 +46,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  TooltipProps,
 } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
@@ -286,9 +287,9 @@ const AnalyticsManagement = () => {
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="name" />
                               <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
-                              <Tooltip content={(props) => (
-                                <ChartTooltipContent {...props} formatter={(value) => formatCurrency(value)} />
-                              )} />
+                              <Tooltip 
+                                formatter={(value) => formatCurrency(value)}
+                              />
                               <Area 
                                 type="monotone" 
                                 dataKey="previous" 
