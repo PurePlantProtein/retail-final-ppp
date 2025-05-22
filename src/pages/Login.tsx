@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -177,7 +176,7 @@ const Login = () => {
         <div 
           className="hidden md:block md:w-[55%] relative"
           style={{
-            backgroundImage: `url('/lovable-uploads/c2b672fa-71b7-46f8-8547-17eff1aa4139.png')`,
+            backgroundImage: `url('/lovable-uploads/f647823a-94e0-43cd-a72e-37a03ad8f464.png')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat'
