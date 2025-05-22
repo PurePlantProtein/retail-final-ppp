@@ -11,6 +11,7 @@ import {
   BarChart3,
   LayoutGrid,
   Tag,
+  ClipboardList,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -55,6 +56,7 @@ const AppSidebar = () => {
     { icon: LayoutGrid, label: 'Dashboard', path: '/admin' },
     { icon: Package, label: 'Products', path: '/admin/products' },
     { icon: Tag, label: 'Categories', path: '/admin/products/categories' },
+    { icon: ClipboardList, label: 'Orders', path: '/admin/orders' },
     { icon: Users, label: 'Users', path: '/admin/users' },
     { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
     { icon: Settings, label: 'Settings', path: '/admin/settings' },
