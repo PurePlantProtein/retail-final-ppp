@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -113,12 +114,13 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
       id: orderId,
       userId: userId || 'guest',
       userName: userEmail || 'guest',
+      email: userEmail || 'guest@example.com', // Add a default email for guest users
       items: items.slice(), // Create a copy of the items array
       total: subtotal + shippingCost,
       status: 'pending',
       createdAt: new Date().toISOString(),
       paymentMethod: 'bank-transfer',
-      shippingOption: selectedOption,
+      shippingOption: selectedOption, // This will be properly handled by normalizeOrder
       shippingAddress: {...shippingAddress}, // Create a copy
       invoiceStatus: 'draft'
     };

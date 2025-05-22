@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Download, FileImage, FileSpreadsheet, FilePdf } from 'lucide-react';
+import { FileText, Download, FileImage, FileSpreadsheet, File } from 'lucide-react';
 import { MarketingMaterial } from '@/types/product';
 import { getMarketingMaterials } from '@/services/marketingService';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,7 +42,7 @@ const Marketing = () => {
   // Get appropriate icon for file type
   const getFileIcon = (fileType: string) => {
     if (fileType.includes('image')) return <FileImage className="h-6 w-6" />;
-    if (fileType.includes('pdf')) return <FilePdf className="h-6 w-6" />;
+    if (fileType.includes('pdf')) return <File className="h-6 w-6" />;
     if (fileType.includes('excel') || fileType.includes('spreadsheet')) return <FileSpreadsheet className="h-6 w-6" />;
     return <FileText className="h-6 w-6" />;
   };
