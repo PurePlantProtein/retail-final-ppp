@@ -57,7 +57,7 @@ type User = {
 };
 
 const UsersManagement = () => {
-  const { isAdmin, user, session } = useAuth();
+  const { isAdmin, user, session, refreshProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
@@ -103,15 +103,12 @@ const UsersManagement = () => {
       let authUsersData: any[] = [];
       try {
         // This might fail due to permissions, but we'll try anyway
-        const { data: authUsers } = await fetch(`https://lswldgmfmeeepdivhznt.supabase.co/auth/v1/admin/users`, {
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzd2xkZ21mbWVlZXBkaXZoem50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2MDUyNzEsImV4cCI6MjA2MjE4MTI3MX0.4vHkxo6rv8xFBBoaTXTPhbnl1bcG7RG33c_A6wLSIx4'
-          }
-        }).then(res => res.json());
+        const { data: authUsers, error } = await supabase.auth.admin.listUsers();
         
-        if (authUsers && Array.isArray(authUsers)) {
-          authUsersData = authUsers;
+        if (error) {
+          console.log('Could not fetch auth users using admin API:', error);
+        } else if (authUsers && authUsers.users && Array.isArray(authUsers.users)) {
+          authUsersData = authUsers.users;
           console.log('Auth users data:', authUsersData);
         }
       } catch (err) {
@@ -125,7 +122,7 @@ const UsersManagement = () => {
         
         // Determine role based on email - this is a temporary approach
         // In a production system, you would store roles in a database table
-        const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.email || profile.id);
+        const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.email || '');
         
         return {
           id: profile.id,
@@ -447,27 +444,32 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Use email invite method which doesn't affect the current session
-      const { error } = await supabase.auth.admin.inviteUserByEmail(values.email, {
-        data: {
+      // First, attempt to create a new user in auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: values.email,
+        password: values.password,
+        email_confirm: true,
+        user_metadata: {
           business_name: values.businessName,
           business_type: values.businessType,
           role: values.role
         }
       });
       
-      if (error) {
-        console.error('Error inviting user:', error);
+      if (authError) {
+        console.error('Error creating user in auth:', authError);
         
-        // Fall back to creating a profile directly
-        // Generate a valid UUID as the ID
-        const uuid = crypto.randomUUID();
+        // If we couldn't create the user in auth, create a profile directly
+        // Generate a valid UUID for the profile ID
+        const userId = crypto.randomUUID();
         
-        const { error: profileError } = await supabase
+        console.log('Creating profile with ID:', userId);
+        
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .insert({
-            id: uuid,
-            email: values.email, // Store the email in the email column
+            id: userId,
+            email: values.email,
             business_name: values.businessName,
             business_type: values.businessType,
           });
@@ -479,12 +481,39 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         
         toast({
           title: "User created",
-          description: `${values.businessName} (${values.email}) has been added. An invitation will be sent to their email.`,
+          description: `${values.businessName} (${values.email}) has been added as a profile.`,
         });
-      } else {
+      } else if (authData.user) {
+        // If auth user was created successfully, ensure we have a profile too
+        console.log('User created in auth:', authData.user);
+        
+        // Check if a profile exists for this user
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+          
+        if (!existingProfile) {
+          // Create profile if it doesn't exist
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              email: values.email,
+              business_name: values.businessName,
+              business_type: values.businessType,
+            });
+            
+          if (profileError) {
+            console.error('Error creating profile after auth user:', profileError);
+            // Don't throw here, the auth user was created successfully
+          }
+        }
+        
         toast({
-          title: "Invitation sent",
-          description: `An invitation has been sent to ${values.email}.`,
+          title: "User created",
+          description: `${values.businessName} (${values.email}) has been created successfully.`,
         });
       }
       
