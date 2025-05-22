@@ -1,4 +1,3 @@
-
 import { Product, Order } from '@/types/product';
 
 export const mockProducts: Product[] = [
@@ -77,7 +76,7 @@ export const mockOrders: Order[] = [
     status: 'delivered',
     createdAt: '2023-05-15T10:30:00Z',
     updatedAt: '2023-05-18T14:20:00Z',
-    paymentMethod: 'stripe'
+    paymentMethod: 'paypal'
   },
   {
     id: '2',
