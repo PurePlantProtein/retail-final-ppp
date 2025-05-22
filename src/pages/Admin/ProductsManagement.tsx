@@ -10,7 +10,7 @@ import { getProducts, deleteProduct, createProduct, updateProduct } from '@/serv
 import { Product } from '@/types/product';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, Trash, Plus, AlertCircle, Copy, CloudArrowUp } from 'lucide-react';
+import { Edit, Trash, Plus, AlertCircle, Copy, CloudUpload } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -216,7 +216,7 @@ const ProductsManagement = () => {
                 <>Processing...</>
               ) : (
                 <>
-                  <CloudArrowUp className="h-4 w-4" />
+                  <CloudUpload className="h-4 w-4" />
                   Migrate Images to Storage
                 </>
               )}
