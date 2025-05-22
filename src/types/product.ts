@@ -44,5 +44,5 @@ export type Order = {
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: string;
   updatedAt: string;
-  paymentMethod: 'stripe' | 'paypal' | 'bank-transfer';
+  paymentMethod: 'paypal' | 'bank-transfer';
 };

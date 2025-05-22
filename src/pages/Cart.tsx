@@ -24,9 +24,14 @@ const Cart = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'bank-transfer' | 'paypal'>('paypal');
   const paypalButtonRef = useRef<HTMLDivElement>(null);
   const [isPaypalLoading, setIsPaypalLoading] = useState(false);
+  const [bankDetails, setBankDetails] = useState({
+    accountName: '',
+    accountNumber: '',
+    reference: `ORDER-${Date.now()}`
+  });
 
   const handleRemoveItem = (productId: string) => {
     removeFromCart(productId);
@@ -67,17 +72,37 @@ const Cart = () => {
     }
   }, [paymentMethod, subtotal, user]);
 
-  const handleStripeCheckout = () => {
-    // This is where we would integrate with Stripe
+  const handleBankTransferCheckout = () => {
+    // This is where we would process a bank transfer
     toast({
-      title: "Checkout initiated",
-      description: "This is where Stripe integration would happen.",
+      title: "Bank Transfer Order Placed",
+      description: "Please complete your bank transfer using the provided details. Your order will be processed after payment confirmation.",
     });
+    
     // For demo purposes, we'll just show a success message and clear the cart
     toast({
-      title: "Order placed successfully!",
-      description: "Your order has been placed and will be processed soon.",
+      title: "Order reference: " + bankDetails.reference,
+      description: "Please include this reference with your bank transfer.",
     });
+    
+    // Save order to local storage for demonstration
+    const order = {
+      id: bankDetails.reference,
+      userId: user?.id || 'guest',
+      userName: user?.email || 'guest',
+      items: items,
+      total: subtotal,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      paymentMethod: 'bank-transfer'
+    };
+    
+    // Store the order in local storage
+    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+    orders.push(order);
+    localStorage.setItem('orders', JSON.stringify(orders));
+    
     clearCart();
     navigate('/orders');
   };
@@ -88,6 +113,25 @@ const Cart = () => {
       title: "PayPal Payment Successful",
       description: `Your payment (ID: ${data.orderID}) has been processed successfully.`,
     });
+    
+    // Save order to local storage for demonstration
+    const order = {
+      id: data.orderID,
+      userId: user?.id || 'guest',
+      userName: user?.email || 'guest',
+      items: items,
+      total: subtotal,
+      status: 'processing',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      paymentMethod: 'paypal'
+    };
+    
+    // Store the order in local storage
+    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+    orders.push(order);
+    localStorage.setItem('orders', JSON.stringify(orders));
+    
     clearCart();
     navigate('/orders');
   };
@@ -264,24 +308,36 @@ const Cart = () => {
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4">
                   <Tabs 
-                    defaultValue="stripe" 
+                    defaultValue="paypal" 
                     className="w-full" 
                     value={paymentMethod}
-                    onValueChange={(value) => setPaymentMethod(value as 'stripe' | 'paypal')}
+                    onValueChange={(value) => setPaymentMethod(value as 'bank-transfer' | 'paypal')}
                   >
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="stripe">Credit Card</TabsTrigger>
+                      <TabsTrigger value="bank-transfer">Bank Transfer</TabsTrigger>
                       <TabsTrigger value="paypal">PayPal</TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="stripe" className="mt-4">
+                    <TabsContent value="bank-transfer" className="mt-4 space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Bank Details</p>
+                        <div className="space-y-1.5 text-sm">
+                          <p><span className="font-medium">Bank:</span> Pure Plant Protein Bank</p>
+                          <p><span className="font-medium">Account Name:</span> Pure Plant Protein</p>
+                          <p><span className="font-medium">Account #:</span> 12345678</p>
+                          <p><span className="font-medium">Reference:</span> {bankDetails.reference}</p>
+                        </div>
+                      </div>
                       <Button 
                         className="w-full" 
                         size="lg"
-                        onClick={handleStripeCheckout}
+                        onClick={handleBankTransferCheckout}
                       >
-                        <CreditCard className="mr-2 h-4 w-4" /> Pay with Stripe
+                        <CreditCard className="mr-2 h-4 w-4" /> Complete Order
                       </Button>
+                      <p className="text-xs text-center text-gray-500">
+                        Include the reference number when making your bank transfer
+                      </p>
                     </TabsContent>
                     
                     <TabsContent value="paypal" className="mt-4">
@@ -301,7 +357,7 @@ const Cart = () => {
                 </CardFooter>
               </Card>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Secure checkout powered by Stripe & PayPal
+                Secure checkout powered by PayPal & Bank Transfer
               </p>
             </div>
           </div>
