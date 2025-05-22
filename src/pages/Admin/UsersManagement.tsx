@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, UserCog, ShieldCheck, ShieldX, AlertCircle, Plus, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -89,25 +89,14 @@ const UsersManagement = () => {
     try {
       setIsLoading(true);
       
-      // First, fetch auth users
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        console.error('Error fetching auth users:', authError);
-        throw authError;
-      }
-      
-      if (!authData || !authData.users) {
-        throw new Error('No user data returned from auth');
-      }
-      
-      // Then, fetch profiles to get additional user information
+      // Fetch profiles data first to get all user information
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
       
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
       }
       
       // Map the profiles by user ID for easy lookup
@@ -116,26 +105,59 @@ const UsersManagement = () => {
         return map;
       }, {});
       
-      // Combine auth users with their profile data
-      const combinedUsers = authData.users.map(authUser => {
-        const profile = profilesMap[authUser.id] || {};
+      // Attempt to fetch auth users using the client API - may have limited permissions
+      try {
+        const { data, error } = await supabase.auth.admin.listUsers();
         
-        // Determine role (hardcoded for now)
-        const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(authUser.email);
-        
+        if (error) {
+          console.error('Error fetching auth users:', error);
+          // If admin API fails, we'll still display users based on profiles
+        } else if (data && data.users) {
+          // Add auth users to the list if we have access to them
+          const combinedUsers = data.users.map(authUser => {
+            const profile = profilesMap[authUser.id] || {};
+            
+            // Determine role (hardcoded for now)
+            const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(authUser.email);
+            
+            return {
+              id: authUser.id,
+              email: authUser.email || '',
+              created_at: authUser.created_at,
+              business_name: profile.business_name || authUser.user_metadata?.business_name || 'Unknown',
+              business_type: profile.business_type || authUser.user_metadata?.business_type || 'Not specified',
+              status: authUser.banned ? 'Suspended' : 'Active',
+              role: isUserAdmin ? 'admin' : 'retailer'
+            };
+          });
+          
+          setUsers(combinedUsers);
+          console.log('Fetched users from admin API:', combinedUsers);
+          setIsLoading(false);
+          return;
+        }
+      } catch (adminApiError) {
+        console.error('Admin API error:', adminApiError);
+        // Continue with using profiles as fallback
+      }
+      
+      // Fallback: Use profiles data to represent users
+      // This is necessary because most client-side apps won't have admin API access
+      const profileUsers = profilesData.map(profile => {
         return {
-          id: authUser.id,
-          email: authUser.email || '',
-          created_at: authUser.created_at,
-          business_name: profile.business_name || authUser.user_metadata?.business_name || 'Unknown',
-          business_type: profile.business_type || authUser.user_metadata?.business_type || 'Not specified',
-          status: authUser.banned ? 'Suspended' : 'Active',
-          role: isUserAdmin ? 'admin' : 'retailer'
+          id: profile.id,
+          email: 'profile-' + profile.id.substring(0, 8),  // We don't have email from profiles only
+          created_at: profile.created_at,
+          business_name: profile.business_name || 'Unknown',
+          business_type: profile.business_type || 'Not specified',
+          status: 'Active', // We don't have status from profiles only
+          role: ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.id) ? 'admin' : 'retailer'
         };
       });
       
-      setUsers(combinedUsers);
-      console.log('Fetched users:', combinedUsers);
+      setUsers(profileUsers);
+      console.log('Fetched users from profiles (fallback):', profileUsers);
+      
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -252,35 +274,16 @@ const UsersManagement = () => {
                   <TabsTrigger value="retailers">Retailers</TabsTrigger>
                   <TabsTrigger value="admins">Admins</TabsTrigger>
                 </TabsList>
-                <TabsContent value="all-users">
-                  <UsersTable 
-                    users={filteredUsers} 
-                    updateUserRole={updateUserRole}
-                    toggleUserStatus={toggleUserStatus}
-                    currentUser={user}
-                    isLoading={isLoading}
-                  />
-                </TabsContent>
-                <TabsContent value="retailers">
-                  <UsersTable 
-                    users={filteredUsers} 
-                    updateUserRole={updateUserRole}
-                    toggleUserStatus={toggleUserStatus}
-                    currentUser={user}
-                    isLoading={isLoading}
-                  />
-                </TabsContent>
-                <TabsContent value="admins">
-                  <UsersTable 
-                    users={filteredUsers} 
-                    updateUserRole={updateUserRole}
-                    toggleUserStatus={toggleUserStatus}
-                    currentUser={user}
-                    isLoading={isLoading}
-                  />
-                </TabsContent>
               </Tabs>
             </div>
+            
+            <UsersTable 
+              users={filteredUsers} 
+              updateUserRole={updateUserRole}
+              toggleUserStatus={toggleUserStatus}
+              currentUser={user}
+              isLoading={isLoading}
+            />
           </CardContent>
         </Card>
 
@@ -456,24 +459,26 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Create the user in Supabase Auth
-      const { data: userData, error: signUpError } = await supabase.auth.signUp({
+      // Create the user in Supabase Auth using the admin API
+      // Important: Use admin.createUser instead of auth.signUp to prevent auto-login
+      const { data: userData, error: createUserError } = await supabase.auth.admin.createUser({
         email: values.email,
         password: values.password,
-        options: {
-          data: {
-            business_name: values.businessName,
-            business_type: values.businessType,
-            role: values.role
-          }
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          business_name: values.businessName,
+          business_type: values.businessType,
+          role: values.role
         }
       });
       
-      if (signUpError) throw signUpError;
+      if (createUserError) throw createUserError;
       
       if (!userData.user) {
         throw new Error('Failed to create user');
       }
+      
+      console.log('Created user:', userData.user);
       
       // Ensure profile is created
       const { error: profileError } = await supabase
@@ -504,11 +509,72 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       onUserCreated();
     } catch (error: any) {
       console.error('Error creating user:', error);
-      toast({
-        title: "Failed to create user",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
+      
+      // Handle permission errors - might not have admin access
+      if (error.message && error.message.includes('permission')) {
+        // Try regular signup as fallback
+        try {
+          const { data: signupData, error: signUpError } = await supabase.auth.signUp({
+            email: values.email,
+            password: values.password,
+            options: {
+              data: {
+                business_name: values.businessName,
+                business_type: values.businessType,
+                role: values.role
+              }
+            }
+          });
+          
+          if (signUpError) throw signUpError;
+          
+          if (!signupData.user) {
+            throw new Error('Failed to create user using signup');
+          }
+          
+          // Manually create profile entry
+          await supabase
+            .from('profiles')
+            .upsert([
+              {
+                id: signupData.user.id,
+                business_name: values.businessName,
+                business_type: values.businessType
+              }
+            ]);
+            
+          toast({
+            title: "User created successfully",
+            description: "Note: Regular signup used due to permissions. You may be logged in as the new user. Please log out and back in to your admin account.",
+          });
+          
+          // Reset form
+          form.reset();
+          
+          // Close dialog
+          onClose();
+          
+          // Set timeout before refreshing to allow profile creation to complete
+          setTimeout(() => {
+            onUserCreated();
+          }, 1000);
+          
+          return;
+        } catch (signupError: any) {
+          console.error('Fallback signup error:', signupError);
+          toast({
+            title: "Failed to create user",
+            description: signupError.message || "An unexpected error occurred.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Failed to create user",
+          description: error.message || "An unexpected error occurred.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
