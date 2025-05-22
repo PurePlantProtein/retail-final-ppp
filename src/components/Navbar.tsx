@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,25 @@ import {
 const Navbar = () => {
   const { user, profile, logout, isAdmin } = useAuth();
   const { totalItems } = useCart();
+  const [siteLogo, setSiteLogo] = useState<string | null>(null);
+  
+  // Load custom logo if available
+  useEffect(() => {
+    const savedLogo = localStorage.getItem('site_logo');
+    if (savedLogo) {
+      setSiteLogo(savedLogo);
+    }
+  }, []);
 
   return (
     <header className="bg-white text-gray-800 border-b border-gray-200 sticky top-0 z-10">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link to="/" className="text-2xl font-bold flex items-center">
-          <img src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=50" alt="PP Protein" className="h-10" />
+          {siteLogo ? (
+            <img src={siteLogo} alt="Site Logo" className="h-10" />
+          ) : (
+            <img src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=50" alt="PP Protein" className="h-10" />
+          )}
         </Link>
         
         <div className="flex items-center space-x-4">

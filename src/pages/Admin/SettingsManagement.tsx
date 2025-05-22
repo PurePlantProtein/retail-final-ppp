@@ -1,88 +1,235 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { AdminLayout } from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mail, Truck } from 'lucide-react';
+import { Mail, Truck, Image } from 'lucide-react';
+import ImageUploader from '@/components/ImageUploader';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from '@/components/ui/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 const SettingsManagement = () => {
+  const [siteIcon, setSiteIcon] = useState<string>("");
+  const [siteLogo, setSiteLogo] = useState<string>("");
+  const { toast } = useToast();
+
+  const handleSiteIconUploaded = (url: string) => {
+    setSiteIcon(url);
+    // Save to localStorage for persistence
+    localStorage.setItem('site_icon', url);
+    toast({
+      title: "Site Icon Updated",
+      description: "The site icon has been updated successfully.",
+    });
+
+    // Update favicon dynamically
+    updateFavicon(url);
+  };
+
+  const handleSiteLogoUploaded = (url: string) => {
+    setSiteLogo(url);
+    // Save to localStorage for persistence
+    localStorage.setItem('site_logo', url);
+    toast({
+      title: "Site Logo Updated",
+      description: "The site logo has been updated successfully.",
+    });
+  };
+
+  // Function to update favicon dynamically
+  const updateFavicon = (url: string) => {
+    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    link.type = 'image/png';
+    link.rel = 'shortcut icon';
+    link.href = url;
+    document.getElementsByTagName('head')[0].appendChild(link);
+  };
+
+  // Load saved values on component mount
+  React.useEffect(() => {
+    const savedIcon = localStorage.getItem('site_icon');
+    const savedLogo = localStorage.getItem('site_logo');
+    
+    if (savedIcon) {
+      setSiteIcon(savedIcon);
+    }
+    
+    if (savedLogo) {
+      setSiteLogo(savedLogo);
+    }
+  }, []);
+
   return (
     <Layout>
       <AdminLayout>
         <div className="container mx-auto py-6">
           <h1 className="text-2xl font-bold mb-6">Settings</h1>
           
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>
-                  Configure general store settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Configure store name, currency, and other basic settings.</p>
-              </CardContent>
-              <CardFooter>
-                <Button>Manage General Settings</Button>
-              </CardFooter>
-            </Card>
+          <Tabs defaultValue="general">
+            <TabsList className="mb-4">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="branding">Branding</TabsTrigger>
+              <TabsTrigger value="other">Other Settings</TabsTrigger>
+            </TabsList>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Settings</CardTitle>
-                <CardDescription>
-                  Configure email notifications for orders
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Set up order notification emails for administrators and customers.</p>
-              </CardContent>
-              <CardFooter>
-                <Button asChild>
-                  <Link to="/admin/email-settings">
-                    <Mail className="mr-2 h-4 w-4" /> Manage Email Settings
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
+            <TabsContent value="general">
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>General Settings</CardTitle>
+                    <CardDescription>
+                      Configure general store settings
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p>Configure store name, currency, and other basic settings.</p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button>Manage General Settings</Button>
+                  </CardFooter>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Email Settings</CardTitle>
+                    <CardDescription>
+                      Configure email notifications for orders
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p>Set up order notification emails for administrators and customers.</p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild>
+                      <Link to="/admin/email-settings">
+                        <Mail className="mr-2 h-4 w-4" /> Manage Email Settings
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Payment Settings</CardTitle>
+                    <CardDescription>
+                      Configure payment gateways and options
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p>Set up payment methods and processors for your store.</p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button>Manage Payment Settings</Button>
+                  </CardFooter>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Shipping Settings</CardTitle>
+                    <CardDescription>
+                      Configure shipping options and rates
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p>Set up shipping zones, methods, and free shipping rules.</p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild>
+                      <Link to="/admin/shipping-settings">
+                        <Truck className="mr-2 h-4 w-4" /> Manage Shipping Settings
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </div>
+            </TabsContent>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Settings</CardTitle>
-                <CardDescription>
-                  Configure payment gateways and options
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Set up payment methods and processors for your store.</p>
-              </CardContent>
-              <CardFooter>
-                <Button>Manage Payment Settings</Button>
-              </CardFooter>
-            </Card>
+            <TabsContent value="branding">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Image className="mr-2 h-5 w-5" />
+                    Site Branding
+                  </CardTitle>
+                  <CardDescription>
+                    Customize your site logo and favicon
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Site Icon (Favicon)</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Upload a square image (PNG recommended) that will be used as your site's favicon.
+                        Recommended size: 32x32 pixels or larger.
+                      </p>
+                      <div className="flex flex-col md:flex-row gap-6 items-start">
+                        <ImageUploader 
+                          currentImageUrl={siteIcon}
+                          onImageUploaded={handleSiteIconUploaded}
+                          className="w-full md:w-1/3"
+                        />
+                        {siteIcon && (
+                          <div className="border rounded-md p-4 flex flex-col items-center">
+                            <p className="text-sm font-medium mb-2">Icon Preview</p>
+                            <img 
+                              src={siteIcon} 
+                              alt="Site Icon Preview" 
+                              className="w-8 h-8 object-contain"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <Separator className="my-6" />
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Site Logo</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Upload your company logo. This will be displayed in the header, footer, and other places throughout the site.
+                        Recommended size: 250x50 pixels (or maintain this aspect ratio).
+                      </p>
+                      <div className="flex flex-col md:flex-row gap-6 items-start">
+                        <ImageUploader 
+                          currentImageUrl={siteLogo}
+                          onImageUploaded={handleSiteLogoUploaded}
+                          className="w-full md:w-1/3"
+                        />
+                        {siteLogo && (
+                          <div className="border rounded-md p-4 flex flex-col items-center">
+                            <p className="text-sm font-medium mb-2">Logo Preview</p>
+                            <img 
+                              src={siteLogo} 
+                              alt="Site Logo Preview" 
+                              className="h-12 object-contain"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Shipping Settings</CardTitle>
-                <CardDescription>
-                  Configure shipping options and rates
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Set up shipping zones, methods, and free shipping rules.</p>
-              </CardContent>
-              <CardFooter>
-                <Button asChild>
-                  <Link to="/admin/shipping-settings">
-                    <Truck className="mr-2 h-4 w-4" /> Manage Shipping Settings
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
+            <TabsContent value="other">
+              <div className="grid gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Other Settings</CardTitle>
+                    <CardDescription>Additional configuration options</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p>More settings will be added here in future updates.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </AdminLayout>
     </Layout>

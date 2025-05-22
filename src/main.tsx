@@ -42,6 +42,16 @@ if (typeof window !== 'undefined') {
       }
     }, 100);
   });
+  
+  // Set the favicon from localStorage if it exists
+  const savedIcon = localStorage.getItem('site_icon');
+  if (savedIcon) {
+    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    link.type = 'image/png';
+    link.rel = 'shortcut icon';
+    link.href = savedIcon;
+    document.getElementsByTagName('head')[0].appendChild(link);
+  }
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

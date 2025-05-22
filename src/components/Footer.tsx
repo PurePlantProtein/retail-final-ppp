@@ -1,9 +1,19 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Testimonials from './Testimonials';
 
 const Footer = () => {
+  const [siteLogo, setSiteLogo] = useState<string | null>(null);
+  
+  // Load custom logo if available
+  useEffect(() => {
+    const savedLogo = localStorage.getItem('site_logo');
+    if (savedLogo) {
+      setSiteLogo(savedLogo);
+    }
+  }, []);
+
   return (
     <footer className="bg-white text-gray-700 border-t border-gray-200 mt-auto">
       <Testimonials />
@@ -12,7 +22,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <h3 className="font-bold text-lg mb-4 flex items-center">
-              <img src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=50" alt="PP Protein" className="h-10" />
+              {siteLogo ? (
+                <img src={siteLogo} alt="Site Logo" className="h-10" />
+              ) : (
+                <img src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=50" alt="PP Protein" className="h-10" />
+              )}
             </h3>
             <p className="text-gray-500 text-sm mb-2">
               Your trusted wholesale protein supplier for retail partners.
