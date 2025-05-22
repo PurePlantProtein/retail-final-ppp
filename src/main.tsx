@@ -32,6 +32,16 @@ if (typeof window !== 'undefined') {
   
   // Enforce HTTPS
   createSecurityMeta('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  
+  // Remove Lovable badge after the app loads
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const lovableBadge = document.getElementById('toEditThisSite');
+      if (lovableBadge) {
+        lovableBadge.style.display = 'none';
+      }
+    }, 100);
+  });
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
