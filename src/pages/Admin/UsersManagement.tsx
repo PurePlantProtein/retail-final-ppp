@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -201,6 +200,32 @@ const UsersManagement = () => {
                   <TabsTrigger value="retailers">Retailers</TabsTrigger>
                   <TabsTrigger value="admins">Admins</TabsTrigger>
                 </TabsList>
+              
+                {/* Make sure TabsContent components are inside the Tabs component */}
+                <TabsContent value="all-users" className="mt-4">
+                  <UsersTable 
+                    users={filteredUsers} 
+                    updateUserRole={updateUserRole}
+                    toggleUserStatus={toggleUserStatus}
+                    currentUser={user}
+                  />
+                </TabsContent>
+                <TabsContent value="retailers" className="mt-4">
+                  <UsersTable 
+                    users={filteredUsers} 
+                    updateUserRole={updateUserRole}
+                    toggleUserStatus={toggleUserStatus}
+                    currentUser={user}
+                  />
+                </TabsContent>
+                <TabsContent value="admins" className="mt-4">
+                  <UsersTable 
+                    users={filteredUsers} 
+                    updateUserRole={updateUserRole}
+                    toggleUserStatus={toggleUserStatus}
+                    currentUser={user}
+                  />
+                </TabsContent>
               </Tabs>
             </div>
 
@@ -208,34 +233,7 @@ const UsersManagement = () => {
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
               </div>
-            ) : (
-              <>
-                <TabsContent value="all-users" className="m-0">
-                  <UsersTable 
-                    users={filteredUsers} 
-                    updateUserRole={updateUserRole}
-                    toggleUserStatus={toggleUserStatus}
-                    currentUser={user}
-                  />
-                </TabsContent>
-                <TabsContent value="retailers" className="m-0">
-                  <UsersTable 
-                    users={filteredUsers} 
-                    updateUserRole={updateUserRole}
-                    toggleUserStatus={toggleUserStatus}
-                    currentUser={user}
-                  />
-                </TabsContent>
-                <TabsContent value="admins" className="m-0">
-                  <UsersTable 
-                    users={filteredUsers} 
-                    updateUserRole={updateUserRole}
-                    toggleUserStatus={toggleUserStatus}
-                    currentUser={user}
-                  />
-                </TabsContent>
-              </>
-            )}
+            ) : null}
           </CardContent>
         </Card>
 
