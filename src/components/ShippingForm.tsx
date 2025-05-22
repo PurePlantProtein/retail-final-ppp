@@ -80,9 +80,20 @@ const ShippingForm: React.FC<ShippingFormProps> = ({
   }, [shippingAddress, form, defaultValues]);
 
   const handleSubmit = (data: ShippingFormValues) => {
+    // Ensure data is a complete ShippingAddress object with all required properties
+    const completeShippingAddress: ShippingAddress = {
+      name: data.name,
+      street: data.street,
+      city: data.city,
+      state: data.state,
+      postalCode: data.postalCode,
+      country: data.country,
+      phone: data.phone,
+    };
+    
     // Save address to context when form is submitted
-    setShippingAddress(data);
-    onSubmit(data);
+    setShippingAddress(completeShippingAddress);
+    onSubmit(completeShippingAddress);
   };
 
   return (
