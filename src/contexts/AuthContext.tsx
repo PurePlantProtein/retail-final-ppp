@@ -22,8 +22,8 @@ type AuthContextType = {
   signup: (email: string, password: string, businessName: string, businessType?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: boolean;
-  session: Session | null; // Adding this property to the type
-  refreshProfile: () => Promise<void>; // Add this new function
+  session: Session | null;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,30 +53,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<Session | null>(null); // Adding this state
+  const [session, setSession] = useState<Session | null>(null);
   const { toast } = useToast();
 
   // Fetch user profile data
   const fetchProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
-      const { data, error } = await supabase
+      
+      // First, check if the profile exists
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
-      if (error) {
-        console.error('Error fetching profile:', error);
-        // Don't throw here - we'll still set the user's role based on email
+      // If no profile exists, create one
+      if (error || !data) {
+        console.log('Profile not found, creating profile for user:', userId);
+        
+        // Get user email from auth.users indirectly through the session
+        const email = user?.email || '';
+        
+        // Create a new profile
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: userId,
+            business_name: user?.user_metadata?.business_name || 'Unknown Business',
+            email: email,
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+          // Even if insert fails, we'll set a minimal profile
+        } else {
+          data = newProfile;
+          console.log('Created new profile:', data);
+        }
       }
       
       // Determine role based on email (in a real app, this would come from the database)
       const role = ADMIN_EMAILS.includes(user?.email || '') ? 'admin' : 'retailer';
       
       if (data) {
-        setProfile({ ...data, role });
-        console.log('User profile loaded:', { ...data, role });
+        const profileWithRole = { ...data, role, email: user?.email };
+        setProfile(profileWithRole);
+        console.log('User profile loaded:', profileWithRole);
       } else {
         // Create a minimal profile if one doesn't exist
         setProfile({ 
@@ -89,6 +115,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
+      
+      // Set minimal profile even if there's an error
+      if (user) {
+        const role = ADMIN_EMAILS.includes(user.email || '') ? 'admin' : 'retailer';
+        setProfile({ 
+          id: user.id, 
+          business_name: user.user_metadata?.business_name || 'Unknown Business',
+          email: user.email,
+          role
+        });
+      }
     }
   };
 
@@ -244,8 +281,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signup,
     logout,
     isAdmin: ADMIN_EMAILS.includes(user?.email || ''),
-    session, // Add the session to the context value
-    refreshProfile, // Add the new function
+    session,
+    refreshProfile,
   };
 
   return (

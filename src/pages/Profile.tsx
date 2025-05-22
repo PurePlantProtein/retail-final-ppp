@@ -66,6 +66,7 @@ const Profile = () => {
   useEffect(() => {
     if (user && authProfile) {
       console.log("Setting form values from profile:", authProfile);
+      
       form.reset({
         business_name: authProfile.business_name || '',
         business_address: authProfile.business_address || '',
@@ -76,7 +77,14 @@ const Profile = () => {
   }, [user, authProfile, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Not logged in",
+        description: "You must be logged in to update your profile",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsSubmitting(true);
     console.log("Submitting profile update:", data);
@@ -94,8 +102,12 @@ const Profile = () => {
       
       const { error } = await supabase
         .from('profiles')
-        .update(updateData)
-        .eq('id', user.id);
+        .upsert({ 
+          id: user.id,
+          ...updateData
+        }, { 
+          onConflict: 'id'
+        });
 
       if (error) {
         console.error("Error updating profile:", error);
