@@ -97,11 +97,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Determine role based on email (in a real app, this would come from the database)
-      const role = ADMIN_EMAILS.includes(user?.email || '') ? 'admin' : 'retailer';
+      const role = ADMIN_EMAILS.includes(user?.email || '') ? 'admin' as const : 'retailer' as const;
       
       if (data) {
         const profileWithRole = { ...data, role, email: user?.email };
-        setProfile(profileWithRole);
+        setProfile(profileWithRole as UserProfile);
         console.log('User profile loaded:', profileWithRole);
       } else {
         // Create a minimal profile if one doesn't exist
@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Set minimal profile even if there's an error
       if (user) {
-        const role = ADMIN_EMAILS.includes(user.email || '') ? 'admin' : 'retailer';
+        const role = ADMIN_EMAILS.includes(user.email || '') ? 'admin' as const : 'retailer' as const;
         setProfile({ 
           id: user.id, 
           business_name: user.user_metadata?.business_name || 'Unknown Business',
