@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -99,14 +98,9 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row" 
-         style={{
-           backgroundImage: `url('/lovable-uploads/e8d0fa9a-8140-44aa-8386-93b48950ecc1.png')`,
-           backgroundSize: 'cover',
-           backgroundPosition: 'center',
-           backgroundRepeat: 'no-repeat'
-         }}>
-      <div className="w-full md:w-[45%] p-6 md:p-12 flex items-center justify-center bg-white/90 backdrop-blur-sm">
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* White login section - full width on mobile, 45% on desktop */}
+      <div className="w-full md:w-[45%] p-6 md:p-12 flex items-center justify-center bg-white">
         <div className="w-full max-w-md">
           <div className="mb-10">
             <img 
@@ -177,6 +171,14 @@ const Login = () => {
           </div>
         </div>
       </div>
+      
+      {/* Image section - hidden on mobile, 55% on desktop */}
+      <div 
+        className="hidden md:block md:w-[55%] bg-cover bg-center bg-no-repeat" 
+        style={{
+          backgroundImage: `url('/lovable-uploads/e8d0fa9a-8140-44aa-8386-93b48950ecc1.png')`
+        }}
+      ></div>
     </div>
   );
 };
