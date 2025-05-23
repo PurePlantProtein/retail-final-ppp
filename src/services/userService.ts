@@ -50,7 +50,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
     
@@ -74,12 +74,22 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
 
 export const updateUserProfile = async (userId: string, profileData: Partial<UserProfile>): Promise<UserProfile | null> => {
   try {
+    // Filter out properties that don't exist in the profiles table
+    const validProfileData: Record<string, any> = {};
+    
+    if (profileData.business_name !== undefined) validProfileData.business_name = profileData.business_name;
+    if (profileData.business_address !== undefined) validProfileData.business_address = profileData.business_address;
+    if (profileData.phone !== undefined) validProfileData.phone = profileData.phone;
+    if (profileData.business_type !== undefined) validProfileData.business_type = profileData.business_type;
+    if (profileData.email !== undefined) validProfileData.email = profileData.email;
+    if (profileData.role !== undefined) validProfileData.role = profileData.role;
+    
     const { data, error } = await supabase
       .from('profiles')
-      .update(profileData)
+      .update(validProfileData)
       .eq('id', userId)
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
     
@@ -109,10 +119,13 @@ export const toggleUserStatus = async (userId: string, isActive: boolean): Promi
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .update({ status: isActive ? 'active' : 'inactive' })
+      .update({ 
+        // Only include status if it's a field in the profiles table
+        status: isActive ? 'active' : 'inactive' 
+      })
       .eq('id', userId)
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
     return data;

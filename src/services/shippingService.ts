@@ -1,7 +1,7 @@
 
 import { ShippingOption, OrderItem } from '@/types/product';
 
-// Define only free shipping option
+// Define available shipping options
 export const standardShippingOptions: ShippingOption[] = [
   {
     id: 'free-shipping',
@@ -10,6 +10,22 @@ export const standardShippingOptions: ShippingOption[] = [
     description: 'Delivery in 5-7 business days',
     estimatedDeliveryDays: 7,
     carrier: 'Australia Post'
+  },
+  {
+    id: 'express-shipping',
+    name: 'Express Shipping',
+    price: 15.00,
+    description: 'Delivery in 2-3 business days',
+    estimatedDeliveryDays: 3,
+    carrier: 'Australia Post'
+  },
+  {
+    id: 'priority-shipping',
+    name: 'Priority Shipping',
+    price: 25.00,
+    description: 'Next-day delivery',
+    estimatedDeliveryDays: 1,
+    carrier: 'DHL Express'
   }
 ];
 
@@ -27,7 +43,7 @@ export const calculateShippingOptions = async (
   try {
     console.log('Calculating shipping options for:', { totalWeight, destination, items });
     
-    // Always return the free shipping option regardless of order total or weight
+    // Return all shipping options
     return standardShippingOptions;
   } catch (error) {
     console.error("Error calculating shipping options:", error);

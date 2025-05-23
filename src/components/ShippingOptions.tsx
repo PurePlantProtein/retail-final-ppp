@@ -29,7 +29,7 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
     );
   }
 
-  if (shippingOptions.length === 0) {
+  if (!shippingOptions || shippingOptions.length === 0) {
     return (
       <div className="py-4 text-center text-muted-foreground">
         No shipping options available for your location.
@@ -47,6 +47,8 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
         <div 
           key={option.id} 
           className={`flex items-center justify-between rounded-md border p-3 cursor-pointer hover:bg-accent ${
+            option.id === selectedOption ? 'border-primary bg-primary/5' : ''
+          } ${
             option.id === 'free-shipping' ? 'border-green-500 bg-green-50' : ''
           }`}
         >
@@ -55,7 +57,7 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
             <div>
               <Label htmlFor={option.id} className="text-base font-medium cursor-pointer flex items-center">
                 {option.name}
-                {option.id === 'free-shipping' && (
+                {option.price === 0 && (
                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                     FREE
                   </span>
