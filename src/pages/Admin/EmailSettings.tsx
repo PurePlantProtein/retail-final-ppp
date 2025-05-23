@@ -279,8 +279,8 @@ const EmailSettings = () => {
                         className="min-h-[300px] font-mono text-sm"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Available variables: {{orderId}}, {{userName}}, {{email}}, {{total}}, {{paymentMethod}}, 
-                        {{items}} - use {{#each items}} to iterate through items.
+                        Available variables: &#123;&#123;orderId&#125;&#125;, &#123;&#123;userName&#125;&#125;, &#123;&#123;email&#125;&#125;, &#123;&#123;total&#125;&#125;, &#123;&#123;paymentMethod&#125;&#125;, 
+                        &#123;&#123;items&#125;&#125; - use &#123;&#123;#each items&#125;&#125; to iterate through items.
                       </p>
                     </div>
                   ) : (
@@ -310,8 +310,8 @@ const EmailSettings = () => {
                         className="min-h-[300px] font-mono text-sm"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Available variables: {{orderId}}, {{userName}}, {{email}}, {{total}}, {{paymentMethod}}, 
-                        {{items}} - use {{#each items}} to iterate through items.
+                        Available variables: &#123;&#123;orderId&#125;&#125;, &#123;&#123;userName&#125;&#125;, &#123;&#123;email&#125;&#125;, &#123;&#123;total&#125;&#125;, &#123;&#123;paymentMethod&#125;&#125;, 
+                        &#123;&#123;items&#125;&#125; - use &#123;&#123;#each items&#125;&#125; to iterate through items.
                       </p>
                     </div>
                   ) : (
