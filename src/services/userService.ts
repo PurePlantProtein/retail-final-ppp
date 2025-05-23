@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/components/admin/UsersTable';
 
@@ -41,13 +40,14 @@ export const fetchUsers = async (): Promise<User[]> => {
       // Continue without auth users data - just use profiles
     }
     
-    // Type the profile parameter explicitly to avoid TypeScript errors
-    const users: User[] = profiles.map((profile) => {
-      // Safely check for profile.id before using it
-      const profileId = profile?.id || '';
+    // Map profiles to User objects with proper type checking
+    const users: User[] = profiles.map((profile: any) => {
+      // Safely check for profile properties
+      const profileId = profile && typeof profile === 'object' && 'id' in profile ? profile.id : '';
+      
       // Try to get email from auth users map first, then from profile
       const authUser = profileId ? authUsersMap.get(profileId) : undefined;
-      const email = authUser?.email || profile?.email || profileId;
+      const email = authUser?.email || (profile && 'email' in profile ? profile.email : '') || profileId;
       
       // Determine role based on email
       const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(email);
