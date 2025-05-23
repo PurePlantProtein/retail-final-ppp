@@ -15,6 +15,7 @@ const mockUsers: User[] = [
     business_type: 'Health Store',
     business_address: '123 Demo St, Example City',
     phone: '555-123-4567',
+    payment_terms: 14,
     status: 'Active',
     role: 'retailer'
   },
@@ -26,6 +27,7 @@ const mockUsers: User[] = [
     business_type: 'Administrator',
     business_address: 'Admin HQ',
     phone: '555-987-6543',
+    payment_terms: 30,
     status: 'Active',
     role: 'admin'
   }
@@ -117,7 +119,8 @@ export const useUsersManagement = () => {
         business_address: userData.business_address,
         phone: userData.phone,
         email: userData.email,
-        role: userData.role as 'admin' | 'retailer'
+        role: userData.role as 'admin' | 'retailer',
+        payment_terms: userData.payment_terms
       };
       
       await userService.updateUserDetails(userId, userProfileData);

@@ -9,6 +9,7 @@ export type UserProfile = {
   business_type?: string;
   email?: string;
   role: 'admin' | 'retailer';
+  payment_terms?: number;
 };
 
 export type AuthContextType = {

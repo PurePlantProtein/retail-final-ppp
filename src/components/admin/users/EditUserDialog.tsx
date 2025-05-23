@@ -91,6 +91,21 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="payment_terms" className="text-right">
+              Payment Terms
+            </Label>
+            <Input
+              id="payment_terms"
+              name="payment_terms"
+              type="number"
+              value={editFormData.payment_terms || 14}
+              onChange={onInputChange}
+              className="col-span-3"
+              min="0"
+              placeholder="Days (e.g. 14)"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="business_address" className="text-right">
               Address
             </Label>

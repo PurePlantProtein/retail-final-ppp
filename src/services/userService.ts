@@ -11,6 +11,7 @@ const mockUsers = [
     business_type: 'Health Store',
     business_address: '123 Demo St, Example City',
     phone: '555-123-4567',
+    payment_terms: 14,
     status: 'Active',
     role: 'retailer'
   },
@@ -22,6 +23,7 @@ const mockUsers = [
     business_type: 'Administrator',
     business_address: 'Admin HQ',
     phone: '555-987-6543',
+    payment_terms: 30,
     status: 'Active',
     role: 'admin'
   }

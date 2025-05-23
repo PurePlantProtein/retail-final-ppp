@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Table,
@@ -26,6 +25,7 @@ export interface User {
   role: string;
   business_address?: string;
   phone?: string;
+  payment_terms?: number;
 }
 
 interface UsersTableProps {
@@ -70,7 +70,8 @@ const UsersTable: React.FC<UsersTableProps> = ({
       business_type: user.business_type,
       business_address: user.business_address || '',
       phone: user.phone || '',
-      email: user.email
+      email: user.email,
+      payment_terms: user.payment_terms
     });
     setIsEditDialogOpen(true);
   };
@@ -142,6 +143,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
             <TableHead>Business Type</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Payment Terms</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>

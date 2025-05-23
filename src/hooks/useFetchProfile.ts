@@ -38,6 +38,7 @@ export const useFetchProfile = (
             id: userId,
             business_name: user?.user_metadata?.business_name || 'Unknown Business',
             email: email,
+            payment_terms: 14, // Default payment terms
             updated_at: new Date().toISOString()
           }])
           .select()
@@ -65,6 +66,7 @@ export const useFetchProfile = (
           id: userId, 
           business_name: user?.user_metadata?.business_name || 'Unknown Business',
           email: user?.email,
+          payment_terms: 14, // Default payment terms
           role
         };
         onProfileLoaded(minimalProfile);
@@ -80,6 +82,7 @@ export const useFetchProfile = (
           id: user.id, 
           business_name: user.user_metadata?.business_name || 'Unknown Business',
           email: user.email,
+          payment_terms: 14, // Default payment terms
           role
         };
         onProfileLoaded(minimalProfile);

@@ -1,15 +1,17 @@
 
 import React from 'react';
-import { Edit, Trash2, ShieldCheck, UserCog } from 'lucide-react';
-import { TableRow, TableCell } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Edit, Trash } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from '@/components/ui/button';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { User } from '@/components/admin/UsersTable';
 
 interface UserTableRowProps {
@@ -29,73 +31,115 @@ const UserTableRow: React.FC<UserTableRowProps> = ({
   onEditClick,
   onDeleteClick
 }) => {
+  const isOwnAccount = user.id === currentUser?.id;
+  const canEditRole = !isOwnAccount;
+  const canToggleStatus = !isOwnAccount;
+  const canDelete = !isOwnAccount;
+  
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-purple-500 hover:bg-purple-600';
+      case 'retailer':
+        return 'bg-blue-500 hover:bg-blue-600';
+      default:
+        return 'bg-gray-500 hover:bg-gray-600';
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'Active':
+        return 'bg-green-500 hover:bg-green-600';
+      case 'Inactive':
+        return 'bg-gray-500 hover:bg-gray-600';
+      case 'Pending':
+        return 'bg-yellow-500 hover:bg-yellow-600';
+      default:
+        return 'bg-gray-500 hover:bg-gray-600';
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    await toggleUserStatus(user.id, user.status);
+  };
+
+  const handleUpdateRole = async (role: string) => {
+    await updateUserRole(user.id, role);
+  };
+
   return (
-    <TableRow key={user.id}>
+    <TableRow>
       <TableCell className="font-medium">{user.business_name}</TableCell>
       <TableCell>{user.email}</TableCell>
-      <TableCell>{user.business_type || 'Not specified'}</TableCell>
+      <TableCell>{user.business_type || '-'}</TableCell>
       <TableCell>
-        <Select
-          defaultValue={user.role}
-          onValueChange={(value) => updateUserRole(user.id, value)}
-          disabled={user.id === currentUser?.id}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="admin">
-              <div className="flex items-center">
-                <ShieldCheck className="mr-2 h-4 w-4" />
-                <span>Admin</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="retailer">
-              <div className="flex items-center">
-                <UserCog className="mr-2 h-4 w-4" />
-                <span>Retailer</span>
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <Badge className={`${getRoleBadgeColor(user.role)}`}>
+          {user.role}
+        </Badge>
       </TableCell>
       <TableCell>
-        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-          user.status === 'Active' 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
+        <Badge className={`${getStatusBadgeColor(user.status)}`}>
           {user.status}
-        </span>
+        </Badge>
       </TableCell>
       <TableCell>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => toggleUserStatus(user.id, user.status)}
-            disabled={user.id === currentUser?.id}
-          >
-            {user.status === 'Active' ? 'Suspend' : 'Activate'}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEditClick(user)}
-            disabled={user.id === currentUser?.id}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDeleteClick(user)}
-            disabled={user.id === currentUser?.id}
-            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        {user.payment_terms !== undefined ? `${user.payment_terms} days` : '14 days'}
+      </TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            
+            <DropdownMenuSeparator />
+            
+            {/* Edit User */}
+            <DropdownMenuItem onClick={() => onEditClick(user)}>
+              <Edit className="mr-2 h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            
+            {/* Role Management */}
+            {canEditRole && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleUpdateRole('admin')} disabled={user.role === 'admin'}>
+                  Make Admin
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleUpdateRole('retailer')} disabled={user.role === 'retailer'}>
+                  Make Retailer
+                </DropdownMenuItem>
+              </>
+            )}
+            
+            {/* Status Management */}
+            {canToggleStatus && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Status</DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleToggleStatus}>
+                  {user.status === 'Active' ? 'Deactivate' : 'Activate'} Account
+                </DropdownMenuItem>
+              </>
+            )}
+            
+            {/* Delete User */}
+            {canDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onDeleteClick(user)} className="text-red-600">
+                  <Trash className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </TableCell>
     </TableRow>
   );

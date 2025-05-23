@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -289,9 +288,14 @@ const Profile = () => {
                   </form>
                 </Form>
               </CardContent>
-              <CardFooter className="flex justify-between border-t pt-6">
-                <div>
-                  <p className="text-sm text-gray-500">Account Email: {user.email}</p>
+              <CardFooter className="flex flex-col border-t pt-6 space-y-2">
+                <div className="w-full flex justify-between">
+                  <p className="text-sm text-gray-500">Account Email:</p>
+                  <p className="text-sm font-medium">{user?.email}</p>
+                </div>
+                <div className="w-full flex justify-between">
+                  <p className="text-sm text-gray-500">Payment Terms:</p>
+                  <p className="text-sm font-medium">{authProfile?.payment_terms || 14} days</p>
                 </div>
               </CardFooter>
             </Card>
