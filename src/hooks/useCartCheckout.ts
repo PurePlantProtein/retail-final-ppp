@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -12,8 +13,9 @@ import {
   sendAccountsOrderNotification 
 } from '@/services/emailService';
 import { normalizeOrder } from '@/utils/orderUtils';
+import { useAuth } from '@/contexts/AuthContext';
 
-export const useCartCheckout = (userId?: string, userEmail?: string) => {
+export const useCartCheckout = () => {
   const { 
     items, 
     subtotal, 
@@ -21,6 +23,7 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     emailSettings 
   } = useCart();
   
+  const { user } = useAuth();
   const { shippingAddress: savedShippingAddress, setShippingAddress } = useShipping();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -103,9 +106,9 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     };
     
     // Send customer email
-    if (emailSettings.notifyCustomer && userEmail) {
+    if (emailSettings.notifyCustomer && order.email) {
       try {
-        const customerResult = await sendOrderConfirmationEmail(order, userEmail, 'customer');
+        const customerResult = await sendOrderConfirmationEmail(order, order.email, 'customer');
         emailResults.customerEmailSent = customerResult.success;
         console.log('Customer email result:', customerResult);
       } catch (error) {
@@ -162,9 +165,9 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     // Create the order object with direct properties
     const orderData = {
       id: orderId,
-      userId: userId || 'guest',
-      userName: userEmail || 'guest',
-      email: userEmail || 'guest@example.com', // Add a default email for guest users
+      userId: user?.id || 'guest',
+      userName: user?.email || shippingAddress.name || 'guest',
+      email: user?.email || 'guest@example.com', // Add a default email for guest users
       items: items.slice(), // Create a copy of the items array
       total: subtotal + shippingCost,
       status: 'pending' as const,

@@ -14,34 +14,23 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserOrders } from '@/services/mockData';
+import { useOrders } from '@/hooks/useOrders';
 import { Order } from '@/types/product';
 
 const Orders = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { orders, isLoading, fetchOrders } = useOrders();
 
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
-
-    const fetchUserOrders = async () => {
-      try {
-        const data = await getUserOrders(user.id);
-        setOrders(data);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserOrders();
-  }, [user, navigate]);
+    
+    // Force a refresh of orders when component mounts
+    fetchOrders();
+  }, [user, navigate, fetchOrders]);
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {

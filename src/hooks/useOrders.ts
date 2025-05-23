@@ -1,7 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Order, OrderStatus } from '@/types/product';
 import { getOrders, updateOrderStatus, deleteOrder } from '@/services/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -9,16 +12,39 @@ export const useOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
 
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const data = await getOrders();
-      setOrders(data);
+      
+      // First try to get orders from localStorage
+      const storedOrders = localStorage.getItem('orders');
+      if (storedOrders) {
+        const parsedOrders = JSON.parse(storedOrders) as Order[];
+        
+        // Filter orders for the current user
+        let userOrders = parsedOrders;
+        if (user) {
+          userOrders = parsedOrders.filter(order => 
+            order.userId === user.id || order.email === user.email
+          );
+        }
+        
+        console.log('Fetched orders from localStorage:', userOrders);
+        setOrders(userOrders);
+      } else {
+        // Fallback to mock data service
+        const data = await getOrders();
+        console.log('Fetched orders from mock service:', data);
+        setOrders(data);
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -39,6 +65,17 @@ export const useOrders = () => {
           order.id === orderId ? { ...order, status: newStatus } : order
         )
       );
+      
+      // Update the order in localStorage too
+      const storedOrders = localStorage.getItem('orders');
+      if (storedOrders) {
+        const parsedOrders = JSON.parse(storedOrders) as Order[];
+        const updatedOrders = parsedOrders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        );
+        localStorage.setItem('orders', JSON.stringify(updatedOrders));
+      }
+      
       toast({
         title: "Status Updated",
         description: `Order #${orderId} status changed to ${newStatus}.`,
@@ -57,13 +94,22 @@ export const useOrders = () => {
     try {
       setIsSubmitting(true);
       
-      // Here you would call your API to update the order
-      // For now, let's just update the local state
+      // Update the order in local state
       setOrders(currentOrders => 
         currentOrders.map(order => 
           order.id === updatedOrder.id ? updatedOrder : order
         )
       );
+      
+      // Update the order in localStorage too
+      const storedOrders = localStorage.getItem('orders');
+      if (storedOrders) {
+        const parsedOrders = JSON.parse(storedOrders) as Order[];
+        const updatedOrders = parsedOrders.map(order => 
+          order.id === updatedOrder.id ? updatedOrder : order
+        );
+        localStorage.setItem('orders', JSON.stringify(updatedOrders));
+      }
       
       toast({
         title: "Order Updated",
@@ -87,7 +133,18 @@ export const useOrders = () => {
     try {
       setIsSubmitting(true);
       await deleteOrder(orderId);
+      
+      // Remove from local state
       setOrders(currentOrders => currentOrders.filter(order => order.id !== orderId));
+      
+      // Remove from localStorage too
+      const storedOrders = localStorage.getItem('orders');
+      if (storedOrders) {
+        const parsedOrders = JSON.parse(storedOrders) as Order[];
+        const updatedOrders = parsedOrders.filter(order => order.id !== orderId);
+        localStorage.setItem('orders', JSON.stringify(updatedOrders));
+      }
+      
       toast({
         title: "Order Deleted",
         description: `Order #${orderId} has been deleted.`,
