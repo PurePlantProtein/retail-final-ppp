@@ -101,10 +101,12 @@ const PaymentStep = ({
           <div className="space-y-2">
             <p className="text-sm font-medium">Bank Details</p>
             <div className="space-y-1.5 text-sm">
-              <p><span className="font-medium">Bank:</span> Pure Plant Protein Bank</p>
-              <p><span className="font-medium">Account Name:</span> {bankDetails.accountName}</p>
-              <p><span className="font-medium">Account #:</span> {bankDetails.accountNumber}</p>
+              <p><span className="font-medium">Bank:</span> Suncorp Bank</p>
+              <p><span className="font-medium">Account Name:</span> JMP Foods Pty Ltd</p>
+              <p><span className="font-medium">BSB:</span> 484-799</p>
+              <p><span className="font-medium">Account:</span> 611680986</p>
               <p><span className="font-medium">Reference:</span> {bankDetails.reference}</p>
+              <p className="text-xs text-muted-foreground mt-2">You'll also receive an invoice from XERO.</p>
             </div>
           </div>
           <Button 

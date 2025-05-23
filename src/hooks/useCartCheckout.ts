@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -26,8 +27,8 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
   const { toast } = useToast();
 
   const [bankDetails] = useState({
-    accountName: 'Pure Plant Protein',
-    accountNumber: '12345678',
+    accountName: 'JMP Foods Pty Ltd',
+    accountNumber: '611680986',
     reference: `ORDER-${Date.now()}`
   });
   

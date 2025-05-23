@@ -20,10 +20,10 @@ const BankTransferInstructions: React.FC<BankTransferInstructionsProps> = ({
   const referenceCode = React.useMemo(() => generateSecureOrderReference(), []);
 
   const bankDetails = {
-    accountName: "PP Protein Wholesale Pty Ltd",
-    bsb: "123-456",
-    accountNumber: "12345678",
-    bankName: "Example Bank"
+    accountName: "JMP Foods Pty Ltd",
+    bsb: "484-799",
+    accountNumber: "611680986",
+    bankName: "Suncorp Bank"
   };
   
   const handleCopyReference = () => {
@@ -97,6 +97,10 @@ const BankTransferInstructions: React.FC<BankTransferInstructionsProps> = ({
                 <Copy className="h-4 w-4 mr-1" /> Copy
               </Button>
             </div>
+          </div>
+          
+          <div className="p-2 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
+            You'll also receive an invoice from XERO.
           </div>
         </div>
         
