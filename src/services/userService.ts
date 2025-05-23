@@ -43,8 +43,20 @@ export const fetchUsers = async (): Promise<User[]> => {
     
     // Map profiles to User objects with proper type checking
     const users: User[] = profiles.map((profile: any) => {
-      // Safely check for profile properties
-      const profileId = profile && typeof profile === 'object' && 'id' in profile ? profile.id : '';
+      // Safely check for profile properties and verify it's an object with an id
+      if (!profile || typeof profile !== 'object') {
+        return {
+          id: '',
+          email: '',
+          created_at: new Date().toISOString(),
+          business_name: 'Unknown',
+          business_type: 'Not specified',
+          role: 'retailer',
+          status: 'Active'
+        };
+      }
+      
+      const profileId = 'id' in profile ? profile.id : '';
       
       // Try to get email from auth users map first, then from profile
       const authUser = profileId ? authUsersMap.get(profileId) : undefined;
@@ -56,11 +68,11 @@ export const fetchUsers = async (): Promise<User[]> => {
       return {
         id: profileId,
         email: email,
-        created_at: profile?.created_at,
-        business_name: profile?.business_name || 'Unknown',
-        business_type: profile?.business_type || 'Not specified',
-        business_address: profile?.business_address,
-        phone: profile?.phone,
+        created_at: profile.created_at,
+        business_name: profile.business_name || 'Unknown',
+        business_type: profile.business_type || 'Not specified',
+        business_address: profile.business_address,
+        phone: profile.phone,
         status: 'Active', // Default status since we don't store this in profiles yet
         role: isUserAdmin ? 'admin' : 'retailer'
       };
