@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -93,7 +94,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-16 text-center">
+        <div className="container mx-auto px-4 py-16 text-left">
           <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
           <p className="mb-8">The product you are looking for does not exist.</p>
           <Button asChild>
@@ -137,7 +138,7 @@ const ProductDetail = () => {
           
           <div className="flex-1 space-y-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+              <h1 className="text-3xl font-bold mb-2 text-left">{product.name}</h1>
               <p className="text-xl font-semibold text-primary">${product.price.toFixed(2)}</p>
             </div>
             
@@ -145,32 +146,32 @@ const ProductDetail = () => {
             <div className="grid grid-cols-2 gap-4 py-2">
               <div>
                 <h4 className="text-sm text-gray-500">Minimum Order</h4>
-                <p>{product.minQuantity} units</p>
+                <p className="text-left">{product.minQuantity} units</p>
               </div>
               <div>
                 <h4 className="text-sm text-gray-500">Available Stock</h4>
-                <p>{product.stock} units</p>
+                <p className="text-left">{product.stock} units</p>
               </div>
               
               {/* New product details */}
               {product.servingSize && (
                 <div>
                   <h4 className="text-sm text-gray-500">Serving Size</h4>
-                  <p>{product.servingSize}</p>
+                  <p className="text-left">{product.servingSize}</p>
                 </div>
               )}
               
               {product.numberOfServings !== undefined && (
                 <div>
                   <h4 className="text-sm text-gray-500">Number of Servings</h4>
-                  <p>{product.numberOfServings}</p>
+                  <p className="text-left">{product.numberOfServings}</p>
                 </div>
               )}
               
               {product.bagSize && (
                 <div>
                   <h4 className="text-sm text-gray-500">Bag Size</h4>
-                  <p>{product.bagSize}</p>
+                  <p className="text-left">{product.bagSize}</p>
                 </div>
               )}
             </div>
@@ -220,14 +221,14 @@ const ProductDetail = () => {
                     </Button>
                   </div>
                   {quantity > 0 && (
-                    <p className="mt-4 text-sm text-gray-600">
+                    <p className="mt-4 text-sm text-gray-600 text-left">
                       Total: ${(product.price * quantity).toFixed(2)}
                     </p>
                   )}
                 </>
               ) : (
                 <div className="flex flex-col space-y-3">
-                  <p className="text-gray-600 mb-2">
+                  <p className="text-gray-600 mb-2 text-left">
                     Please log in to purchase this product.
                   </p>
                   <Button asChild size="lg">
@@ -259,8 +260,8 @@ const ProductDetail = () => {
             <TabsContent value="description" className="py-4">
               <Card>
                 <CardContent className="p-6">
-                  <h2 className="text-2xl font-semibold mb-4">Description</h2>
-                  <p className="text-gray-700">{product.description}</p>
+                  <h2 className="text-2xl font-semibold mb-4 text-left">Description</h2>
+                  <p className="text-gray-700 text-left">{product.description}</p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -269,16 +270,16 @@ const ProductDetail = () => {
               <TabsContent value="ingredients" className="py-4">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-2xl font-semibold mb-4">Ingredients</h2>
-                    <p className="text-gray-700">{product.ingredients}</p>
+                    <h2 className="text-2xl font-semibold mb-4 text-left">Ingredients</h2>
+                    <p className="text-gray-700 text-left">{product.ingredients}</p>
                     
                     {/* Certifications and badges */}
                     <div className="mt-6">
-                      <p className="text-gray-700 mb-3">
+                      <p className="text-gray-700 mb-3 text-left">
                         Gluten Free | Dairy Free | Vegan Friendly | GMO Free | Halal and Kosher Certified
                       </p>
                       <div className="border border-green-600 rounded p-4 inline-flex items-center text-green-700">
-                        <span className="font-medium">
+                        <span className="font-medium text-left">
                           Produced in Australia from 90% Australian ingredients.
                         </span>
                       </div>
@@ -292,15 +293,15 @@ const ProductDetail = () => {
               <TabsContent value="amino" className="py-4">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-2xl font-semibold mb-4">Amino Acid Profile</h2>
-                    <p className="text-sm text-gray-500 mb-4">Total per serve ({product.servingSize || '30g'})</p>
+                    <h2 className="text-2xl font-semibold mb-4 text-left">Amino Acid Profile</h2>
+                    <p className="text-sm text-gray-500 mb-4 text-left">Total per serve ({product.servingSize || '30g'})</p>
                     
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <tbody>
                           {product.aminoAcidProfile.map((amino, index) => (
                             <tr key={index} className={index % 2 === 0 ? 'bg-gray-100' : ''}>
-                              <td className="py-3 px-4">{amino.name}</td>
+                              <td className="py-3 px-4 text-left">{amino.name}</td>
                               <td className="py-3 px-4 text-right">{amino.amount}</td>
                             </tr>
                           ))}
@@ -316,7 +317,7 @@ const ProductDetail = () => {
               <TabsContent value="nutritional" className="py-4">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-2xl font-semibold mb-4">Nutritional Info</h2>
+                    <h2 className="text-2xl font-semibold mb-4 text-left">Nutritional Info</h2>
                     
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -330,7 +331,7 @@ const ProductDetail = () => {
                         <tbody>
                           {product.nutritionalInfo.map((info, index) => (
                             <tr key={index} className={index % 2 === 0 ? 'bg-gray-100' : ''}>
-                              <td className="py-3 px-4">{info.name}</td>
+                              <td className="py-3 px-4 text-left">{info.name}</td>
                               <td className="py-3 px-4 text-right">{info.perServing}</td>
                               <td className="py-3 px-4 text-right">{info.per100g}</td>
                             </tr>
