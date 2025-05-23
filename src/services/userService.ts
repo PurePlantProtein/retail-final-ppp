@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/components/admin/UsersTable';
 
@@ -47,7 +48,7 @@ export const fetchUsers = async (): Promise<User[]> => {
       
       // Try to get email from auth users map first, then from profile
       const authUser = profileId ? authUsersMap.get(profileId) : undefined;
-      const email = authUser?.email || (profile && 'email' in profile ? profile.email : '') || profileId;
+      const email = authUser?.email || (profile && typeof profile === 'object' && 'email' in profile ? profile.email : '') || profileId;
       
       // Determine role based on email
       const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(email);
