@@ -16,7 +16,7 @@ export const useOrders = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [user]); // Removed user dependency to load all orders in admin view
+  }, [user]);
 
   const fetchOrders = async () => {
     try {
@@ -162,6 +162,11 @@ export const useOrders = () => {
     }
   };
 
+  // Add a function to get a specific order by ID
+  const getOrderById = (orderId: string): Order | undefined => {
+    return orders.find(order => order.id === orderId);
+  };
+
   // Add a function to clear all orders (for testing/analytics)
   const clearAllOrders = () => {
     localStorage.removeItem('orders');
@@ -182,6 +187,7 @@ export const useOrders = () => {
     handleStatusChange,
     handleUpdateOrder,
     handleDeleteOrder,
+    getOrderById,
     clearAllOrders
   };
 };

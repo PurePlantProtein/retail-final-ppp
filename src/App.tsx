@@ -27,6 +27,7 @@ import CategoriesManagement from '@/pages/Admin/CategoriesManagement';
 import ProductImport from '@/pages/Admin/ProductImport';
 import UsersManagement from '@/pages/Admin/UsersManagement';
 import OrdersManagement from '@/pages/Admin/OrdersManagement';
+import OrderDetail from '@/pages/Admin/OrderDetail';
 import AnalyticsManagement from '@/pages/Admin/AnalyticsManagement';
 import SettingsManagement from '@/pages/Admin/SettingsManagement';
 import ShippingSettings from '@/pages/Admin/ShippingSettings';
@@ -77,6 +78,7 @@ function App() {
                 <Route path="/admin/products/import" element={<ProtectedRoute requiresAdmin><ProductImport /></ProtectedRoute>} />
                 <Route path="/admin/products/categories" element={<ProtectedRoute requiresAdmin><CategoriesManagement /></ProtectedRoute>} />
                 <Route path="/admin/orders" element={<ProtectedRoute requiresAdmin><OrdersManagement /></ProtectedRoute>} />
+                <Route path="/admin/orders/:orderId" element={<ProtectedRoute requiresAdmin><OrderDetail /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute requiresAdmin><UsersManagement /></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<ProtectedRoute requiresAdmin><AnalyticsManagement /></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute requiresAdmin><SettingsManagement /></ProtectedRoute>} />
