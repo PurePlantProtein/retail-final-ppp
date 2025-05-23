@@ -1,41 +1,17 @@
 
 import { ShippingOption, OrderItem } from '@/types/product';
 
-// Define standard shipping options
+// Define only free shipping option
 export const standardShippingOptions: ShippingOption[] = [
   {
-    id: 'standard',
-    name: 'Standard Shipping',
-    price: 10.00,
-    description: 'Delivery in 3-5 business days',
-    estimatedDeliveryDays: 5,
+    id: 'free-shipping',
+    name: 'Free Shipping',
+    price: 0.00,
+    description: 'Delivery in 5-7 business days',
+    estimatedDeliveryDays: 7,
     carrier: 'Australia Post'
-  },
-  {
-    id: 'express',
-    name: 'Express Shipping',
-    price: 20.00,
-    description: 'Delivery in 1-2 business days',
-    estimatedDeliveryDays: 2,
-    carrier: 'Australia Post Express'
-  },
-  {
-    id: 'priority',
-    name: 'Priority Shipping',
-    price: 30.00,
-    description: 'Next business day delivery',
-    estimatedDeliveryDays: 1,
-    carrier: 'DHL Express'
   }
 ];
-
-// Define regional shipping surcharges
-const regionalSurcharges: Record<string, number> = {
-  'NT': 15.00,  // Northern Territory
-  'WA': 12.00,  // Western Australia
-  'TAS': 10.00, // Tasmania
-  'QLD': 5.00,  // Queensland (for distant areas)
-};
 
 /**
  * Calculate shipping options based on weight and destination
@@ -49,31 +25,8 @@ export const calculateShippingOptions = async (
   await new Promise(resolve => setTimeout(resolve, 500));
   
   try {
-    // Check for free shipping eligibility (orders over $150)
-    const orderSubtotal = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-    const qualifiesForFreeShipping = orderSubtotal >= 150;
-    
-    // Regional surcharge based on state
-    const stateSurcharge = regionalSurcharges[destination.state] || 0;
-    
-    // Weight-based price adjustment (per kg over 5kg)
-    const extraWeightCharge = Math.max(0, totalWeight - 5) * 2;
-    
-    // Calculate final shipping options
-    const calculatedOptions = standardShippingOptions.map(option => ({
-      ...option,
-      price: qualifiesForFreeShipping && option.id === 'standard' 
-        ? 0 
-        : option.price + stateSurcharge + extraWeightCharge
-    }));
-    
-    // Add free shipping option if qualified
-    if (qualifiesForFreeShipping) {
-      calculatedOptions.find(option => option.id === 'standard')!.name = 'Free Shipping';
-      calculatedOptions.find(option => option.id === 'standard')!.description += ' (Free with orders over $150)';
-    }
-    
-    return calculatedOptions;
+    // Always return the free shipping option regardless of order total or weight
+    return standardShippingOptions;
   } catch (error) {
     console.error("Error calculating shipping options:", error);
     return standardShippingOptions; // Fallback to standard options
