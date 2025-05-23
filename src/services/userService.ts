@@ -113,7 +113,6 @@ export const deleteUser = async (userId: string): Promise<void> => {
     console.log('Attempting to delete user with ID:', userId);
     
     // First attempt to delete the user from auth.users (which will cascade to profiles)
-    // Use the service role key to perform this admin operation
     try {
       const { error: authError } = await supabase.auth.admin.deleteUser(userId);
       
