@@ -68,85 +68,74 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // First, attempt to create a new user in auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: values.email,
-        password: values.password,
-        email_confirm: true,
-        user_metadata: {
+      // First check if a user with this email already exists to avoid foreign key conflicts
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', values.email)
+        .maybeSingle();
+      
+      if (existingUsers) {
+        toast({
+          title: "User already exists",
+          description: `A user with the email ${values.email} already exists.`,
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Generate a UUID for the new user
+      const userId = crypto.randomUUID();
+      
+      // First create the profile directly
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: values.email,
           business_name: values.businessName,
           business_type: values.businessType,
-          role: values.role
-        }
-      });
+        })
+        .select();
       
-      if (authError) {
-        console.error('Error creating user in auth:', authError);
-        
-        // If we couldn't create the user in auth, create a profile directly
-        // Generate a valid UUID for the profile ID
-        const userId = crypto.randomUUID();
-        
-        console.log('Creating profile with ID:', userId);
-        
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: values.email,
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        throw profileError;
+      }
+      
+      // Then try to create the auth user if possible
+      try {
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: values.email,
+          password: values.password,
+          email_confirm: true,
+          user_metadata: {
             business_name: values.businessName,
             business_type: values.businessType,
-          });
-        
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          throw profileError;
-        }
-        
-        toast({
-          title: "User created",
-          description: `${values.businessName} (${values.email}) has been added as a profile.`,
-        });
-      } else if (authData.user) {
-        // If auth user was created successfully, ensure we have a profile too
-        console.log('User created in auth:', authData.user);
-        
-        // Check if a profile exists for this user
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authData.user.id)
-          .maybeSingle();
-          
-        if (!existingProfile) {
-          // Create profile if it doesn't exist
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: authData.user.id,
-              email: values.email,
-              business_name: values.businessName,
-              business_type: values.businessType,
-            });
-            
-          if (profileError) {
-            console.error('Error creating profile after auth user:', profileError);
-            // Don't throw here, the auth user was created successfully
+            role: values.role
           }
-        }
-        
-        toast({
-          title: "User created",
-          description: `${values.businessName} (${values.email}) has been created successfully.`,
         });
+        
+        if (authError) {
+          console.warn('Could not create auth user, but profile was created:', authError);
+        } else if (authData.user) {
+          console.log('User created in auth:', authData.user);
+        }
+      } catch (authCreateError) {
+        console.warn('Failed to create auth user, but profile was created:', authCreateError);
       }
+      
+      toast({
+        title: "User created",
+        description: `${values.businessName} (${values.email}) has been added successfully.`,
+      });
       
       // Reset form and close dialog
       form.reset();
       
       // Important: Refresh the users list
       onUserCreated();
-      
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({

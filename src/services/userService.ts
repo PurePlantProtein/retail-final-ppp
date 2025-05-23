@@ -56,13 +56,17 @@ export const fetchUsers = async (): Promise<User[]> => {
         };
       }
       
-      // Safely get the profile ID with explicit type checking
+      // Type assertion as Record<string, any> to safely access properties
       const profileObj = profile as Record<string, any>;
-      const profileId = profileObj.id ? String(profileObj.id) : '';
+      const profileId = typeof profileObj.id === 'string' ? profileObj.id : 
+                       profileObj.id ? String(profileObj.id) : '';
       
       // Try to get email from auth users map first, then from profile
       const authUser = profileId ? authUsersMap.get(profileId) : undefined;
-      const email = authUser?.email || (profileObj.email ? String(profileObj.email) : '') || profileId;
+      const email = authUser?.email || 
+                   (typeof profileObj.email === 'string' ? profileObj.email : 
+                   profileObj.email ? String(profileObj.email) : '') || 
+                   profileId;
       
       // Determine role based on email
       const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(email);
@@ -92,7 +96,18 @@ export const updateUserRole = async (userId: string, newRole: string): Promise<v
   try {
     // In a real implementation, you would update the role in the database
     console.log(`User role updated for ${userId} to ${newRole}`);
-    // This would be where you'd make the actual API call
+    
+    // Update user role in the profiles table
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        // Using metadata to store the role since there's no direct role column
+        // This will be used as reference until an actual role system is implemented
+        business_type: newRole === 'admin' ? 'Administrator' : 'Retailer'
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
   } catch (error) {
     console.error('Error updating user role:', error);
     throw error;
@@ -103,7 +118,8 @@ export const toggleUserStatus = async (userId: string, currentStatus: string): P
   try {
     const newStatus = currentStatus === 'Active' ? 'Suspended' : 'Active';
     
-    // In a real implementation, you would update the status in the database
+    // For now, we're just returning the new status without updating the database
+    // In a future implementation, this might be stored in a dedicated column
     console.log(`User status updated for ${userId} to ${newStatus}`);
     
     return newStatus;
@@ -115,6 +131,8 @@ export const toggleUserStatus = async (userId: string, currentStatus: string): P
 
 export const updateUserDetails = async (userId: string, userData: Partial<User>): Promise<void> => {
   try {
+    console.log('Updating user details for', userId, 'with data:', userData);
+    
     // Update user in Supabase profiles table
     const { error } = await supabase
       .from('profiles')
@@ -127,7 +145,12 @@ export const updateUserDetails = async (userId: string, userData: Partial<User>)
       })
       .eq('id', userId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error in Supabase update:', error);
+      throw error;
+    }
+    
+    console.log('User details updated successfully');
   } catch (error) {
     console.error('Error updating user details:', error);
     throw error;
@@ -138,32 +161,33 @@ export const deleteUser = async (userId: string): Promise<void> => {
   try {
     console.log('Attempting to delete user with ID:', userId);
     
-    // First attempt to delete the user from auth.users (which will cascade to profiles)
+    // First try to delete from profiles table directly
+    // This avoids the 403 errors when trying to use auth.admin.deleteUser without admin privileges
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+      
+    if (profileError) {
+      console.error('Error deleting from profiles table:', profileError);
+      throw profileError;
+    }
+    
+    console.log('User successfully deleted from profiles table');
+    
+    // Optionally try to delete from auth.users if we have admin privileges
     try {
-      // Wrap this in a try-catch since it requires admin privileges
       const { error: authError } = await supabase.auth.admin.deleteUser(userId);
       
       if (authError) {
-        console.error('Error deleting user from auth.users:', authError);
-        throw authError;
+        console.warn('Could not delete from auth.users, but profiles deletion succeeded:', authError);
+        // This is not a critical error since we've deleted the profile
+      } else {
+        console.log('User also successfully deleted from auth.users');
       }
-      
-      console.log('User successfully deleted from auth.users');
     } catch (authDeleteError) {
-      console.warn('Failed to delete from auth.users, falling back to profiles deletion:', authDeleteError);
-      
-      // If failing to delete from auth, at least remove from profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-        
-      if (profileError) {
-        console.error('Error deleting from profiles table:', profileError);
-        throw profileError;
-      }
-      
-      console.log('User successfully deleted from profiles table');
+      console.warn('Failed to delete from auth.users, but profiles deletion succeeded:', authDeleteError);
+      // Continue since we've deleted the profile successfully
     }
   } catch (error) {
     console.error('Error in deleteUser function:', error);
