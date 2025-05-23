@@ -1,154 +1,71 @@
+import { ShippingOption, OrderItem } from '@/types/product';
 
-import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '@/types/auth';
+// Define only free shipping option
+export const standardShippingOptions: ShippingOption[] = [
+  {
+    id: 'free-shipping',
+    name: 'Free Shipping',
+    price: 0.00,
+    description: 'Delivery in 5-7 business days',
+    estimatedDeliveryDays: 7,
+    carrier: 'Australia Post'
+  }
+];
 
-// Interface for search parameters
-export interface UserSearchParams {
-  search?: string;
-  status?: string;
-  sort?: {
-    field: string;
-    direction: 'asc' | 'desc';
+/**
+ * Calculate shipping options based on weight and destination
+ */
+export const calculateShippingOptions = async (
+  totalWeight: number,
+  destination: { postalCode: string; state: string },
+  items: OrderItem[] = []
+): Promise<ShippingOption[]> => {
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  try {
+    console.log('Calculating shipping options for:', { totalWeight, destination, items });
+    
+    // Always return the free shipping option regardless of order total or weight
+    return standardShippingOptions;
+  } catch (error) {
+    console.error("Error calculating shipping options:", error);
+    return standardShippingOptions; // Fallback to standard options
+  }
+};
+
+/**
+ * Get available shipping options for a postal code
+ */
+export const getShippingOptions = async (postalCode: string): Promise<ShippingOption[]> => {
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  console.log('Getting shipping options for postal code:', postalCode);
+  
+  // Get state from postal code (simple demonstration)
+  const state = getStateFromPostal(postalCode);
+  
+  return calculateShippingOptions(1, { postalCode, state });
+};
+
+/**
+ * Convert postal code to state (simplified mapping for Australia)
+ */
+const getStateFromPostal = (postalCode: string): string => {
+  const prefix = postalCode.substring(0, 1);
+  
+  // Simplified mapping
+  const mapping: Record<string, string> = {
+    '0': 'NT',  // 0800-0899
+    '1': 'NSW', // 1000-1999
+    '2': 'NSW', // 2000-2999
+    '3': 'VIC', // 3000-3999
+    '4': 'QLD', // 4000-4999
+    '5': 'SA',  // 5000-5999
+    '6': 'WA',  // 6000-6999
+    '7': 'TAS', // 7000-7999
   };
-}
-
-export const fetchUsers = async (params?: UserSearchParams): Promise<any[]> => {
-  try {
-    let query = supabase
-      .from('profiles')
-      .select('*');
-    
-    if (params?.search) {
-      query = query.or(`email.ilike.%${params.search}%,business_name.ilike.%${params.search}%`);
-    }
-    
-    if (params?.status) {
-      query = query.eq('status', params.status);
-    }
-    
-    if (params?.sort) {
-      const { field, direction } = params.sort;
-      query = query.order(field, { ascending: direction === 'asc' });
-    } else {
-      query = query.order('created_at', { ascending: false });
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    throw error;
-  }
-};
-
-export const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-    
-    if (error) throw error;
-    
-    if (!data) return null;
-    
-    // Convert to UserProfile type
-    return { 
-      id: userId,
-      role: data.role as 'admin' | 'retailer' || 'retailer', // Default role if not present
-      business_name: data.business_name || '',
-      business_address: data.business_address,
-      phone: data.phone,
-      business_type: data.business_type,
-      email: data.email
-    };
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    return null;
-  }
-};
-
-export const updateUserProfile = async (userId: string, profileData: Partial<UserProfile>): Promise<UserProfile | null> => {
-  try {
-    // Filter out properties that don't exist in the profiles table
-    const validProfileData: Record<string, any> = {};
-    
-    if (profileData.business_name !== undefined) validProfileData.business_name = profileData.business_name;
-    if (profileData.business_address !== undefined) validProfileData.business_address = profileData.business_address;
-    if (profileData.phone !== undefined) validProfileData.phone = profileData.phone;
-    if (profileData.business_type !== undefined) validProfileData.business_type = profileData.business_type;
-    if (profileData.email !== undefined) validProfileData.email = profileData.email;
-    if (profileData.role !== undefined) validProfileData.role = profileData.role;
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(validProfileData)
-      .eq('id', userId)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    
-    if (!data) return null;
-    
-    // Convert to UserProfile type
-    return { 
-      id: userId,
-      role: data.role as 'admin' | 'retailer' || 'retailer',
-      business_name: data.business_name || '',
-      business_address: data.business_address,
-      phone: data.phone,
-      business_type: data.business_type,
-      email: data.email
-    };
-  } catch (error) {
-    console.error('Error updating user profile:', error);
-    return null;
-  }
-};
-
-export const updateUserRole = async (userId: string, role: string): Promise<UserProfile | null> => {
-  return updateUserProfile(userId, { role: role as 'admin' | 'retailer' });
-};
-
-export const toggleUserStatus = async (userId: string, isActive: boolean): Promise<any> => {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ 
-        // Only include status if it's a field in the profiles table
-        status: isActive ? 'active' : 'inactive' 
-      })
-      .eq('id', userId)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error toggling user status:', error);
-    throw error;
-  }
-};
-
-export const updateUserDetails = async (userId: string, userData: Partial<UserProfile>): Promise<UserProfile | null> => {
-  return updateUserProfile(userId, userData);
-};
-
-export const deleteUser = async (userId: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
-    
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    throw error;
-  }
+  
+  return mapping[prefix] || 'NSW'; // Default to NSW
 };
