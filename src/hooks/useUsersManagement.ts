@@ -1,7 +1,9 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { User } from '@/components/admin/UsersTable';
 import * as userService from '@/services/userService';
+import { UserProfile } from '@/types/auth';
 
 // Fallback mock data in case the API fails
 const mockUsers: User[] = [
@@ -82,16 +84,18 @@ export const useUsersManagement = () => {
 
   const toggleUserStatus = async (userId: string, currentStatus: string) => {
     try {
-      const newStatus = await userService.toggleUserStatus(userId, currentStatus);
+      // Convert string status to boolean for the API
+      const isCurrentlyActive = currentStatus === 'Active';
+      const newStatus = await userService.toggleUserStatus(userId, !isCurrentlyActive);
       
       toast({
         title: "Status Updated",
-        description: `User status updated to ${newStatus}.`,
+        description: `User status updated to ${newStatus?.status || (!isCurrentlyActive ? 'Active' : 'Inactive')}.`,
       });
       
       setUsers(prevUsers => 
         prevUsers.map(u => 
-          u.id === userId ? { ...u, status: newStatus } : u
+          u.id === userId ? { ...u, status: newStatus?.status || (!isCurrentlyActive ? 'Active' : 'Inactive') } : u
         )
       );
     } catch (error) {
@@ -106,7 +110,17 @@ export const useUsersManagement = () => {
 
   const updateUserDetails = async (userId: string, userData: Partial<User>) => {
     try {
-      await userService.updateUserDetails(userId, userData);
+      // Convert User type to UserProfile type for the API
+      const userProfileData: Partial<UserProfile> = {
+        business_name: userData.business_name,
+        business_type: userData.business_type,
+        business_address: userData.business_address,
+        phone: userData.phone,
+        email: userData.email,
+        role: userData.role as 'admin' | 'retailer'
+      };
+      
+      await userService.updateUserDetails(userId, userProfileData);
 
       // Update local state
       setUsers(prevUsers =>
@@ -149,6 +163,31 @@ export const useUsersManagement = () => {
     }
   };
 
+  // Delete all test users except your account
+  const deleteTestUsers = async (keepEmail: string) => {
+    try {
+      setIsLoading(true);
+      await userService.deleteAllUsersExcept(keepEmail);
+      
+      toast({
+        title: "Success",
+        description: "All test users have been deleted successfully.",
+      });
+      
+      // Refresh the user list
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting test users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete test users. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Filter users based on search term and active tab
   const getFilteredUsers = () => {
     return users.filter(user => {
@@ -178,6 +217,7 @@ export const useUsersManagement = () => {
     toggleUserStatus,
     updateUserDetails,
     deleteUser,
+    deleteTestUsers,
     getFilteredUsers
   };
 };
