@@ -101,8 +101,7 @@ export const updateUserRole = async (userId: string, newRole: string): Promise<v
     const { error } = await supabase
       .from('profiles')
       .update({
-        // Using metadata to store the role since there's no direct role column
-        // This will be used as reference until an actual role system is implemented
+        // Using business_type to store the role since there's no direct role column
         business_type: newRole === 'admin' ? 'Administrator' : 'Retailer'
       })
       .eq('id', userId);
