@@ -5,34 +5,6 @@ import { User } from '@/components/admin/UsersTable';
 import * as userService from '@/services/userService';
 import { UserProfile } from '@/types/auth';
 
-// Fallback mock data in case the API fails
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'retailer@example.com',
-    created_at: new Date().toISOString(),
-    business_name: 'Demo Retail Business',
-    business_type: 'Health Store',
-    business_address: '123 Demo St, Example City',
-    phone: '555-123-4567',
-    payment_terms: 14,
-    status: 'Active',
-    role: 'retailer'
-  },
-  {
-    id: '2',
-    email: 'admin@example.com',
-    created_at: new Date().toISOString(),
-    business_name: 'Admin Account',
-    business_type: 'Administrator',
-    business_address: 'Admin HQ',
-    phone: '555-987-6543',
-    payment_terms: 30,
-    status: 'Active',
-    role: 'admin'
-  }
-];
-
 export const useUsersManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
@@ -45,20 +17,23 @@ export const useUsersManagement = () => {
     try {
       setIsLoading(true);
       const fetchedUsers = await userService.fetchUsers();
-      setUsers(fetchedUsers.length > 0 ? fetchedUsers : mockUsers);
+      setUsers(fetchedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
         title: "Error",
-        description: "Failed to load users. Using placeholder data.",
+        description: "Failed to load users. Please try again.",
         variant: "destructive",
       });
-      // Use mock data when API fails
-      setUsers(mockUsers);
+      setUsers([]);
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
@@ -119,7 +94,6 @@ export const useUsersManagement = () => {
         business_address: userData.business_address,
         phone: userData.phone,
         email: userData.email,
-        role: userData.role as 'admin' | 'retailer',
         payment_terms: userData.payment_terms
       };
       
@@ -132,16 +106,27 @@ export const useUsersManagement = () => {
         )
       );
 
+      toast({
+        title: "Success",
+        description: "User details updated successfully.",
+      });
+
       return Promise.resolve();
     } catch (error) {
       console.error('Error updating user details:', error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to update user details.",
+        variant: "destructive",
+      });
+      
       return Promise.reject(error);
     }
   };
 
   const deleteUser = async (userId: string) => {
     try {
-      console.log('Starting to delete user:', userId);
       await userService.deleteUser(userId);
       
       // Update local state after successful deletion

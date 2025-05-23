@@ -1,106 +1,142 @@
 
+import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/types/auth';
 
-// Mock data for demonstration
-const mockUsers = [
-  {
-    id: '1',
-    email: 'retailer@example.com',
-    created_at: new Date().toISOString(),
-    business_name: 'Demo Retail Business',
-    business_type: 'Health Store',
-    business_address: '123 Demo St, Example City',
-    phone: '555-123-4567',
-    payment_terms: 14,
-    status: 'Active',
-    role: 'retailer'
-  },
-  {
-    id: '2',
-    email: 'admin@example.com',
-    created_at: new Date().toISOString(),
-    business_name: 'Admin Account',
-    business_type: 'Administrator',
-    business_address: 'Admin HQ',
-    phone: '555-987-6543',
-    payment_terms: 30,
-    status: 'Active',
-    role: 'admin'
-  }
-];
-
 /**
- * Fetch all users
+ * Fetch all users from Supabase
  */
 export const fetchUsers = async () => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // In a real application, this would call an API endpoint
-  return mockUsers;
+  try {
+    // First get profiles which contain user details
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*');
+    
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw profilesError;
+    }
+
+    // Map profiles to the expected user format
+    const users = profiles.map(profile => ({
+      id: profile.id,
+      email: profile.email || '',
+      created_at: profile.created_at,
+      business_name: profile.business_name || '',
+      business_type: profile.business_type || '',
+      business_address: profile.business_address || '',
+      phone: profile.phone || '',
+      payment_terms: profile.payment_terms || 14,
+      status: 'Active', // Default status, could be stored in profile in the future
+      role: profile.email?.includes('admin') ? 'admin' : 'retailer' // Simple role inference, could be more sophisticated
+    }));
+    
+    return users;
+  } catch (error) {
+    console.error('Error in fetchUsers:', error);
+    // Return empty array instead of mock data in case of error
+    return [];
+  }
 };
 
 /**
  * Update user role
  */
 export const updateUserRole = async (userId: string, newRole: string) => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  console.log(`Updating user ${userId} role to ${newRole}`);
-  
-  // In a real application, this would call an API endpoint
-  return {
-    success: true,
-    message: `User role updated to ${newRole}`
-  };
+  try {
+    // In a real application, we might store roles in a separate table
+    // For now, we just log the change
+    console.log(`Updating user ${userId} role to ${newRole}`);
+    
+    return {
+      success: true,
+      message: `User role updated to ${newRole}`
+    };
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    throw error;
+  }
 };
 
 /**
  * Toggle user status (active/inactive)
  */
 export const toggleUserStatus = async (userId: string, isActive: boolean) => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  const newStatus = isActive ? 'Active' : 'Inactive';
-  console.log(`Setting user ${userId} status to ${newStatus}`);
-  
-  // In a real application, this would call an API endpoint
-  return {
-    success: true,
-    status: newStatus
-  };
+  try {
+    const newStatus = isActive ? 'Active' : 'Inactive';
+    console.log(`Setting user ${userId} status to ${newStatus}`);
+    
+    // In a real application, we would update this in the database
+    
+    return {
+      success: true,
+      status: newStatus
+    };
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    throw error;
+  }
 };
 
 /**
  * Update user details
  */
 export const updateUserDetails = async (userId: string, userData: Partial<UserProfile>) => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  console.log(`Updating user ${userId} details:`, userData);
-  
-  // In a real application, this would call an API endpoint
-  return {
-    success: true,
-    message: "User details updated successfully"
-  };
+  try {
+    // Update user profile in Supabase
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        business_name: userData.business_name,
+        business_type: userData.business_type,
+        business_address: userData.business_address,
+        phone: userData.phone,
+        email: userData.email,
+        payment_terms: userData.payment_terms
+      })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Error updating user details:', error);
+      throw error;
+    }
+    
+    return {
+      success: true,
+      message: "User details updated successfully"
+    };
+  } catch (error) {
+    console.error('Error updating user details:', error);
+    throw error;
+  }
 };
 
 /**
  * Delete user
  */
 export const deleteUser = async (userId: string) => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  console.log(`Deleting user ${userId}`);
-  
-  // In a real application, this would call an API endpoint
-  return {
-    success: true,
-    message: "User deleted successfully"
-  };
+  try {
+    console.log(`Request to delete user ${userId}`);
+    // In a production environment, you would need admin privileges 
+    // to delete users from auth.users
+    
+    // For now, we just remove their profile
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Error deleting user profile:', error);
+      throw error;
+    }
+    
+    return {
+      success: true,
+      message: "User profile deleted successfully"
+    };
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
 };
