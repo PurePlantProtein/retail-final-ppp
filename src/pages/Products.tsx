@@ -26,7 +26,21 @@ const Products = () => {
     queryFn: getProducts,
   });
 
-  const categories = products ? [...new Set(products.map(product => product.category))].filter(Boolean) : [];
+  // Filter out any products that are just category placeholders
+  const filteredProducts = products?.filter(product => {
+    // Filter out products that have "Category", "Placeholder", or "category" in their name
+    return !(
+      product.name.includes("Category") || 
+      product.name.includes("Placeholder") ||
+      product.name.includes("category") ||
+      product.price === 0
+    );
+  });
+
+  // Extract categories from filtered products
+  const categories = filteredProducts 
+    ? [...new Set(filteredProducts.map(product => product.category))].filter(Boolean) 
+    : [];
 
   // Handle category selection
   const handleCategoryClick = (category: string) => {
@@ -41,10 +55,10 @@ const Products = () => {
     }
   };
 
-  // Filter products by selected category
-  const filteredProducts = selectedCategory 
-    ? products?.filter(product => product.category === selectedCategory) 
-    : products;
+  // Filter products by selected category, but first filter out placeholders
+  const displayProducts = selectedCategory 
+    ? filteredProducts?.filter(product => product.category === selectedCategory) 
+    : filteredProducts;
 
   if (isLoading) {
     return (
@@ -106,8 +120,8 @@ const Products = () => {
         
         {/* Products grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts && filteredProducts.length > 0 ? (
-            filteredProducts.map((product) => (
+          {displayProducts && displayProducts.length > 0 ? (
+            displayProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))
           ) : (
