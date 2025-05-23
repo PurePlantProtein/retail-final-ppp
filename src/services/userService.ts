@@ -36,8 +36,11 @@ export const fetchUsers = async (): Promise<User[]> => {
       });
     }
     
+    // Make sure profilesData is always treated as an array even if it's null
+    const profiles = Array.isArray(profilesData) ? profilesData : [];
+    
     // Type the profile parameter explicitly to avoid TypeScript errors
-    const users: User[] = profilesData.map((profile: any) => {
+    const users: User[] = profiles.map((profile) => {
       // Safely check for profile.id before using it
       const profileId = profile?.id || '';
       // Try to get email from auth users map first, then from profile
