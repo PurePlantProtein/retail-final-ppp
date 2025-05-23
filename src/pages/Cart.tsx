@@ -1,105 +1,119 @@
 
-import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState } from 'react';
 import Layout from '@/components/Layout';
-import { useCart } from '@/contexts/CartContext';
-import { useShipping } from '@/contexts/ShippingContext';
-import { useCartCheckout } from '@/hooks/useCartCheckout';
-
-// Import components
-import CartItemList from '@/components/cart/CartItemList';
-import EmptyCart from '@/components/cart/EmptyCart';
 import LoginRequired from '@/components/cart/LoginRequired';
+import EmptyCart from '@/components/cart/EmptyCart';
+import CartItemList from '@/components/cart/CartItemList';
 import OrderSummary from '@/components/cart/OrderSummary';
 import ShippingStep from '@/components/cart/ShippingStep';
 import PaymentStep from '@/components/cart/PaymentStep';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCartCheckout } from '@/hooks/useCartCheckout';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const Cart = () => {
+  const { items, itemCount } = useCart();
   const { user } = useAuth();
-  const { items, updateQuantity, removeFromCart, clearCart } = useCart();
-  const { shippingAddress: savedShippingAddress, isLoading: isLoadingShippingAddress } = useShipping();
-  
   const {
-    subtotal,
-    bankDetails,
-    shippingOptions,
-    selectedShippingOption,
-    selectedOption,
-    shippingAddress,
-    isProcessingOrder,
-    isLoadingShippingOptions,
     checkoutStep,
     setCheckoutStep,
-    setSelectedShippingOption,
     handleShippingFormSubmit,
     handleBankTransferCheckout,
-  } = useCartCheckout(user?.id, user?.email);
+    isProcessingOrder,
+    shippingAddress,
+    shippingOptions,
+    selectedOption,
+    selectedShippingOption,
+    setSelectedShippingOption,
+    isLoadingShippingOptions,
+    subtotal,
+    totalWithShipping,
+    bankDetails
+  } = useCartCheckout();
 
+  // Fix: Removing the extra arguments in setCheckoutStep call
+  const goBackToCart = () => setCheckoutStep('cart');
+  
+  // Fix: Removing the extra arguments in setCheckoutStep call
+  const goBackToShipping = () => setCheckoutStep('shipping');
+
+  // If no items in cart, show empty cart view
+  if (itemCount === 0) {
+    return (
+      <Layout>
+        <EmptyCart />
+      </Layout>
+    );
+  }
+
+  // If no logged in user, show login required
   if (!user) {
     return (
       <Layout>
-        <div className="max-w-4xl mx-auto py-8 text-center">
-          <h1 className="text-2xl font-bold mb-6">Your Cart</h1>
-          <LoginRequired />
-        </div>
+        <LoginRequired />
       </Layout>
     );
   }
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-6">Your Cart</h1>
+      <div className="max-w-7xl mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold mb-8">Your Cart</h1>
         
-        {items.length === 0 ? (
-          <EmptyCart />
-        ) : (
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="flex-1 space-y-4">
-              {checkoutStep === 'cart' && (
-                <CartItemList
-                  items={items}
-                  onRemoveItem={removeFromCart}
-                  onUpdateQuantity={updateQuantity}
-                  onClearCart={clearCart}
-                />
-              )}
-              
-              {checkoutStep === 'shipping' && shippingAddress && (
-                <ShippingStep
-                  shippingAddress={shippingAddress}
-                  onShippingAddressSubmit={handleShippingFormSubmit}
-                  shippingOptions={shippingOptions}
-                  selectedShippingOption={selectedShippingOption}
-                  onSelectShippingOption={setSelectedShippingOption}
-                  isLoadingShippingOptions={isLoadingShippingOptions}
-                  onBackToCart={() => setCheckoutStep('cart')}
-                  onContinueToPayment={() => setCheckoutStep('payment')}
-                />
-              )}
-              
-              {checkoutStep === 'payment' && shippingAddress && (
-                <PaymentStep
-                  shippingAddress={shippingAddress}
-                  selectedOption={selectedOption}
-                  bankDetails={bankDetails}
-                  isProcessingOrder={isProcessingOrder}
-                  onBackToShipping={() => setCheckoutStep('shipping')}
-                  onCompleteOrder={handleBankTransferCheckout}
-                  onEditShipping={() => setCheckoutStep('shipping')}
-                />
-              )}
+        {checkoutStep !== 'cart' && (
+          <Button 
+            variant="ghost" 
+            onClick={checkoutStep === 'payment' ? goBackToShipping : goBackToCart} 
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to {checkoutStep === 'payment' ? 'Shipping' : 'Cart'}
+          </Button>
+        )}
+        
+        {checkoutStep === 'cart' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <Card>
+                <CardContent className="p-6">
+                  <CartItemList />
+                </CardContent>
+              </Card>
             </div>
-            
-            <div className="w-full md:w-72 h-fit">
-              <OrderSummary
-                subtotal={subtotal}
-                selectedShippingOption={selectedOption}
-                checkoutStep={checkoutStep}
-                onProceedToShipping={() => setCheckoutStep('shipping')}
+            <div>
+              <OrderSummary 
+                subtotal={subtotal} 
+                shippingCost={0} 
+                total={subtotal} 
+                onCheckout={() => setCheckoutStep('shipping')}
               />
             </div>
           </div>
+        )}
+        
+        {checkoutStep === 'shipping' && (
+          <ShippingStep
+            onSubmit={handleShippingFormSubmit}
+            shippingOptions={shippingOptions}
+            selectedShippingOption={selectedShippingOption}
+            setSelectedShippingOption={setSelectedShippingOption}
+            isLoading={isLoadingShippingOptions}
+            savedAddress={shippingAddress}
+          />
+        )}
+        
+        {checkoutStep === 'payment' && (
+          <PaymentStep 
+            subtotal={subtotal}
+            shipping={selectedOption?.price || 0}
+            total={totalWithShipping}
+            bankDetails={bankDetails}
+            onPay={handleBankTransferCheckout}
+            isProcessing={isProcessingOrder}
+          />
         )}
       </div>
     </Layout>

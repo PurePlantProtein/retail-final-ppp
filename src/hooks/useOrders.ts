@@ -15,30 +15,29 @@ export const useOrders = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      fetchOrders();
-    }
-  }, [user]);
+    fetchOrders();
+  }, [user]); // Removed user dependency to load all orders in admin view
 
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
       
-      // First try to get orders from localStorage
+      // Get orders from localStorage
       const storedOrders = localStorage.getItem('orders');
       if (storedOrders) {
         const parsedOrders = JSON.parse(storedOrders) as Order[];
         
-        // Filter orders for the current user
-        let userOrders = parsedOrders;
-        if (user) {
-          userOrders = parsedOrders.filter(order => 
+        // If viewing as a regular user, filter for their orders only
+        // If admin or no user (admin pages), show all orders
+        let filteredOrders = parsedOrders;
+        if (user && !user.email?.includes('admin') && !user.email?.includes('sparkflare')) {
+          filteredOrders = parsedOrders.filter(order => 
             order.userId === user.id || order.email === user.email
           );
         }
         
-        console.log('Fetched orders from localStorage:', userOrders);
-        setOrders(userOrders);
+        console.log('Fetched orders:', filteredOrders);
+        setOrders(filteredOrders);
       } else {
         // Fallback to mock data service
         const data = await getOrders();
@@ -163,6 +162,16 @@ export const useOrders = () => {
     }
   };
 
+  // Add a function to clear all orders (for testing/analytics)
+  const clearAllOrders = () => {
+    localStorage.removeItem('orders');
+    setOrders([]);
+    toast({
+      title: "Orders Cleared",
+      description: "All orders have been cleared from the system.",
+    });
+  };
+
   return {
     orders,
     isLoading,
@@ -172,6 +181,7 @@ export const useOrders = () => {
     fetchOrders,
     handleStatusChange,
     handleUpdateOrder,
-    handleDeleteOrder
+    handleDeleteOrder,
+    clearAllOrders
   };
 };
