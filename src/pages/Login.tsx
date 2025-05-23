@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertCircle } from 'lucide-react';
 import { cleanupAuthState } from '@/utils/authUtils';
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
 
 // Helper function for manual account creation (for testing only)
 const createAdminAccount = async () => {
@@ -41,6 +43,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [useAuthUI, setUseAuthUI] = useState(false);
   const { login, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -93,7 +96,8 @@ const Login = () => {
       console.error("Login error:", error);
       
       if (error.message?.includes('captcha') || error.message?.includes('CAPTCHA')) {
-        setErrorMessage("CAPTCHA verification is required. Please use the Supabase Auth UI for login with CAPTCHA verification.");
+        setErrorMessage("CAPTCHA verification is required. Please use the Supabase Auth UI.");
+        setUseAuthUI(true);
       } else {
         setErrorMessage(error.message || "Invalid login credentials");
       }
@@ -124,47 +128,82 @@ const Login = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@yourbusiness.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full"
+          {useAuthUI ? (
+            <div className="mt-4">
+              <Auth
+                supabaseClient={supabase}
+                appearance={{
+                  theme: ThemeSupa,
+                  variables: {
+                    default: {
+                      colors: {
+                        brand: '#25a18e',
+                        brandAccent: '#1e8a77',
+                      },
+                    },
+                  },
+                }}
+                providers={[]}
+                redirectTo={`${window.location.origin}/products`}
+                onlyThirdPartyProviders={false}
+                magicLink={false}
+                view="sign_in"
               />
             </div>
-            
-            <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-[#25a18e] hover:text-[#1e8a77] hover:underline"
-                >
-                  Forgot password?
-                </Link>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@yourbusiness.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 w-full"
+                />
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full"
-              />
-            </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full bg-[#25a18e] hover:bg-[#1e8a77]" 
-              disabled={isLoading}
-            >
-              {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
-          </form>
+              
+              <div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-[#25a18e] hover:text-[#1e8a77] hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 w-full"
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-[#25a18e] hover:bg-[#1e8a77]" 
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign in"}
+              </Button>
+
+              <div className="text-center pt-2">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="text-[#25a18e] hover:text-[#1e8a77] hover:underline"
+                  onClick={() => setUseAuthUI(true)}
+                >
+                  Use Supabase Auth UI (with CAPTCHA support)
+                </Button>
+              </div>
+            </form>
+          )}
           
           <div className="mt-8">
             <p className="text-center text-sm text-gray-600">
