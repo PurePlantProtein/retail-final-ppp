@@ -12,6 +12,8 @@ export const sendOrderConfirmationEmail = async (
   customerEmail: string
 ): Promise<EmailResult> => {
   try {
+    console.log('Sending order confirmation email to customer:', customerEmail, 'with order:', order);
+    
     const { data, error } = await supabase.functions.invoke('send-order-email', {
       body: {
         orderDetails: order,
@@ -20,7 +22,10 @@ export const sendOrderConfirmationEmail = async (
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error response from edge function:', error);
+      throw error;
+    }
     
     console.log('Customer order confirmation email sent:', data);
     return { success: true, message: 'Order confirmation email sent' };
@@ -35,6 +40,8 @@ export const sendAdminOrderNotification = async (
   adminEmail: string
 ): Promise<EmailResult> => {
   try {
+    console.log('Sending order notification to admin:', adminEmail, 'with order:', order);
+    
     const { data, error } = await supabase.functions.invoke('send-order-email', {
       body: {
         orderDetails: order,
@@ -43,7 +50,10 @@ export const sendAdminOrderNotification = async (
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error response from edge function:', error);
+      throw error;
+    }
     
     console.log('Admin order notification email sent:', data);
     return { success: true, message: 'Admin notification email sent' };

@@ -54,7 +54,10 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
         items // Pass the cart items to check for free shipping eligibility
       ).then(options => {
         setShippingOptions(options);
-        setSelectedShippingOption(options[0]?.id);
+        // Always select the first option (free shipping) by default
+        if (options.length > 0) {
+          setSelectedShippingOption(options[0].id);
+        }
         setIsLoadingShippingOptions(false);
       }).catch(error => {
         console.error("Error calculating shipping:", error);
@@ -82,9 +85,20 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
 
   // Helper function to send order confirmation emails
   const sendOrderConfirmationEmails = async (order: Order) => {
+    let customerEmailSent = false;
+    let adminEmailSent = false;
+    
     if (emailSettings.notifyCustomer && userEmail) {
       try {
-        await sendOrderConfirmationEmail(order, userEmail);
+        const customerResult = await sendOrderConfirmationEmail(order, userEmail);
+        customerEmailSent = customerResult.success;
+        console.log('Customer email result:', customerResult);
+        if (!customerResult.success) {
+          toast({
+            title: "Email Notification",
+            description: "We couldn't send you an order confirmation email, but your order was processed successfully.",
+          });
+        }
       } catch (error) {
         console.error("Error sending customer email:", error);
       }
@@ -92,11 +106,15 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     
     if (emailSettings.notifyAdmin) {
       try {
-        await sendAdminOrderNotification(order, emailSettings.adminEmail);
+        const adminResult = await sendAdminOrderNotification(order, emailSettings.adminEmail);
+        adminEmailSent = adminResult.success;
+        console.log('Admin email result:', adminResult);
       } catch (error) {
         console.error("Error sending admin email:", error);
       }
     }
+    
+    return { customerEmailSent, adminEmailSent };
   };
 
   // Create and save order function
@@ -143,12 +161,13 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     console.log("Orders saved:", existingOrders);
 
     // Send email confirmation
-    sendOrderConfirmationEmails(normalizedOrder);
+    const emailResults = await sendOrderConfirmationEmails(normalizedOrder);
+    console.log("Email sending results:", emailResults);
     
     return normalizedOrder;
   };
 
-  const handleBankTransferCheckout = () => {
+  const handleBankTransferCheckout = async () => {
     if (isProcessingOrder) return;
     
     setIsProcessingOrder(true);
@@ -165,7 +184,7 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
       }
       
       // Process the bank transfer order
-      const order = createOrder();
+      const order = await createOrder();
       
       toast({
         title: "Order Placed Successfully",

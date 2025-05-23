@@ -44,7 +44,7 @@ export const fetchUsers = async (): Promise<User[]> => {
     // Map profiles to User objects with proper type checking
     const users: User[] = profiles.map((profile) => {
       // Safely check for profile properties and verify it's an object with an id
-      if (!profile || typeof profile !== 'object') {
+      if (!profile || typeof profile !== 'object' || !('id' in profile)) {
         return {
           id: '',
           email: '',
