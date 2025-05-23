@@ -36,7 +36,7 @@ export const fetchUsers = async (): Promise<User[]> => {
       });
     }
     
-    // Explicitly type profile parameter to fix the TypeScript error
+    // Explicitly type the map function's parameter to fix the TypeScript error
     const users: User[] = profilesData.map((profile: any) => {
       // Safely check for profile.id before using it
       const profileId = profile.id || '';
