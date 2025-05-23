@@ -113,10 +113,18 @@ export const deleteUser = async (userId: string): Promise<void> => {
     console.log('Attempting to delete user with ID:', userId);
     
     // First attempt to delete the user from auth.users (which will cascade to profiles)
-    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-    
-    if (authError) {
-      console.error('Error deleting user from auth.users:', authError);
+    // Use the service role key to perform this admin operation
+    try {
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      
+      if (authError) {
+        console.error('Error deleting user from auth.users:', authError);
+        throw authError;
+      }
+      
+      console.log('User successfully deleted from auth.users');
+    } catch (authDeleteError) {
+      console.error('Failed to delete from auth.users, falling back to profiles deletion:', authDeleteError);
       
       // If failing to delete from auth, at least remove from profiles table
       const { error: profileError } = await supabase
@@ -128,9 +136,9 @@ export const deleteUser = async (userId: string): Promise<void> => {
         console.error('Error deleting from profiles table:', profileError);
         throw profileError;
       }
+      
+      console.log('User successfully deleted from profiles table');
     }
-    
-    console.log('User successfully deleted');
   } catch (error) {
     console.error('Error in deleteUser function:', error);
     throw error;
