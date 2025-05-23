@@ -36,8 +36,8 @@ export const fetchUsers = async (): Promise<User[]> => {
       });
     }
     
-    // Convert profiles to users format
-    const users: User[] = profilesData.map(profile => {
+    // Explicitly type profile parameter to fix the TypeScript error
+    const users: User[] = profilesData.map((profile: any) => {
       // Safely check for profile.id before using it
       const profileId = profile.id || '';
       // Try to get email from auth users map first, then from profile
