@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ShippingOption } from '@/types/product';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,13 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
   const displayOptions = (shippingOptions && shippingOptions.length > 0) 
     ? shippingOptions 
     : [defaultFreeShipping];
+  
+  // Always ensure the free shipping option is selected by default
+  useEffect(() => {
+    if (!selectedOption && displayOptions.length > 0) {
+      onSelect(displayOptions[0].id);
+    }
+  }, [displayOptions, selectedOption, onSelect]);
   
   if (isLoading) {
     return (

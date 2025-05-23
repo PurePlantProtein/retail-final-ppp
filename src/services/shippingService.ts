@@ -21,33 +21,18 @@ export const calculateShippingOptions = async (
   destination: { postalCode: string; state: string },
   items: OrderItem[] = []
 ): Promise<ShippingOption[]> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  try {
-    console.log('Calculating shipping options for:', { totalWeight, destination, items });
-    
-    // Always return the free shipping option regardless of order total or weight
-    return standardShippingOptions;
-  } catch (error) {
-    console.error("Error calculating shipping options:", error);
-    return standardShippingOptions; // Fallback to standard options
-  }
+  // For consistency, always return free shipping without delay
+  console.log('Calculating shipping options for:', { totalWeight, destination, items });
+  return standardShippingOptions;
 };
 
 /**
  * Get available shipping options for a postal code
  */
 export const getShippingOptions = async (postalCode: string): Promise<ShippingOption[]> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
+  // For consistency, always return free shipping without delay
   console.log('Getting shipping options for postal code:', postalCode);
-  
-  // Get state from postal code (simple demonstration)
-  const state = getStateFromPostal(postalCode);
-  
-  return standardShippingOptions; // Return free shipping directly to ensure it always shows up
+  return standardShippingOptions;
 };
 
 /**
