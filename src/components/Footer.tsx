@@ -17,7 +17,7 @@ const Footer = () => {
     <footer className="bg-white text-gray-700 border-t border-gray-200 mt-auto">
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
+          <div className="text-left">
             <h3 className="font-bold text-lg mb-4 flex items-center">
               {siteLogo ? (
                 <img src={siteLogo} alt="Site Logo" className="h-10" />
@@ -35,7 +35,7 @@ const Footer = () => {
             </div>
           </div>
           
-          <div>
+          <div className="text-left">
             <h4 className="font-semibold mb-4 text-[#25a18e]">Quick Links</h4>
             <ul className="space-y-2 text-sm">
               <li>
@@ -56,7 +56,7 @@ const Footer = () => {
             </ul>
           </div>
           
-          <div>
+          <div className="text-left">
             <h4 className="font-semibold mb-4 text-[#25a18e]">Support</h4>
             <ul className="space-y-2 text-sm">
               <li>
@@ -77,7 +77,7 @@ const Footer = () => {
             </ul>
           </div>
           
-          <div>
+          <div className="text-left">
             <h4 className="font-semibold mb-4 text-[#25a18e]">Legal</h4>
             <ul className="space-y-2 text-sm">
               <li>

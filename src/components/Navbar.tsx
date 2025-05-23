@@ -28,7 +28,7 @@ const Navbar = () => {
   return (
     <header className="bg-white text-gray-800 border-b border-gray-200 sticky top-0 z-10">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to="/" className="text-2xl font-bold flex items-center">
+        <Link to="/" className="text-2xl font-bold flex items-center text-left">
           {siteLogo ? (
             <img src={siteLogo} alt="Site Logo" className="h-10" />
           ) : (

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { AdminLayout } from '@/components/AdminLayout';
@@ -21,24 +21,25 @@ const SettingsManagement = () => {
     setSiteIcon(url);
     // Save to localStorage for persistence
     localStorage.setItem('site_icon', url);
+    
+    // Update favicon dynamically
+    updateFavicon(url);
+    
     toast({
       title: "Site Icon Updated",
       description: "The site icon has been updated successfully.",
     });
-
-    // Update favicon dynamically
-    updateFavicon(url);
   };
 
   const handleSiteLogoUploaded = (url: string) => {
     setSiteLogo(url);
     // Save to localStorage for persistence
     localStorage.setItem('site_logo', url);
+    
     toast({
       title: "Site Logo Updated",
-      description: "The site logo has been updated successfully.",
+      description: "The site logo has been updated successfully and will appear in the navbar and footer.",
     });
-    // Don't update favicon here as this is for the logo
   };
 
   // Load saved values on component mount
@@ -58,26 +59,26 @@ const SettingsManagement = () => {
   return (
     <Layout>
       <AdminLayout>
-        <div className="container mx-auto py-6">
-          <h1 className="text-2xl font-bold mb-6">Settings</h1>
+        <div className="container mx-auto py-6 settings-container">
+          <h1 className="text-2xl font-bold mb-6 text-left">Settings</h1>
           
-          <Tabs defaultValue="general">
+          <Tabs defaultValue="branding">
             <TabsList className="mb-4">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="branding">Branding</TabsTrigger>
               <TabsTrigger value="other">Other Settings</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="general">
+            <TabsContent value="general" className="text-left">
               <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle>General Settings</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-left">General Settings</CardTitle>
+                    <CardDescription className="text-left">
                       Configure general store settings
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="text-left">
+                  <CardContent>
                     <p>Configure store name, currency, and other basic settings.</p>
                   </CardContent>
                   <CardFooter>
@@ -87,12 +88,12 @@ const SettingsManagement = () => {
                 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Email Settings</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-left">Email Settings</CardTitle>
+                    <CardDescription className="text-left">
                       Configure email notifications for orders
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="text-left">
+                  <CardContent>
                     <p>Set up order notification emails for administrators and customers.</p>
                   </CardContent>
                   <CardFooter>
@@ -106,12 +107,12 @@ const SettingsManagement = () => {
                 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Payment Settings</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-left">Payment Settings</CardTitle>
+                    <CardDescription className="text-left">
                       Configure payment gateways and options
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="text-left">
+                  <CardContent>
                     <p>Set up payment methods and processors for your store.</p>
                   </CardContent>
                   <CardFooter>
@@ -121,12 +122,12 @@ const SettingsManagement = () => {
                 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Shipping Settings</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-left">Shipping Settings</CardTitle>
+                    <CardDescription className="text-left">
                       Configure shipping options and rates
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="text-left">
+                  <CardContent>
                     <p>Set up shipping zones, methods, and free shipping rules.</p>
                   </CardContent>
                   <CardFooter>
@@ -140,22 +141,22 @@ const SettingsManagement = () => {
               </div>
             </TabsContent>
             
-            <TabsContent value="branding">
+            <TabsContent value="branding" className="text-left">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center">
+                  <CardTitle className="flex items-center text-left">
                     <Image className="mr-2 h-5 w-5" />
                     Site Branding
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-left">
                     Customize your site logo and favicon
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="text-left">
+                <CardContent>
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-medium mb-2">Site Icon (Favicon)</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <h3 className="text-lg font-medium mb-2 text-left">Site Icon (Favicon)</h3>
+                      <p className="text-sm text-muted-foreground mb-4 text-left">
                         Upload a square image (PNG recommended) that will be used as your site's favicon.
                         Recommended size: 32x32 pixels or larger.
                       </p>
@@ -181,8 +182,8 @@ const SettingsManagement = () => {
                     <Separator className="my-6" />
                     
                     <div>
-                      <h3 className="text-lg font-medium mb-2">Site Logo</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <h3 className="text-lg font-medium mb-2 text-left">Site Logo</h3>
+                      <p className="text-sm text-muted-foreground mb-4 text-left">
                         Upload your company logo. This will be displayed in the header, footer, and other places throughout the site.
                         Recommended size: 250x50 pixels (or maintain this aspect ratio).
                       </p>
@@ -209,14 +210,14 @@ const SettingsManagement = () => {
               </Card>
             </TabsContent>
             
-            <TabsContent value="other">
+            <TabsContent value="other" className="text-left">
               <div className="grid gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Other Settings</CardTitle>
-                    <CardDescription>Additional configuration options</CardDescription>
+                    <CardTitle className="text-left">Other Settings</CardTitle>
+                    <CardDescription className="text-left">Additional configuration options</CardDescription>
                   </CardHeader>
-                  <CardContent className="text-left">
+                  <CardContent>
                     <p>More settings will be added here in future updates.</p>
                   </CardContent>
                 </Card>

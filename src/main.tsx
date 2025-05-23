@@ -15,10 +15,10 @@ if (typeof window !== 'undefined') {
     document.head.appendChild(meta);
   };
 
-  // Content Security Policy
+  // Content Security Policy - allow images from any source
   createSecurityMeta(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' https://cdn.gpteng.co 'unsafe-inline'; connect-src 'self' https://*.supabase.co https://*.lovable.app; img-src 'self' data: https://*.supabase.co; style-src 'self' 'unsafe-inline';"
+    "default-src 'self'; script-src 'self' https://cdn.gpteng.co 'unsafe-inline'; connect-src 'self' https://*.supabase.co https://*.lovable.app; img-src 'self' data: https://*.supabase.co https://* blob:; style-src 'self' 'unsafe-inline';"
   );
 
   // Prevent XSS attacks
@@ -46,11 +46,14 @@ if (typeof window !== 'undefined') {
   // Set the favicon from localStorage if it exists
   const savedIcon = localStorage.getItem('site_icon');
   if (savedIcon) {
-    const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
+    let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'shortcut icon';
+      document.head.appendChild(link);
+    }
     link.type = 'image/png';
-    link.rel = 'shortcut icon';
     link.href = savedIcon;
-    document.getElementsByTagName('head')[0].appendChild(link);
   }
 }
 
