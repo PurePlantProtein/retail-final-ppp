@@ -42,7 +42,7 @@ export const fetchUsers = async (): Promise<User[]> => {
     }
     
     // Map profiles to User objects with proper type checking
-    const users: User[] = profiles.map((profile: any) => {
+    const users: User[] = profiles.map((profile) => {
       // Safely check for profile properties and verify it's an object with an id
       if (!profile || typeof profile !== 'object') {
         return {
@@ -56,11 +56,13 @@ export const fetchUsers = async (): Promise<User[]> => {
         };
       }
       
-      const profileId = 'id' in profile ? profile.id : '';
+      // Safely get the profile ID with explicit type checking
+      const profileObj = profile as Record<string, any>;
+      const profileId = profileObj.id ? String(profileObj.id) : '';
       
       // Try to get email from auth users map first, then from profile
       const authUser = profileId ? authUsersMap.get(profileId) : undefined;
-      const email = authUser?.email || (profile && typeof profile === 'object' && 'email' in profile ? profile.email : '') || profileId;
+      const email = authUser?.email || (profileObj.email ? String(profileObj.email) : '') || profileId;
       
       // Determine role based on email
       const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(email);
@@ -68,11 +70,11 @@ export const fetchUsers = async (): Promise<User[]> => {
       return {
         id: profileId,
         email: email,
-        created_at: profile.created_at,
-        business_name: profile.business_name || 'Unknown',
-        business_type: profile.business_type || 'Not specified',
-        business_address: profile.business_address,
-        phone: profile.phone,
+        created_at: profileObj.created_at,
+        business_name: profileObj.business_name || 'Unknown',
+        business_type: profileObj.business_type || 'Not specified',
+        business_address: profileObj.business_address,
+        phone: profileObj.phone,
         status: 'Active', // Default status since we don't store this in profiles yet
         role: isUserAdmin ? 'admin' : 'retailer'
       };
