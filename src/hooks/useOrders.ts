@@ -113,7 +113,7 @@ export const useOrders = () => {
     selectedOrder,
     setSelectedOrder,
     isSubmitting,
-    setIsSubmitting,
+    fetchOrders,
     handleStatusChange,
     handleUpdateOrder,
     handleDeleteOrder
