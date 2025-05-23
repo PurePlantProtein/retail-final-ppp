@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import Layout from '@/components/Layout';
@@ -25,38 +24,39 @@ const EmailSettings = () => {
   const [testStatus, setTestStatus] = useState<null | 'success' | 'error'>(null);
   
   // Email templates state
+  // Using backtick string with escaped template syntax
   const [customerTemplate, setCustomerTemplate] = useState(`
 <h1>Order Confirmation</h1>
 <p>Thank you for your order!</p>
-<p>Order ID: {{orderId}}</p>
+<p>Order ID: \{\{orderId\}\}</p>
 <div>
   <h3>Order Details:</h3>
   <ul>
-    {{#each items}}
-    <li>{{product.name}} - Quantity: {{quantity}} - ${{product.price}}</li>
-    {{/each}}
+    \{\{#each items\}\}
+    <li>\{\{product.name\}\} - Quantity: \{\{quantity\}\} - $\{\{product.price\}\}</li>
+    \{\{/each\}\}
   </ul>
 </div>
-<p>Total: ${{total}}</p>
-<p>Payment Method: {{paymentMethod}}</p>
+<p>Total: $\{\{total\}\}</p>
+<p>Payment Method: \{\{paymentMethod\}\}</p>
 <p>Thank you for shopping with us!</p>
   `);
   
   const [adminTemplate, setAdminTemplate] = useState(`
 <h1>New Order Notification</h1>
 <p>A new order has been placed.</p>
-<p>Order ID: {{orderId}}</p>
-<p>Customer: {{userName}} ({{email}})</p>
+<p>Order ID: \{\{orderId\}\}</p>
+<p>Customer: \{\{userName\}\} (\{\{email\}\})</p>
 <div>
   <h3>Order Details:</h3>
   <ul>
-    {{#each items}}
-    <li>{{product.name}} - Quantity: {{quantity}} - ${{product.price}}</li>
-    {{/each}}
+    \{\{#each items\}\}
+    <li>\{\{product.name\}\} - Quantity: \{\{quantity\}\} - $\{\{product.price\}\}</li>
+    \{\{/each\}\}
   </ul>
 </div>
-<p>Total: ${{total}}</p>
-<p>Payment Method: {{paymentMethod}}</p>
+<p>Total: $\{\{total\}\}</p>
+<p>Payment Method: \{\{paymentMethod\}\}</p>
   `);
   
   const [editingTemplate, setEditingTemplate] = useState(false);
