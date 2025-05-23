@@ -14,7 +14,6 @@ interface OrderEmailRequest {
   orderDetails: any;
   emailType: 'customer' | 'admin' | 'dispatch' | 'accounts';
   recipientEmail: string;
-  template?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -24,7 +23,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { orderDetails, emailType, recipientEmail, template }: OrderEmailRequest = await req.json();
+    const { orderDetails, emailType, recipientEmail }: OrderEmailRequest = await req.json();
 
     const fromEmail = "orders@retail.ppprotein.com.au";
     let subject = "Order Notification";
@@ -46,11 +45,8 @@ const handler = async (req: Request): Promise<Response> => {
         break;
     }
     
-    // Use provided template if available, otherwise use default template
-    htmlContent = template || `<h1>${subject}</h1><p>Order details: ${JSON.stringify(orderDetails)}</p>`;
-    
-    // Simple templating system for the email
-    htmlContent = processTemplate(htmlContent, orderDetails);
+    // Simple HTML content for all email types
+    htmlContent = `<h1>${subject}</h1><p>Order details: ${JSON.stringify(orderDetails)}</p>`;
 
     const emailResponse = await resend.emails.send({
       from: `PP Protein <${fromEmail}>`,
@@ -79,73 +75,5 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 };
-
-// Process template for handlebars-like syntax
-function processTemplate(template: string, order: any): string {
-  let result = template;
-
-  // Replace simple variables
-  const variables = [
-    'id', 'orderId', 'userId', 'userName', 'email', 'total', 'paymentMethod', 
-    'invoiceStatus', 'invoiceUrl', 'notes', 'status'
-  ];
-
-  // Map orderId to id if needed
-  if (order.id && !order.orderId) {
-    order.orderId = order.id;
-  }
-
-  variables.forEach(variable => {
-    result = result.replace(
-      new RegExp(`\\{\\{${variable}\\}\\}`, 'g'),
-      order[variable] || ''
-    );
-  });
-
-  // Handle nested objects like shippingAddress
-  if (order.shippingAddress) {
-    const addressFields = ['name', 'street', 'city', 'state', 'postalCode', 'country', 'phone'];
-    addressFields.forEach(field => {
-      result = result.replace(
-        new RegExp(`\\{\\{shippingAddress.${field}\\}\\}`, 'g'),
-        order.shippingAddress[field] || ''
-      );
-    });
-  }
-  
-  // Handle each loops for items
-  const eachItemsRegex = /\{\{#each items\}\}([\s\S]*?)\{\{\/each\}\}/g;
-  const itemMatches = result.match(eachItemsRegex);
-  
-  if (itemMatches && order.items && Array.isArray(order.items)) {
-    itemMatches.forEach(match => {
-      const template = match.replace(/\{\{#each items\}\}/, '').replace(/\{\{\/each\}\}/, '');
-      let replacement = '';
-      
-      order.items.forEach((item: any) => {
-        let itemHtml = template;
-        
-        // Replace product properties
-        if (item.product) {
-          Object.keys(item.product).forEach(key => {
-            itemHtml = itemHtml.replace(
-              new RegExp(`\\{\\{product.${key}\\}\\}`, 'g'),
-              item.product[key] || ''
-            );
-          });
-        }
-        
-        // Replace item quantity
-        itemHtml = itemHtml.replace(/\{\{quantity\}\}/g, item.quantity || '');
-        
-        replacement += itemHtml;
-      });
-      
-      result = result.replace(match, replacement);
-    });
-  }
-  
-  return result;
-}
 
 serve(handler);

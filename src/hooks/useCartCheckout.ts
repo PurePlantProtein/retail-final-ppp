@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -109,12 +108,6 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
         const customerResult = await sendOrderConfirmationEmail(order, userEmail, 'customer');
         emailResults.customerEmailSent = customerResult.success;
         console.log('Customer email result:', customerResult);
-        if (!customerResult.success) {
-          toast({
-            title: "Email Notification",
-            description: "We couldn't send you an order confirmation email, but your order was processed successfully.",
-          });
-        }
       } catch (error) {
         console.error("Error sending customer email:", error);
       }
@@ -225,13 +218,14 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
       // Process the bank transfer order
       const order = await createOrder();
       
+      // Clear the cart first to avoid race conditions
+      clearCart();
+      
+      // Show success message
       toast({
         title: "Order Placed Successfully",
         description: "Your order has been placed. Please complete your bank transfer.",
       });
-      
-      // Clear the cart
-      clearCart();
       
       // Navigate to the success page with order details
       navigate('/order-success', { state: { orderDetails: order } });
