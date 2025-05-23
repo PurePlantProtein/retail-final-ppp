@@ -48,3 +48,29 @@ export const isValidImageUrl = (url: string): boolean => {
   
   return !!extension && imageExtensions.includes(extension);
 };
+
+/**
+ * Session timeout (30 minutes in milliseconds)
+ */
+export const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+
+/**
+ * Check if a session is expired based on last activity timestamp
+ */
+export const isSessionExpired = (lastActivityTimestamp: number): boolean => {
+  const currentTime = Date.now();
+  const inactiveTime = currentTime - lastActivityTimestamp;
+  
+  return inactiveTime > SESSION_TIMEOUT_MS;
+};
+
+/**
+ * Generate a secure reference code for orders
+ */
+export const generateSecureOrderReference = (): string => {
+  // Create a random string with timestamp to ensure uniqueness
+  const timestamp = Date.now().toString(36);
+  const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase();
+  
+  return `REF-${timestamp}-${randomPart}`;
+};
