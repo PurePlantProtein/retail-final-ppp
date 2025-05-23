@@ -42,25 +42,6 @@ import { supabase } from '@/integrations/supabase/client';
 // Create a client
 const queryClient = new QueryClient();
 
-// Create marketing storage bucket if it doesn't exist
-const initializeStorage = async () => {
-  try {
-    // Check if the marketing bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const marketingBucketExists = buckets?.some(bucket => bucket.name === 'marketing');
-    
-    // We can't create buckets from the client, so we'll just log a warning if it doesn't exist
-    if (!marketingBucketExists) {
-      console.warn('Marketing storage bucket does not exist. Please create it in the Supabase dashboard.');
-    }
-  } catch (error) {
-    console.error('Error checking storage buckets:', error);
-  }
-};
-
-// Initialize storage on app load
-initializeStorage();
-
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">

@@ -24,6 +24,39 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_materials: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string
+          file_type: string
+          file_url: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description: string
+          file_type: string
+          file_url: string
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           amino_acid_profile: Json | null
