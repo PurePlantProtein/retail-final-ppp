@@ -16,27 +16,8 @@ export const fetchUsers = async (): Promise<User[]> => {
 
     console.log('Raw profiles data:', profilesData);
     
-    // Also fetch auth users if possible (will work if user has admin rights)
-    let authUsersData: any[] = [];
-    try {
-      // This might fail due to permissions, but we'll try anyway
-      const { data: authUsers, error } = await supabase.auth.admin.listUsers();
-      
-      if (error) {
-        console.log('Could not fetch auth users using admin API:', error);
-      } else if (authUsers && authUsers.users && Array.isArray(authUsers.users)) {
-        authUsersData = authUsers.users;
-        console.log('Auth users data:', authUsersData);
-      }
-    } catch (err) {
-      console.log('Could not fetch auth users, using profiles only:', err);
-    }
-
     // Convert profiles to users format
     const users: User[] = profilesData.map(profile => {
-      // Find matching auth user if available
-      const matchingAuthUser = authUsersData.find(au => au.id === profile.id);
-      
       // Determine role based on email - this is a temporary approach
       // In a production system, you would store roles in a database table
       const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.email || '');
@@ -49,7 +30,7 @@ export const fetchUsers = async (): Promise<User[]> => {
         business_type: profile.business_type || 'Not specified',
         business_address: profile.business_address,
         phone: profile.phone,
-        status: 'Active',
+        status: 'Active', // Default status since we don't store this in profiles yet
         role: isUserAdmin ? 'admin' : 'retailer'
       };
     });

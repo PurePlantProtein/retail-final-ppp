@@ -37,7 +37,8 @@ const UsersManagement = () => {
     toggleUserStatus,
     updateUserDetails,
     deleteUser,
-    getFilteredUsers
+    getFilteredUsers,
+    users
   } = useUsersManagement();
 
   useEffect(() => {
@@ -54,7 +55,14 @@ const UsersManagement = () => {
       return;
     }
     
-    fetchUsers();
+    fetchUsers().catch(error => {
+      console.error('Failed to fetch users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users. Using placeholder data instead.",
+        variant: "destructive",
+      });
+    });
   }, [user, isAdmin, navigate, toast, fetchUsers]);
 
   const filteredUsers = getFilteredUsers();
@@ -66,7 +74,7 @@ const UsersManagement = () => {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto py-8 px-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 text-left">
           <h1 className="text-3xl font-bold">User Management</h1>
           <Button 
             onClick={() => setIsCreateUserDialogOpen(true)} 
@@ -77,7 +85,7 @@ const UsersManagement = () => {
         </div>
         
         <Card className="mb-8">
-          <CardHeader>
+          <CardHeader className="text-left">
             <CardTitle>Users</CardTitle>
             <CardDescription>
               Manage user accounts, roles, and permissions.
