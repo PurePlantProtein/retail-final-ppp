@@ -1,3 +1,4 @@
+
 import { ShippingOption, OrderItem } from '@/types/product';
 
 // Define only free shipping option
@@ -46,7 +47,7 @@ export const getShippingOptions = async (postalCode: string): Promise<ShippingOp
   // Get state from postal code (simple demonstration)
   const state = getStateFromPostal(postalCode);
   
-  return calculateShippingOptions(1, { postalCode, state });
+  return standardShippingOptions; // Return free shipping directly to ensure it always shows up
 };
 
 /**

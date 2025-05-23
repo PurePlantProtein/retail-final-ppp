@@ -20,19 +20,26 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
 }) => {
   console.log('Rendering ShippingOptions with:', { shippingOptions, selectedOption, isLoading });
   
+  // Default free shipping option as fallback if API fails to load options
+  const defaultFreeShipping: ShippingOption = {
+    id: 'free-shipping',
+    name: 'Free Shipping',
+    price: 0.00,
+    description: 'Delivery in 5-7 business days',
+    estimatedDeliveryDays: 7,
+    carrier: 'Australia Post'
+  };
+  
+  // Use available options or fallback to default
+  const displayOptions = (shippingOptions && shippingOptions.length > 0) 
+    ? shippingOptions 
+    : [defaultFreeShipping];
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         <span>Calculating shipping options...</span>
-      </div>
-    );
-  }
-
-  if (!shippingOptions || shippingOptions.length === 0) {
-    return (
-      <div className="py-4 text-center text-muted-foreground">
-        No shipping options available for your location.
       </div>
     );
   }
@@ -43,7 +50,7 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
       onValueChange={onSelect}
       className="space-y-3"
     >
-      {shippingOptions.map((option) => (
+      {displayOptions.map((option) => (
         <div 
           key={option.id} 
           className={`flex items-center justify-between rounded-md border p-3 cursor-pointer hover:bg-accent ${
