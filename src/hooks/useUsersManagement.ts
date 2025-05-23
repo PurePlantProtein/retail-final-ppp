@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { User } from '@/components/admin/UsersTable';
@@ -125,14 +124,27 @@ export const useUsersManagement = () => {
 
   const deleteUser = async (userId: string) => {
     try {
+      console.log('Starting to delete user:', userId);
       await userService.deleteUser(userId);
       
-      // Update local state
+      // Update local state after successful deletion
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+      
+      toast({
+        title: "Success",
+        description: "User has been successfully deleted.",
+      });
       
       return Promise.resolve();
     } catch (error) {
       console.error('Error deleting user:', error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to delete user. Please try again.",
+        variant: "destructive",
+      });
+      
       return Promise.reject(error);
     }
   };

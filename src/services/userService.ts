@@ -16,15 +16,34 @@ export const fetchUsers = async (): Promise<User[]> => {
 
     console.log('Raw profiles data:', profilesData);
     
+    // Get auth users to match with profiles for email addresses
+    const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers();
+    
+    if (authUsersError) {
+      console.error('Error fetching auth users:', authUsersError);
+      // Continue with profiles data only
+    }
+    
+    // Create a map of auth users by ID for easy lookup
+    const authUsersMap = new Map();
+    if (authUsersData?.users) {
+      authUsersData.users.forEach(user => {
+        authUsersMap.set(user.id, user);
+      });
+    }
+    
     // Convert profiles to users format
     const users: User[] = profilesData.map(profile => {
-      // Determine role based on email - this is a temporary approach
-      // In a production system, you would store roles in a database table
-      const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(profile.email || '');
+      // Try to get email from auth users map first, then from profile
+      const authUser = authUsersMap.get(profile.id);
+      const email = authUser?.email || profile.email || profile.id;
+      
+      // Determine role based on email
+      const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(email);
       
       return {
         id: profile.id,
-        email: profile.email || profile.id,
+        email: email,
         created_at: profile.created_at,
         business_name: profile.business_name || 'Unknown',
         business_type: profile.business_type || 'Not specified',
@@ -78,6 +97,7 @@ export const updateUserDetails = async (userId: string, userData: Partial<User>)
         business_type: userData.business_type,
         business_address: userData.business_address,
         phone: userData.phone,
+        email: userData.email, // Store email in profiles table as well for redundancy
       })
       .eq('id', userId);
 
@@ -90,15 +110,29 @@ export const updateUserDetails = async (userId: string, userData: Partial<User>)
 
 export const deleteUser = async (userId: string): Promise<void> => {
   try {
-    // For now, we'll just remove from profiles table
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
+    console.log('Attempting to delete user with ID:', userId);
+    
+    // First attempt to delete the user from auth.users (which will cascade to profiles)
+    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+    
+    if (authError) {
+      console.error('Error deleting user from auth.users:', authError);
       
-    if (error) throw error;
+      // If failing to delete from auth, at least remove from profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+        
+      if (profileError) {
+        console.error('Error deleting from profiles table:', profileError);
+        throw profileError;
+      }
+    }
+    
+    console.log('User successfully deleted');
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('Error in deleteUser function:', error);
     throw error;
   }
 };

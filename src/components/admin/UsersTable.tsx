@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Loader2, Edit, Trash2, ShieldCheck, UserCog } from 'lucide-react';
 import {
@@ -68,6 +67,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   if (isLoading) {
     return (
@@ -134,6 +134,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
     if (!userToDelete || !deleteUser) return;
     
     try {
+      setIsDeletingUser(true);
       await deleteUser(userToDelete.id);
       toast({
         title: "User deleted",
@@ -144,9 +145,11 @@ const UsersTable: React.FC<UsersTableProps> = ({
       console.error('Error deleting user:', error);
       toast({
         title: "Error",
-        description: "Failed to delete user.",
+        description: "Failed to delete user. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -341,8 +344,12 @@ const UsersTable: React.FC<UsersTableProps> = ({
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteConfirm}
+              disabled={isDeletingUser}
+            >
+              {isDeletingUser ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
