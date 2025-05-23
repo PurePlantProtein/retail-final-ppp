@@ -3,7 +3,7 @@ import React from 'react';
 import { ShippingOption } from '@/types/product';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2, Truck } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface ShippingOptionsProps {
   shippingOptions: ShippingOption[];
@@ -18,6 +18,8 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
   onSelect,
   isLoading
 }) => {
+  console.log('Rendering ShippingOptions with:', { shippingOptions, selectedOption, isLoading });
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
@@ -34,9 +36,6 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
       </div>
     );
   }
-
-  // Check if free shipping is available
-  const hasFreeShipping = shippingOptions.some(option => option.id === 'free-shipping');
 
   return (
     <RadioGroup 
@@ -66,14 +65,12 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
                 {option.description}
               </p>
               <p className="text-sm">
-                Estimated delivery: {option.estimatedDeliveryDays}
+                Estimated delivery: {option.estimatedDeliveryDays} days
               </p>
               <div className="flex items-center text-xs mt-1">
-                <span className={`inline-block h-3 w-3 rounded-full mr-1 ${
-                  option.carrier === 'australia-post' ? 'bg-red-500' : 'bg-blue-500'
-                }`}></span>
+                <span className="inline-block h-3 w-3 rounded-full mr-1 bg-red-500"></span>
                 <span className="capitalize">
-                  {option.carrier === 'australia-post' ? 'Australia Post' : 'Transdirect'}
+                  {option.carrier}
                 </span>
               </div>
             </div>

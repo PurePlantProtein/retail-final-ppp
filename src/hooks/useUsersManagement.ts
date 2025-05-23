@@ -163,31 +163,6 @@ export const useUsersManagement = () => {
     }
   };
 
-  // Delete all test users except your account
-  const deleteTestUsers = async (keepEmail: string) => {
-    try {
-      setIsLoading(true);
-      await userService.deleteAllUsersExcept(keepEmail);
-      
-      toast({
-        title: "Success",
-        description: "All test users have been deleted successfully.",
-      });
-      
-      // Refresh the user list
-      fetchUsers();
-    } catch (error) {
-      console.error('Error deleting test users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete test users. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Filter users based on search term and active tab
   const getFilteredUsers = () => {
     return users.filter(user => {
@@ -217,7 +192,6 @@ export const useUsersManagement = () => {
     toggleUserStatus,
     updateUserDetails,
     deleteUser,
-    deleteTestUsers,
     getFilteredUsers
   };
 };

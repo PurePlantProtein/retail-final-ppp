@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/types/auth';
 
@@ -58,7 +59,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     // Convert to UserProfile type
     return { 
       id: userId,
-      role: (data.role as 'admin' | 'retailer') || 'retailer', // Default role if not present
+      role: data.role as 'admin' | 'retailer' || 'retailer', // Default role if not present
       business_name: data.business_name || '',
       business_address: data.business_address,
       phone: data.phone,
@@ -87,7 +88,7 @@ export const updateUserProfile = async (userId: string, profileData: Partial<Use
     // Convert to UserProfile type
     return { 
       id: userId,
-      role: (data.role as 'admin' | 'retailer') || 'retailer',
+      role: data.role as 'admin' | 'retailer' || 'retailer',
       business_name: data.business_name || '',
       business_address: data.business_address,
       phone: data.phone,
@@ -135,44 +136,6 @@ export const deleteUser = async (userId: string): Promise<void> => {
     if (error) throw error;
   } catch (error) {
     console.error('Error deleting user:', error);
-    throw error;
-  }
-};
-
-// Function to delete all users except the specified email
-export const deleteAllUsersExcept = async (exceptEmail: string): Promise<void> => {
-  try {
-    // First get the user to keep (to make sure we don't delete it)
-    const { data: keepUser, error: fetchError } = await supabase
-      .from('profiles')
-      .select('id, email')
-      .eq('email', exceptEmail)
-      .single();
-
-    if (fetchError) {
-      console.error('Error finding user to keep:', fetchError);
-      throw fetchError;
-    }
-
-    if (!keepUser) {
-      console.error('Could not find user with email:', exceptEmail);
-      return;
-    }
-
-    // Delete all users except the one to keep
-    const { error: deleteError } = await supabase
-      .from('profiles')
-      .delete()
-      .neq('id', keepUser.id);
-
-    if (deleteError) {
-      console.error('Error deleting test users:', deleteError);
-      throw deleteError;
-    }
-
-    console.log(`Successfully deleted all users except ${exceptEmail}`);
-  } catch (error) {
-    console.error('Error in deleteAllUsersExcept:', error);
     throw error;
   }
 };
