@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -76,7 +77,7 @@ const SettingsManagement = () => {
                       Configure general store settings
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="text-left">
                     <p>Configure store name, currency, and other basic settings.</p>
                   </CardContent>
                   <CardFooter>
@@ -91,7 +92,7 @@ const SettingsManagement = () => {
                       Configure email notifications for orders
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="text-left">
                     <p>Set up order notification emails for administrators and customers.</p>
                   </CardContent>
                   <CardFooter>
@@ -110,7 +111,7 @@ const SettingsManagement = () => {
                       Configure payment gateways and options
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="text-left">
                     <p>Set up payment methods and processors for your store.</p>
                   </CardContent>
                   <CardFooter>
@@ -125,7 +126,7 @@ const SettingsManagement = () => {
                       Configure shipping options and rates
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="text-left">
                     <p>Set up shipping zones, methods, and free shipping rules.</p>
                   </CardContent>
                   <CardFooter>
@@ -150,7 +151,7 @@ const SettingsManagement = () => {
                     Customize your site logo and favicon
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="text-left">
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-medium mb-2">Site Icon (Favicon)</h3>
@@ -215,7 +216,7 @@ const SettingsManagement = () => {
                     <CardTitle>Other Settings</CardTitle>
                     <CardDescription>Additional configuration options</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="text-left">
                     <p>More settings will be added here in future updates.</p>
                   </CardContent>
                 </Card>

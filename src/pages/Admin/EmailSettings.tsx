@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import Layout from '@/components/Layout';
@@ -102,7 +103,7 @@ const EmailSettings = () => {
     <Layout>
       <AdminLayout>
         <div className="container mx-auto py-6">
-          <h1 className="text-2xl font-bold mb-6">Email Notification Settings</h1>
+          <h1 className="text-2xl font-bold mb-6 text-left">Email Notification Settings</h1>
           
           <Card>
             <CardHeader>
@@ -114,7 +115,7 @@ const EmailSettings = () => {
                 Configure email settings for order notifications
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 text-left">
               <div className="space-y-2">
                 <Label htmlFor="adminEmail">Admin Email Address</Label>
                 <Input
@@ -204,7 +205,7 @@ const EmailSettings = () => {
                 Information about the email templates used for order notifications
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="text-left">
               <div className="space-y-4">
                 <div className="p-4 border rounded-md">
                   <h3 className="font-medium mb-1">Order Confirmation Email</h3>
