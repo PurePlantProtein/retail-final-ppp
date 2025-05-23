@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import Layout from '@/components/Layout';
@@ -45,13 +46,15 @@ import {
   FileSpreadsheet,
   Trash,
   Download,
-  Upload 
+  Upload,
+  AlertCircle
 } from 'lucide-react';
 import { 
   getMarketingMaterials, 
   uploadMarketingMaterial,
   deleteMarketingMaterial
 } from '@/services/marketingService';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type FormValues = {
   title: string;
@@ -67,6 +70,7 @@ const MarketingMaterialsManagement = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   const form = useForm<FormValues>({
@@ -84,6 +88,7 @@ const MarketingMaterialsManagement = () => {
   const fetchMaterials = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       const data = await getMarketingMaterials();
       setMaterials(data);
       
@@ -95,6 +100,7 @@ const MarketingMaterialsManagement = () => {
       });
     } catch (error) {
       console.error('Error fetching marketing materials:', error);
+      setError('Failed to load marketing materials. Please try again later.');
       toast({
         title: 'Error',
         description: 'Failed to load marketing materials',
@@ -114,12 +120,14 @@ const MarketingMaterialsManagement = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteMarketingMaterial(id);
+      // Update the local state to reflect the change immediately
       setMaterials(prev => prev.filter(item => item.id !== id));
       toast({
         title: 'Success',
         description: 'Marketing material deleted successfully',
       });
     } catch (error) {
+      console.error('Error deleting material:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete marketing material',
@@ -140,13 +148,17 @@ const MarketingMaterialsManagement = () => {
     
     try {
       setIsUploading(true);
+      setError(null);
       
-      await uploadMarketingMaterial(selectedFile, {
+      const newMaterial = await uploadMarketingMaterial(selectedFile, {
         title: data.title,
         description: data.description,
         category: data.category,
         file_type: selectedFile.type,
       });
+      
+      // Update the local state to add the new material immediately
+      setMaterials(prev => [newMaterial, ...prev]);
       
       toast({
         title: 'Success',
@@ -156,10 +168,9 @@ const MarketingMaterialsManagement = () => {
       form.reset();
       setSelectedFile(null);
       setIsDialogOpen(false);
-      fetchMaterials(); // Refresh the materials list
-      
     } catch (error) {
       console.error('Error uploading marketing material:', error);
+      setError('Failed to upload marketing material. Please try again later.');
       toast({
         title: 'Error',
         description: 'Failed to upload marketing material',
@@ -301,6 +312,13 @@ const MarketingMaterialsManagement = () => {
               </DialogContent>
             </Dialog>
           </div>
+          
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

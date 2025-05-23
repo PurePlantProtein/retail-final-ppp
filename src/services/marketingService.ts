@@ -5,40 +5,13 @@ import { MarketingMaterial } from '@/types/product';
 // Function to get all marketing materials
 export const getMarketingMaterials = async (): Promise<MarketingMaterial[]> => {
   try {
-    // Use a hardcoded mock data for now since the marketing_materials table doesn't exist yet
-    // Normally we would query the database like this:
-    // const { data, error } = await supabase
-    //   .from('marketing_materials')
-    //   .select('*')
-    //   .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('marketing_materials')
+      .select('*')
+      .order('created_at', { ascending: false });
     
-    // if (error) throw error;
-    
-    // Mock data as a temporary solution until we create the marketing_materials table
-    const mockData: MarketingMaterial[] = [
-      {
-        id: "1",
-        title: "Product Brochure",
-        description: "A comprehensive guide to our products",
-        file_url: "/placeholder.svg",
-        file_type: "application/pdf",
-        category: "Brochures",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: "2",
-        title: "Brand Logo Pack",
-        description: "High-resolution logos for marketing use",
-        file_url: "/placeholder.svg",
-        file_type: "image/jpeg",
-        category: "Logos",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-    
-    return mockData;
+    if (error) throw error;
+    return data || [];
   } catch (error) {
     console.error("Error fetching marketing materials:", error);
     throw error;
@@ -48,9 +21,14 @@ export const getMarketingMaterials = async (): Promise<MarketingMaterial[]> => {
 // Function to get marketing materials by category
 export const getMarketingMaterialsByCategory = async (category: string): Promise<MarketingMaterial[]> => {
   try {
-    // Use mock data for now
-    const allMaterials = await getMarketingMaterials();
-    return allMaterials.filter(material => material.category === category);
+    const { data, error } = await supabase
+      .from('marketing_materials')
+      .select('*')
+      .eq('category', category)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
     console.error(`Error fetching marketing materials for category ${category}:`, error);
     throw error;
@@ -63,21 +41,38 @@ export const uploadMarketingMaterial = async (
   materialData: Omit<MarketingMaterial, 'id' | 'file_url' | 'created_at' | 'updated_at'>
 ): Promise<MarketingMaterial> => {
   try {
-    // Mock implementation without actual storage
-    const newMaterial: MarketingMaterial = {
-      id: Date.now().toString(),
-      title: materialData.title,
-      description: materialData.description,
-      file_url: URL.createObjectURL(file), // This is temporary and will only work during the current session
-      file_type: file.type,
-      category: materialData.category || 'General',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    // Generate a unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+    const filePath = `marketing_materials/${fileName}`;
     
-    console.log("Uploaded marketing material (mock):", newMaterial);
+    // Upload file to storage
+    const { error: uploadError } = await supabase.storage
+      .from('marketing')
+      .upload(filePath, file);
+      
+    if (uploadError) throw uploadError;
     
-    return newMaterial;
+    // Get public URL
+    const { data: urlData } = supabase.storage.from('marketing').getPublicUrl(filePath);
+    const fileUrl = urlData.publicUrl;
+    
+    // Insert record into database
+    const { data, error } = await supabase
+      .from('marketing_materials')
+      .insert([{
+        title: materialData.title,
+        description: materialData.description,
+        file_url: fileUrl,
+        file_type: file.type,
+        category: materialData.category || 'General'
+      }])
+      .select('*')
+      .single();
+      
+    if (error) throw error;
+    
+    return data;
   } catch (error) {
     console.error("Error uploading marketing material:", error);
     throw error;
@@ -86,6 +81,37 @@ export const uploadMarketingMaterial = async (
 
 // Function to delete a marketing material
 export const deleteMarketingMaterial = async (id: string): Promise<void> => {
-  // Mock implementation
-  console.log(`Marketing material with ID ${id} would be deleted here`);
+  try {
+    // Get the file URL first to extract the path for storage deletion
+    const { data, error: fetchError } = await supabase
+      .from('marketing_materials')
+      .select('file_url')
+      .eq('id', id)
+      .single();
+      
+    if (fetchError) throw fetchError;
+    
+    // Delete from database
+    const { error } = await supabase
+      .from('marketing_materials')
+      .delete()
+      .eq('id', id);
+      
+    if (error) throw error;
+    
+    // If we have a file URL, try to delete from storage
+    if (data && data.file_url) {
+      // Extract the filename from the URL
+      const fileUrl = data.file_url;
+      const filePath = fileUrl.split('/').pop();
+      if (filePath) {
+        await supabase.storage
+          .from('marketing')
+          .remove([`marketing_materials/${filePath}`]);
+      }
+    }
+  } catch (error) {
+    console.error(`Error deleting marketing material with ID ${id}:`, error);
+    throw error;
+  }
 };

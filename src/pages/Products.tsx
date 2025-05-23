@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -18,7 +17,7 @@ import { Product, CategoryDisplay } from '@/types/product';
 import { getProducts, getCategories } from '@/services/productService';
 import { Search } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import CategoryCard from '@/components/CategoryCard'; // We'll create this component
+import CategoryCard from '@/components/CategoryCard';
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -157,6 +156,9 @@ const Products = () => {
     // If a category is selected or search is active, show filtered products
     return (
       <div>
+        <h2 className="text-2xl font-semibold mb-4">
+          {categoryParam !== 'all' ? `${categoryParam} Products` : 'Search Results'}
+        </h2>
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {filteredProducts.map((product) => (
