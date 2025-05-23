@@ -6,7 +6,7 @@ import { Json } from '@/integrations/supabase/types';
  * Maps snake_case database fields to camelCase properties for frontend use
  * and ensures proper type casting for JSON fields
  */
-export const mapProductForClient = (product: Product): Product => {
+export const mapProductForClient = (product: any): Product => {
   return {
     ...product,
     minQuantity: product.min_quantity,
@@ -22,7 +22,7 @@ export const mapProductForClient = (product: Product): Product => {
 /**
  * Maps camelCase properties to snake_case for database storage
  */
-export const mapProductForStorage = (product: Partial<Product>): Partial<Product> => {
+export const mapProductForStorage = (product: Partial<Product>): any => {
   const { 
     minQuantity, 
     bagSize, 

@@ -109,7 +109,7 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
     const shippingCost = selectedOption ? selectedOption.price : 0;
     const orderId = bankDetails.reference;
     
-    // Create the order object and normalize it to ensure all properties are correct
+    // Create the order object with direct properties
     const orderData = {
       id: orderId,
       userId: userId || 'guest',
@@ -122,12 +122,8 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
       paymentMethod: 'bank-transfer',
       shippingAddress: {...shippingAddress}, // Create a copy
       invoiceStatus: 'draft',
-      // Store selectedOption's properties directly instead of the object reference
-      // to avoid type issues when serializing/deserializing
-      shippingOptionId: selectedOption?.id,
-      shippingOptionName: selectedOption?.name,
-      shippingOptionPrice: selectedOption?.price,
-      shippingCarrier: selectedOption?.carrier,
+      shippingOption: selectedOption,
+      updatedAt: new Date().toISOString()
     };
     
     // Normalize the order to ensure all fields are correct

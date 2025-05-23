@@ -67,17 +67,15 @@ let productsList: Product[] = [
     number_of_servings: 30,
     serving_size: '10g',
     ingredients: 'L-Leucine, L-Isoleucine, L-Valine, Citric Acid, Natural Flavors, Sucralose',
-    nutritional_info: {
-      calories: 10,
-      leucine: 2,
-      isoleucine: 1,
-      valine: 1
-    },
-    amino_acid_profile: {
-      leucine: 2,
-      isoleucine: 1,
-      valine: 1
-    }
+    nutritional_info: [
+      { name: "Calories", perServing: "10", per100g: "100" },
+      { name: "BCAAs", perServing: "5g", per100g: "50g" }
+    ] as NutritionalValue[],
+    amino_acid_profile: [
+      { name: "Leucine", amount: "2g" },
+      { name: "Isoleucine", amount: "1g" },
+      { name: "Valine", amount: "1g" }
+    ] as AminoAcid[]
   },
   {
     id: '4',

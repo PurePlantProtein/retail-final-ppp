@@ -15,7 +15,7 @@ export const getProducts = async (): Promise<Product[]> => {
     throw new Error(error.message);
   }
 
-  return (data || []).map(mapProductForClient);
+  return (data || []).map((item) => mapProductForClient(item));
 };
 
 // Function to get products by category
@@ -31,7 +31,7 @@ export const getProductsByCategory = async (category: string): Promise<Product[]
     throw new Error(error.message);
   }
 
-  return (data || []).map(mapProductForClient);
+  return (data || []).map((item) => mapProductForClient(item));
 };
 
 // Function to get a product by ID
@@ -47,7 +47,7 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     throw new Error(error.message);
   }
 
-  return data ? mapProductForClient(data as any) : null;
+  return data ? mapProductForClient(data) : null;
 };
 
 // Function to add a new product
@@ -66,7 +66,7 @@ export const addProduct = async (productData: any): Promise<Product> => {
     throw new Error(error.message);
   }
 
-  return mapProductForClient(data as any);
+  return mapProductForClient(data);
 };
 
 // Function to update an existing product
@@ -86,7 +86,7 @@ export const updateProduct = async (id: string, productData: any): Promise<Produ
     throw new Error(error.message);
   }
 
-  return data ? mapProductForClient(data as any) : null;
+  return data ? mapProductForClient(data) : null;
 };
 
 // Function to delete a product
@@ -137,7 +137,19 @@ export const addCategory = async (categoryName: string): Promise<string> => {
     image: null
   };
 
-  await addProduct(placeholderProduct);
+  const transformedData = mapProductForStorage(placeholderProduct);
+
+  const { data, error } = await supabase
+    .from('products')
+    .insert([transformedData])
+    .select()
+    .single();
+
+  if (error) {
+    console.error(`Error adding category ${categoryName}:`, error);
+    throw new Error(error.message);
+  }
+
   return categoryName;
 };
 
@@ -204,7 +216,7 @@ export const ppProteinSampleProducts = [
 export const importProducts = async (products: any[]): Promise<void> => {
   try {
     for (const product of products) {
-      await createProduct(mapProductForStorage(product));
+      await createProduct(product);
     }
   } catch (error) {
     console.error("Error importing products:", error);

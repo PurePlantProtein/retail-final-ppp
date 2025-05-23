@@ -360,7 +360,7 @@ export interface Order {
   id: string;
   userId: string;
   userName: string;
-  email: string; // Required property as per error
+  email: string;
   items: OrderItem[];
   total: number;
   status: OrderStatus;
@@ -370,7 +370,8 @@ export interface Order {
   notes?: string;
   invoiceUrl?: string;
   invoiceStatus?: string;
-  shippingOption?: ShippingOption; // Updated to proper type
+  shippingOption?: ShippingOption;
+  updatedAt: string; // Adding updatedAt as it's used in multiple places
 }
 
 export interface MarketingMaterial {

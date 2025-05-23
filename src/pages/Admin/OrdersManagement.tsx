@@ -164,7 +164,13 @@ const OrdersManagement = () => {
   };
   
   // Function to save edited order
-  const handleSaveOrderEdit = editForm.handleSubmit(async (data) => {
+  const handleSaveOrderEdit = (data: { 
+    userName: string; 
+    status: OrderStatus; 
+    paymentMethod: string; 
+    invoiceUrl: string; 
+    notes: string; 
+  }) => {
     if (!editingOrder) return;
     
     try {
@@ -196,7 +202,7 @@ const OrdersManagement = () => {
       console.error('Error updating order:', error);
       toast.error('Failed to update order');
     }
-  });
+  };
   
   // Function to handle delete confirmation
   const handleDeleteConfirm = async () => {
