@@ -26,16 +26,18 @@ export const fetchUsers = async (): Promise<User[]> => {
     
     // Create a map of auth users by ID for easy lookup
     const authUsersMap = new Map();
-    if (authUsersData?.users) {
+    if (authUsersData && authUsersData.users) {
       authUsersData.users.forEach(user => {
-        authUsersMap.set(user.id, user);
+        if (user && user.id) {
+          authUsersMap.set(user.id, user);
+        }
       });
     }
     
     // Convert profiles to users format
     const users: User[] = profilesData.map(profile => {
       // Try to get email from auth users map first, then from profile
-      const authUser = authUsersMap.get(profile.id);
+      const authUser = profile.id ? authUsersMap.get(profile.id) : undefined;
       const email = authUser?.email || profile.email || profile.id;
       
       // Determine role based on email
