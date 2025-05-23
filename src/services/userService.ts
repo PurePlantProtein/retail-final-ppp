@@ -26,9 +26,11 @@ export const fetchUsers = async (): Promise<User[]> => {
     
     // Create a map of auth users by ID for easy lookup
     const authUsersMap = new Map();
-    if (authUsersData && authUsersData.users) {
+    
+    // Safely handle the auth users data with proper type checking
+    if (authUsersData && 'users' in authUsersData && Array.isArray(authUsersData.users)) {
       authUsersData.users.forEach(user => {
-        if (user && user.id) {
+        if (user && typeof user === 'object' && 'id' in user) {
           authUsersMap.set(user.id, user);
         }
       });
@@ -36,15 +38,17 @@ export const fetchUsers = async (): Promise<User[]> => {
     
     // Convert profiles to users format
     const users: User[] = profilesData.map(profile => {
+      // Safely check for profile.id before using it
+      const profileId = profile.id || '';
       // Try to get email from auth users map first, then from profile
-      const authUser = profile.id ? authUsersMap.get(profile.id) : undefined;
-      const email = authUser?.email || profile.email || profile.id;
+      const authUser = profileId ? authUsersMap.get(profileId) : undefined;
+      const email = authUser?.email || profile.email || profileId;
       
       // Determine role based on email
       const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(email);
       
       return {
-        id: profile.id,
+        id: profileId,
         email: email,
         created_at: profile.created_at,
         business_name: profile.business_name || 'Unknown',
