@@ -1,6 +1,4 @@
 
-import { User } from '@supabase/supabase-js';
-
 // Helper function to clean up auth state
 export const cleanupAuthState = () => {
   // Remove standard auth tokens
@@ -17,4 +15,9 @@ export const cleanupAuthState = () => {
       sessionStorage.removeItem(key);
     }
   });
+};
+
+// Helper function to check if a user is an admin
+export const checkIsAdmin = (roles: string[]): boolean => {
+  return roles.includes('admin');
 };

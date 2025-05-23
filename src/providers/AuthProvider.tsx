@@ -1,277 +1,44 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { AuthContextType, UserProfile, AppRole } from '@/types/auth';
-import { useFetchProfile } from '@/hooks/useFetchProfile';
-import { cleanupAuthState } from '@/utils/authUtils';
-import { isSessionExpired, SESSION_TIMEOUT_MS } from '@/utils/securityUtils';
-import { fetchUserRoles } from '@/services/userService';
+import React from 'react';
+import { AuthContextType } from '@/types/auth';
+import { useAuthState } from '@/hooks/useAuthState';
+import { useAuthMethods } from '@/hooks/useAuthMethods';
+import { useAuthSessionMonitor } from '@/hooks/useAuthSessionMonitor';
 
 // Create the context with undefined as initial value
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [roles, setRoles] = useState<AppRole[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<Session | null>(null);
-  const [lastActivity, setLastActivity] = useState<number>(Date.now());
-  const { toast } = useToast();
+  // Use our custom hooks to organize the logic
+  const { 
+    user, 
+    profile, 
+    roles,
+    isLoading, 
+    session, 
+    hasRole,
+    isAdmin,
+    isDistributor,
+    isRetailer,
+    refreshProfile
+  } = useAuthState();
   
-  // Use the custom hook to fetch profile
-  const { fetchProfile } = useFetchProfile(user, setProfile);
-
-  // Add a function to refresh the profile and roles
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id);
-      await loadUserRoles(user.id);
-    }
-  };
-
-  // Function to load user roles
-  const loadUserRoles = async (userId: string) => {
-    try {
-      const userRoles = await fetchUserRoles(userId);
-      setRoles(userRoles);
-    } catch (error) {
-      console.error("Error loading user roles:", error);
-      setRoles([]);
-    }
-  };
-
-  // Role checking functions
-  const hasRole = useCallback((role: AppRole) => {
-    return roles.includes(role);
-  }, [roles]);
+  // Get session monitoring and activity tracking
+  const { updateActivity } = useAuthSessionMonitor(session, async () => await authMethods.logout());
   
-  const isAdmin = useCallback(() => {
-    return hasRole('admin');
-  }, [hasRole]);
-  
-  const isDistributor = useCallback(() => {
-    return hasRole('distributor');
-  }, [hasRole]);
-  
-  const isRetailer = useCallback(() => {
-    return hasRole('retailer');
-  }, [hasRole]);
+  // Get authentication methods
+  const authMethods = useAuthMethods(updateActivity);
 
-  // Track user activity to handle session timeouts
-  const updateActivity = useCallback(() => {
-    const timestamp = Date.now();
-    setLastActivity(timestamp);
-    localStorage.setItem('lastUserActivity', timestamp.toString());
-  }, []);
-
-  // Check for session expiration
-  useEffect(() => {
-    const checkSession = () => {
-      const storedLastActivity = parseInt(localStorage.getItem('lastUserActivity') || '0');
-      if (session && storedLastActivity > 0 && isSessionExpired(storedLastActivity)) {
-        toast({
-          title: "Session expired",
-          description: "Your session has expired due to inactivity. Please log in again.",
-          variant: "destructive",
-        });
-        logout();
-      }
-    };
-
-    const interval = setInterval(checkSession, 30000); // Check every 30 seconds
-    
-    // Add event listeners to track user activity
-    const events = ['mousedown', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(event => window.addEventListener(event, updateActivity));
-    
-    // Initialize lastUserActivity if not set
-    if (!localStorage.getItem('lastUserActivity')) {
-      updateActivity();
-    }
-    
-    return () => {
-      clearInterval(interval);
-      events.forEach(event => window.removeEventListener(event, updateActivity));
-    };
-  }, [session, updateActivity, toast]);
-
-  useEffect(() => {
-    const setupAuth = async () => {
-      // Set up auth state listener FIRST
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log('Auth state changed:', event, session?.user?.email);
-          setUser(session?.user ?? null);
-          setSession(session); // Store the session
-          
-          if (session?.user) {
-            // Use setTimeout to prevent auth deadlocks
-            setTimeout(async () => {
-              await fetchProfile(session.user.id);
-              await loadUserRoles(session.user.id);
-            }, 0);
-            
-            // Update the activity timestamp
-            updateActivity();
-          } else {
-            setProfile(null);
-            setRoles([]);
-          }
-        }
-      );
-
-      // THEN check for existing session
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
-        setSession(session); // Store the session
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-          await loadUserRoles(session.user.id);
-          updateActivity(); // Update activity timestamp on session retrieval
-        }
-      } catch (err) {
-        console.error('Error getting session:', err);
-      } finally {
-        setIsLoading(false);
-      }
-
-      return () => subscription.unsubscribe();
-    };
-    
-    setupAuth();
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    
-    try {
-      // Clean up existing state
-      cleanupAuthState();
-      
-      // Attempt global sign out
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Continue even if this fails
-      }
-      
-      // Implement rate limiting for login attempts
-      const clientId = localStorage.getItem('device_id') || 
-                      (localStorage.setItem('device_id', crypto.randomUUID()), localStorage.getItem('device_id')!);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) throw error;
-      
-      // Reset the last activity timestamp
-      updateActivity();
-      
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signup = async (email: string, password: string, businessName: string, businessType?: string) => {
-    setIsLoading(true);
-    
-    try {
-      // Clean up existing state
-      cleanupAuthState();
-      
-      console.log("Signing up with:", { email, businessName, businessType });
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            business_name: businessName,
-            business_type: businessType || ''
-          }
-        }
-      });
-      
-      if (error) {
-        console.error("Signup error:", error);
-        throw error;
-      }
-      
-      console.log("Signup success:", data);
-      
-      // Reset the last activity timestamp
-      updateActivity();
-      
-      toast({
-        title: "Account created",
-        description: "Welcome to PP Protein Wholesale!",
-      });
-    } catch (error: any) {
-      console.error("Signup error caught:", error);
-      toast({
-        title: "Sign up failed",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      // Clean up auth state
-      cleanupAuthState();
-      localStorage.removeItem('lastUserActivity');
-      
-      // Attempt global sign out
-      await supabase.auth.signOut({ scope: 'global' });
-      
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-      
-      // Force page reload for a clean state
-      window.location.href = '/login';
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const value = {
+  const value: AuthContextType = {
     user,
     profile,
-    isLoading,
-    login,
-    signup,
-    logout,
-    isAdmin: isAdmin(),
-    isDistributor: isDistributor(),
-    isRetailer: isRetailer(),
+    isLoading: isLoading || authMethods.authLoading,
+    login: authMethods.login,
+    signup: authMethods.signup,
+    logout: authMethods.logout,
+    isAdmin,
+    isDistributor,
+    isRetailer,
     hasRole,
     roles,
     session,

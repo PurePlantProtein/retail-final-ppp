@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, AppRole } from '@/types/auth';
 
@@ -87,7 +86,7 @@ export const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
 /**
  * Update user role
  */
-export const updateUserRole = async (userId: string, newRole: string) => {
+export const updateUserRole = async (userId: string, newRole: AppRole) => {
   try {
     // First check if the role already exists for this user
     const { data: existingRole, error: checkError } = await supabase
@@ -129,7 +128,7 @@ export const updateUserRole = async (userId: string, newRole: string) => {
 /**
  * Remove a user role
  */
-export const removeUserRole = async (userId: string, roleToRemove: string) => {
+export const removeUserRole = async (userId: string, roleToRemove: AppRole) => {
   try {
     // Never remove the last role from a user
     const { data: existingRoles, error: checkError } = await supabase

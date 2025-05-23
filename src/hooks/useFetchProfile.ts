@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/types/auth';
-import { isAdminUser } from '@/utils/authUtils';
+import { checkIsAdmin } from '@/utils/authUtils';
 
 export const useFetchProfile = (
   user: User | null,
@@ -53,13 +53,10 @@ export const useFetchProfile = (
         }
       }
       
-      // Determine role based on email (in a real app, this would come from the database)
-      const role = isAdminUser(user) ? 'admin' as const : 'retailer' as const;
-      
       if (data) {
-        const profileWithRole = { ...data, role, email: user?.email };
-        onProfileLoaded(profileWithRole as UserProfile);
-        console.log('User profile loaded:', profileWithRole);
+        const profileData = { ...data, email: user?.email };
+        onProfileLoaded(profileData as UserProfile);
+        console.log('User profile loaded:', profileData);
       } else {
         // Create a minimal profile if one doesn't exist
         const minimalProfile: UserProfile = { 
@@ -67,7 +64,6 @@ export const useFetchProfile = (
           business_name: user?.user_metadata?.business_name || 'Unknown Business',
           email: user?.email,
           payment_terms: 14, // Default payment terms
-          role
         };
         onProfileLoaded(minimalProfile);
         console.log('Created minimal profile with email:', user?.email);
@@ -77,13 +73,11 @@ export const useFetchProfile = (
       
       // Set minimal profile even if there's an error
       if (user) {
-        const role = isAdminUser(user) ? 'admin' as const : 'retailer' as const;
         const minimalProfile: UserProfile = { 
           id: user.id, 
           business_name: user.user_metadata?.business_name || 'Unknown Business',
           email: user.email,
           payment_terms: 14, // Default payment terms
-          role
         };
         onProfileLoaded(minimalProfile);
       }
