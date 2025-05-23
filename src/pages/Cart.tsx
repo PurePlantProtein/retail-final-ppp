@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 const Cart = () => {
-  const { items, itemCount } = useCart();
+  const { items, totalItems } = useCart(); // Changed from itemCount to totalItems
   const { user } = useAuth();
   const {
     checkoutStep,
@@ -41,7 +41,7 @@ const Cart = () => {
   const goBackToShipping = () => setCheckoutStep('shipping');
 
   // If no items in cart, show empty cart view
-  if (itemCount === 0) {
+  if (totalItems === 0) { // Changed from itemCount to totalItems
     return (
       <Layout>
         <EmptyCart />
@@ -79,16 +79,21 @@ const Cart = () => {
             <div className="lg:col-span-2">
               <Card>
                 <CardContent className="p-6">
-                  <CartItemList />
+                  <CartItemList 
+                    items={items}
+                    onRemoveItem={(id) => useCart().removeFromCart(id)}
+                    onUpdateQuantity={(id, qty) => useCart().updateQuantity(id, qty)}
+                    onClearCart={() => useCart().clearCart()}
+                  />
                 </CardContent>
               </Card>
             </div>
             <div>
               <OrderSummary 
                 subtotal={subtotal} 
-                shippingCost={0} 
-                total={subtotal} 
-                onCheckout={() => setCheckoutStep('shipping')}
+                selectedShippingOption={selectedOption}
+                checkoutStep="cart"
+                onProceedToShipping={() => setCheckoutStep('shipping')}
               />
             </div>
           </div>
@@ -96,23 +101,26 @@ const Cart = () => {
         
         {checkoutStep === 'shipping' && (
           <ShippingStep
-            onSubmit={handleShippingFormSubmit}
+            shippingAddress={shippingAddress}
+            onShippingAddressSubmit={handleShippingFormSubmit}
             shippingOptions={shippingOptions}
             selectedShippingOption={selectedShippingOption}
-            setSelectedShippingOption={setSelectedShippingOption}
-            isLoading={isLoadingShippingOptions}
-            savedAddress={shippingAddress}
+            onSelectShippingOption={setSelectedShippingOption}
+            isLoadingShippingOptions={isLoadingShippingOptions}
+            onBackToCart={goBackToCart}
+            onContinueToPayment={() => setCheckoutStep('payment')}
           />
         )}
         
         {checkoutStep === 'payment' && (
           <PaymentStep 
-            subtotal={subtotal}
-            shipping={selectedOption?.price || 0}
-            total={totalWithShipping}
+            shippingAddress={shippingAddress!}
+            selectedOption={selectedOption}
             bankDetails={bankDetails}
-            onPay={handleBankTransferCheckout}
-            isProcessing={isProcessingOrder}
+            isProcessingOrder={isProcessingOrder}
+            onBackToShipping={goBackToShipping}
+            onCompleteOrder={handleBankTransferCheckout}
+            onEditShipping={() => setCheckoutStep('shipping')}
           />
         )}
       </div>

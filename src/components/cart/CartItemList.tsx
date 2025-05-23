@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import CartItem from './CartItem';
 import { Product } from '@/types/product';
+import { useCart } from '@/contexts/CartContext';
 
 type CartItemListProps = {
   items: Array<{ product: Product; quantity: number }>;
