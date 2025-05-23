@@ -16,28 +16,30 @@ export const fetchUsers = async (): Promise<User[]> => {
 
     console.log('Raw profiles data:', profilesData);
     
-    // Get auth users to match with profiles for email addresses
-    const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers();
-    
-    if (authUsersError) {
-      console.error('Error fetching auth users:', authUsersError);
-      // Continue with profiles data only
-    }
-    
-    // Create a map of auth users by ID for easy lookup
-    const authUsersMap = new Map();
-    
-    // Safely handle the auth users data with proper type checking
-    if (authUsersData && 'users' in authUsersData && Array.isArray(authUsersData.users)) {
-      authUsersData.users.forEach(user => {
-        if (user && typeof user === 'object' && 'id' in user) {
-          authUsersMap.set(user.id, user);
-        }
-      });
-    }
-    
     // Make sure profilesData is always treated as an array even if it's null
     const profiles = Array.isArray(profilesData) ? profilesData : [];
+    
+    let authUsersMap = new Map();
+    
+    // Only try to fetch auth users if we have admin access
+    // This addresses the 403 errors when trying to access admin endpoints
+    try {
+      const { data: authUsersData, error: authUsersError } = await supabase.auth.admin.listUsers();
+      
+      if (authUsersError) {
+        console.error('Error fetching auth users:', authUsersError);
+      } else if (authUsersData && 'users' in authUsersData && Array.isArray(authUsersData.users)) {
+        // Only create the map if we successfully got auth users
+        authUsersData.users.forEach(user => {
+          if (user && typeof user === 'object' && 'id' in user) {
+            authUsersMap.set(user.id, user);
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Could not fetch auth users, likely not running with admin privileges:', error);
+      // Continue without auth users data - just use profiles
+    }
     
     // Type the profile parameter explicitly to avoid TypeScript errors
     const users: User[] = profiles.map((profile) => {
@@ -123,6 +125,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
     
     // First attempt to delete the user from auth.users (which will cascade to profiles)
     try {
+      // Wrap this in a try-catch since it requires admin privileges
       const { error: authError } = await supabase.auth.admin.deleteUser(userId);
       
       if (authError) {
@@ -132,7 +135,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
       
       console.log('User successfully deleted from auth.users');
     } catch (authDeleteError) {
-      console.error('Failed to delete from auth.users, falling back to profiles deletion:', authDeleteError);
+      console.warn('Failed to delete from auth.users, falling back to profiles deletion:', authDeleteError);
       
       // If failing to delete from auth, at least remove from profiles table
       const { error: profileError } = await supabase
