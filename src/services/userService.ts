@@ -36,13 +36,13 @@ export const fetchUsers = async (): Promise<User[]> => {
       });
     }
     
-    // Explicitly type the map function's parameter to fix the TypeScript error
+    // Type the profile parameter explicitly to avoid TypeScript errors
     const users: User[] = profilesData.map((profile: any) => {
       // Safely check for profile.id before using it
-      const profileId = profile.id || '';
+      const profileId = profile?.id || '';
       // Try to get email from auth users map first, then from profile
       const authUser = profileId ? authUsersMap.get(profileId) : undefined;
-      const email = authUser?.email || profile.email || profileId;
+      const email = authUser?.email || profile?.email || profileId;
       
       // Determine role based on email
       const isUserAdmin = ['admin@example.com', 'myles@sparkflare.com.au'].includes(email);
@@ -50,11 +50,11 @@ export const fetchUsers = async (): Promise<User[]> => {
       return {
         id: profileId,
         email: email,
-        created_at: profile.created_at,
-        business_name: profile.business_name || 'Unknown',
-        business_type: profile.business_type || 'Not specified',
-        business_address: profile.business_address,
-        phone: profile.phone,
+        created_at: profile?.created_at,
+        business_name: profile?.business_name || 'Unknown',
+        business_type: profile?.business_type || 'Not specified',
+        business_address: profile?.business_address,
+        phone: profile?.phone,
         status: 'Active', // Default status since we don't store this in profiles yet
         role: isUserAdmin ? 'admin' : 'retailer'
       };
