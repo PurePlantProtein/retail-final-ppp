@@ -63,3 +63,57 @@ export const createSampleOrder = (): Order => {
     updatedAt: new Date().toISOString()
   };
 };
+
+/**
+ * Default template for dispatch notification emails
+ */
+export const defaultDispatchTemplate = `
+<h1>New Order for Dispatch</h1>
+<p>A new order has been placed that requires shipping.</p>
+<p>Order ID: \{\{orderId\}\}</p>
+<p>Customer: \{\{userName\}\} (\{\{email\}\})</p>
+
+<h2>Shipping Address</h2>
+<p>
+  \{\{shippingAddress.name\}\}<br>
+  \{\{shippingAddress.street\}\}<br>
+  \{\{shippingAddress.city\}\}, \{\{shippingAddress.state\}\} \{\{shippingAddress.postalCode\}\}<br>
+  \{\{shippingAddress.country\}\}<br>
+  Phone: \{\{shippingAddress.phone\}\}
+</p>
+
+<div>
+  <h3>Items to Ship:</h3>
+  <ul>
+    \{\{#each items\}\}
+    <li>\{\{product.name\}\} - Quantity: \{\{quantity\}\}</li>
+    \{\{/each\}\}
+  </ul>
+</div>
+
+<p>Notes: \{\{notes\}\}</p>
+`;
+
+/**
+ * Default template for accounts notification emails
+ */
+export const defaultAccountsTemplate = `
+<h1>New Order for Accounts</h1>
+<p>A new order has been placed requiring financial processing.</p>
+<p>Order ID: \{\{orderId\}\}</p>
+<p>Customer: \{\{userName\}\} (\{\{email\}\})</p>
+
+<h2>Order Summary</h2>
+<div>
+  <ul>
+    \{\{#each items\}\}
+    <li>\{\{product.name\}\} - Quantity: \{\{quantity\}\} - $\{\{product.price\}\}</li>
+    \{\{/each\}\}
+  </ul>
+</div>
+
+<p>Subtotal: $\{\{total\}\}</p>
+<p>Payment Method: \{\{paymentMethod\}\}</p>
+<p>Invoice Status: \{\{invoiceStatus\}\}</p>
+<p>Invoice Reference: \{\{invoiceUrl\}\}</p>
+`;

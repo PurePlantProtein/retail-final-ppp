@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -6,11 +5,22 @@ import { useCart } from '@/contexts/CartContext';
 import { useShipping } from '@/contexts/ShippingContext';
 import { Order, ShippingOption, ShippingAddress } from '@/types/product';
 import { calculateShippingOptions } from '@/services/shippingService';
-import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/services/emailService';
+import { 
+  sendOrderConfirmationEmail, 
+  sendAdminOrderNotification, 
+  sendDispatchOrderNotification, 
+  sendAccountsOrderNotification 
+} from '@/services/emailService';
 import { normalizeOrder } from '@/utils/orderUtils';
 
 export const useCartCheckout = (userId?: string, userEmail?: string) => {
-  const { items, subtotal, clearCart, emailSettings } = useCart();
+  const { 
+    items, 
+    subtotal, 
+    clearCart, 
+    emailSettings 
+  } = useCart();
+  
   const { shippingAddress: savedShippingAddress, setShippingAddress } = useShipping();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -85,13 +95,18 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
 
   // Helper function to send order confirmation emails
   const sendOrderConfirmationEmails = async (order: Order) => {
-    let customerEmailSent = false;
-    let adminEmailSent = false;
+    let emailResults = {
+      customerEmailSent: false,
+      adminEmailSent: false,
+      dispatchEmailSent: false,
+      accountsEmailSent: false
+    };
     
+    // Send customer email
     if (emailSettings.notifyCustomer && userEmail) {
       try {
-        const customerResult = await sendOrderConfirmationEmail(order, userEmail);
-        customerEmailSent = customerResult.success;
+        const customerResult = await sendOrderConfirmationEmail(order, userEmail, 'customer');
+        emailResults.customerEmailSent = customerResult.success;
         console.log('Customer email result:', customerResult);
         if (!customerResult.success) {
           toast({
@@ -104,17 +119,40 @@ export const useCartCheckout = (userId?: string, userEmail?: string) => {
       }
     }
     
-    if (emailSettings.notifyAdmin) {
+    // Send admin (sales) email
+    if (emailSettings.notifyAdmin && emailSettings.adminEmail) {
       try {
         const adminResult = await sendAdminOrderNotification(order, emailSettings.adminEmail);
-        adminEmailSent = adminResult.success;
+        emailResults.adminEmailSent = adminResult.success;
         console.log('Admin email result:', adminResult);
       } catch (error) {
         console.error("Error sending admin email:", error);
       }
     }
     
-    return { customerEmailSent, adminEmailSent };
+    // Send dispatch email
+    if (emailSettings.notifyDispatch && emailSettings.dispatchEmail) {
+      try {
+        const dispatchResult = await sendDispatchOrderNotification(order, emailSettings.dispatchEmail);
+        emailResults.dispatchEmailSent = dispatchResult.success;
+        console.log('Dispatch email result:', dispatchResult);
+      } catch (error) {
+        console.error("Error sending dispatch email:", error);
+      }
+    }
+    
+    // Send accounts email
+    if (emailSettings.notifyAccounts && emailSettings.accountsEmail) {
+      try {
+        const accountsResult = await sendAccountsOrderNotification(order, emailSettings.accountsEmail);
+        emailResults.accountsEmailSent = accountsResult.success;
+        console.log('Accounts email result:', accountsResult);
+      } catch (error) {
+        console.error("Error sending accounts email:", error);
+      }
+    }
+    
+    return emailResults;
   };
 
   // Create and save order function

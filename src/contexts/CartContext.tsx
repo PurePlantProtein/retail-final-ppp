@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Product } from '@/types/product';
@@ -11,8 +10,16 @@ type CartItem = {
 // Added email notification settings
 type EmailSettings = {
   adminEmail: string;
+  dispatchEmail?: string;
+  accountsEmail?: string;
   notifyAdmin: boolean;
+  notifyDispatch?: boolean;
+  notifyAccounts?: boolean;
   notifyCustomer: boolean;
+  customerTemplate?: string;
+  adminTemplate?: string;
+  dispatchTemplate?: string;
+  accountsTemplate?: string;
 };
 
 type CartContextType = {
@@ -40,7 +47,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>(() => {
     const savedSettings = localStorage.getItem('emailSettings');
-    return savedSettings ? JSON.parse(savedSettings) : defaultEmailSettings;
+    return savedSettings ? JSON.parse(savedSettings) : {
+      adminEmail: 'sales@ppprotein.com.au',
+      dispatchEmail: '',
+      accountsEmail: '',
+      notifyAdmin: true,
+      notifyDispatch: false,
+      notifyAccounts: false,
+      notifyCustomer: true,
+      customerTemplate: '',
+      adminTemplate: '',
+      dispatchTemplate: '',
+      accountsTemplate: ''
+    };
   });
   const { toast } = useToast();
 
@@ -67,10 +86,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [emailSettings]);
 
   const updateEmailSettings = (settings: Partial<EmailSettings>) => {
-    setEmailSettings(prevSettings => ({
-      ...prevSettings,
-      ...settings
-    }));
+    setEmailSettings(prev => {
+      const updated = { ...prev, ...settings };
+      localStorage.setItem('emailSettings', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // Mock email sending function - in a real app, this would call a backend API
