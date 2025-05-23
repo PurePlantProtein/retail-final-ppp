@@ -24,6 +24,10 @@ port = 54325
 # Enable CAPTCHA protection
 enable_captcha = true
 captcha_provider = "hcaptcha"
+# Enable leaked password protection
+enable_leaked_password_protection = true
+# Set OTP expiry time to 1 hour (3600 seconds) as recommended
+otp_expiry_seconds = 3600
 
 [storage]
 enabled = true
@@ -38,4 +42,3 @@ enabled = true
 
 [functions.send-order-email]
 verify_jwt = true
-
