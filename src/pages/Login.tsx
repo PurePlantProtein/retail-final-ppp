@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -87,11 +88,21 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      // For development, try direct login first without captcha
+      // This will work if captcha verification is disabled in Supabase
       await login(email, password);
-      // Navigation happens in useEffect when user state changes
     } catch (error: any) {
-      setErrorMessage(error.message || "Invalid login credentials");
-      console.error(error);
+      console.error("Login error:", error);
+      
+      // If we get a captcha error, show a more specific message
+      if (error.message?.includes('captcha') || error.message?.includes('CAPTCHA')) {
+        setErrorMessage("Captcha verification failed. Please try again or use another browser. For development, you can disable CAPTCHA in Supabase settings.");
+        
+        // For production, you would use the Supabase Auth UI or implement hCaptcha directly
+        // See: https://supabase.com/docs/guides/auth/auth-captcha
+      } else {
+        setErrorMessage(error.message || "Invalid login credentials");
+      }
     } finally {
       setIsLoading(false);
     }
