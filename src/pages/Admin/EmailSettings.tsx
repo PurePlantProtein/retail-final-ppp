@@ -9,9 +9,11 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Mail, CheckCircle2 } from 'lucide-react';
+import { Mail, CheckCircle2, Edit2, Save } from 'lucide-react';
 import { sendOrderConfirmationEmail } from '@/services/emailService';
 import { mapProductForClient } from '@/utils/productUtils';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const EmailSettings = () => {
   const { emailSettings, updateEmailSettings } = useCart();
@@ -21,12 +23,53 @@ const EmailSettings = () => {
   const [notifyCustomer, setNotifyCustomer] = useState(emailSettings.notifyCustomer);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<null | 'success' | 'error'>(null);
+  
+  // Email templates state
+  const [customerTemplate, setCustomerTemplate] = useState(`
+<h1>Order Confirmation</h1>
+<p>Thank you for your order!</p>
+<p>Order ID: {{orderId}}</p>
+<div>
+  <h3>Order Details:</h3>
+  <ul>
+    {{#each items}}
+    <li>{{product.name}} - Quantity: {{quantity}} - ${{product.price}}</li>
+    {{/each}}
+  </ul>
+</div>
+<p>Total: ${{total}}</p>
+<p>Payment Method: {{paymentMethod}}</p>
+<p>Thank you for shopping with us!</p>
+  `);
+  
+  const [adminTemplate, setAdminTemplate] = useState(`
+<h1>New Order Notification</h1>
+<p>A new order has been placed.</p>
+<p>Order ID: {{orderId}}</p>
+<p>Customer: {{userName}} ({{email}})</p>
+<div>
+  <h3>Order Details:</h3>
+  <ul>
+    {{#each items}}
+    <li>{{product.name}} - Quantity: {{quantity}} - ${{product.price}}</li>
+    {{/each}}
+  </ul>
+</div>
+<p>Total: ${{total}}</p>
+<p>Payment Method: {{paymentMethod}}</p>
+  `);
+  
+  const [editingTemplate, setEditingTemplate] = useState(false);
+  const [currentTab, setCurrentTab] = useState("customer");
 
   const handleSaveSettings = () => {
+    // Save email notification settings
     updateEmailSettings({
       adminEmail,
       notifyAdmin,
-      notifyCustomer
+      notifyCustomer,
+      customerTemplate,
+      adminTemplate
     });
 
     toast({
@@ -200,33 +243,93 @@ const EmailSettings = () => {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Email Templates</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Email Templates</span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setEditingTemplate(!editingTemplate)}
+                >
+                  {editingTemplate ? (
+                    <><Save className="mr-2 h-4 w-4" /> Done Editing</>
+                  ) : (
+                    <><Edit2 className="mr-2 h-4 w-4" /> Edit Templates</>
+                  )}
+                </Button>
+              </CardTitle>
               <CardDescription>
-                Information about the email templates used for order notifications
+                Customize the email templates used for order notifications
               </CardDescription>
             </CardHeader>
             <CardContent className="text-left">
-              <div className="space-y-4">
-                <div className="p-4 border rounded-md">
-                  <h3 className="font-medium mb-1">Order Confirmation Email</h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Sent to customers when they place an order. Includes order details, shipping information, and payment status.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Sender: <strong>orders@retail.ppprotein.com.au</strong>
-                  </p>
-                </div>
-
-                <div className="p-4 border rounded-md">
-                  <h3 className="font-medium mb-1">Admin Notification Email</h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Sent to the admin email address when a new order is received. Includes all order details and customer information.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Sender: <strong>orders@retail.ppprotein.com.au</strong>
-                  </p>
-                </div>
-              </div>
+              <Tabs value={currentTab} onValueChange={setCurrentTab}>
+                <TabsList className="mb-4">
+                  <TabsTrigger value="customer">Customer Template</TabsTrigger>
+                  <TabsTrigger value="admin">Admin Template</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="customer">
+                  {editingTemplate ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="customerTemplate">Customer Order Confirmation Template</Label>
+                      <Textarea
+                        id="customerTemplate"
+                        value={customerTemplate}
+                        onChange={(e) => setCustomerTemplate(e.target.value)}
+                        className="min-h-[300px] font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Available variables: {{orderId}}, {{userName}}, {{email}}, {{total}}, {{paymentMethod}}, 
+                        {{items}} - use {{#each items}} to iterate through items.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-4 border rounded-md">
+                      <h3 className="font-medium mb-1">Order Confirmation Email</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Sent to customers when they place an order. Includes order details, shipping information, and payment status.
+                      </p>
+                      <div className="text-xs bg-slate-50 p-3 rounded border max-h-[200px] overflow-y-auto">
+                        <pre className="whitespace-pre-wrap">{customerTemplate}</pre>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-4">
+                        Sender: <strong>orders@retail.ppprotein.com.au</strong>
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="admin">
+                  {editingTemplate ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="adminTemplate">Admin Notification Template</Label>
+                      <Textarea
+                        id="adminTemplate"
+                        value={adminTemplate}
+                        onChange={(e) => setAdminTemplate(e.target.value)}
+                        className="min-h-[300px] font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Available variables: {{orderId}}, {{userName}}, {{email}}, {{total}}, {{paymentMethod}}, 
+                        {{items}} - use {{#each items}} to iterate through items.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-4 border rounded-md">
+                      <h3 className="font-medium mb-1">Admin Notification Email</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Sent to the admin email address when a new order is received. Includes all order details and customer information.
+                      </p>
+                      <div className="text-xs bg-slate-50 p-3 rounded border max-h-[200px] overflow-y-auto">
+                        <pre className="whitespace-pre-wrap">{adminTemplate}</pre>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-4">
+                        Sender: <strong>orders@retail.ppprotein.com.au</strong>
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
