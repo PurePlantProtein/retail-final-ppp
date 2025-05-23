@@ -1,3 +1,4 @@
+
 import { Product, Order, OrderStatus, AminoAcid, NutritionalValue } from '@/types/product';
 
 // Mock data for products
@@ -22,12 +23,12 @@ let productsList: Product[] = [
       { name: "Protein", perServing: "25g", per100g: "83g" },
       { name: "Carbs", perServing: "3g", per100g: "10g" },
       { name: "Fat", perServing: "1g", per100g: "3g" }
-    ] as NutritionalValue[],
+    ],
     amino_acid_profile: [
       { name: "Leucine", amount: "2.5g" },
       { name: "Isoleucine", amount: "1.5g" },
       { name: "Valine", amount: "1.5g" }
-    ] as AminoAcid[]
+    ]
   },
   {
     id: '2',
@@ -48,8 +49,8 @@ let productsList: Product[] = [
     nutritional_info: [
       { name: "Creatine", perServing: "3g", per100g: "100g" },
       { name: "Calories", perServing: "0", per100g: "0" }
-    ] as NutritionalValue[],
-    amino_acid_profile: [] as AminoAcid[]
+    ],
+    amino_acid_profile: []
   },
   {
     id: '3',
@@ -70,12 +71,12 @@ let productsList: Product[] = [
     nutritional_info: [
       { name: "Calories", perServing: "10", per100g: "100" },
       { name: "BCAAs", perServing: "5g", per100g: "50g" }
-    ] as NutritionalValue[],
+    ],
     amino_acid_profile: [
       { name: "Leucine", amount: "2g" },
       { name: "Isoleucine", amount: "1g" },
       { name: "Valine", amount: "1g" }
-    ] as AminoAcid[]
+    ]
   },
   {
     id: '4',
@@ -93,13 +94,13 @@ let productsList: Product[] = [
     number_of_servings: 40,
     serving_size: '10g',
     ingredients: 'Beta-Alanine, Citrulline Malate, Caffeine Anhydrous, L-Theanine, Natural Flavors, Sucralose',
-    nutritional_info: {
-      calories: 15,
-      beta_alanine: 3,
-      citrulline_malate: 6,
-      caffeine: 200
-    },
-    amino_acid_profile: {}
+    nutritional_info: [
+      { name: "Calories", perServing: "15", per100g: "150" },
+      { name: "Beta-Alanine", perServing: "3g", per100g: "30g" },
+      { name: "Citrulline Malate", perServing: "6g", per100g: "60g" },
+      { name: "Caffeine", perServing: "200mg", per100g: "2000mg" }
+    ],
+    amino_acid_profile: []
   },
   {
     id: '5',
@@ -117,17 +118,17 @@ let productsList: Product[] = [
     number_of_servings: 30,
     serving_size: '30g',
     ingredients: 'Pea Protein, Brown Rice Protein, Chia Seed Protein, Natural Flavors, Stevia',
-    nutritional_info: {
-      calories: 110,
-      protein: 22,
-      carbs: 4,
-      fat: 2
-    },
-    amino_acid_profile: {
-      leucine: 2,
-      isoleucine: 1,
-      valine: 1
-    }
+    nutritional_info: [
+      { name: "Calories", perServing: "110", per100g: "366" },
+      { name: "Protein", perServing: "22g", per100g: "73g" },
+      { name: "Carbs", perServing: "4g", per100g: "13g" },
+      { name: "Fat", perServing: "2g", per100g: "7g" }
+    ],
+    amino_acid_profile: [
+      { name: "Leucine", amount: "2g" },
+      { name: "Isoleucine", amount: "1g" },
+      { name: "Valine", amount: "1g" }
+    ]
   },
   {
     id: '6',
@@ -145,11 +146,11 @@ let productsList: Product[] = [
     number_of_servings: 80,
     serving_size: '5g',
     ingredients: 'L-Glutamine',
-    nutritional_info: {
-      calories: 0,
-      glutamine: 5
-    },
-    amino_acid_profile: {}
+    nutritional_info: [
+      { name: "Calories", perServing: "0", per100g: "0" },
+      { name: "Glutamine", perServing: "5g", per100g: "100g" }
+    ],
+    amino_acid_profile: []
   },
   {
     id: '7',
@@ -167,17 +168,17 @@ let productsList: Product[] = [
     number_of_servings: 30,
     serving_size: '30g',
     ingredients: 'Micellar Casein, Natural Flavors, Sucralose',
-    nutritional_info: {
-      calories: 120,
-      protein: 24,
-      carbs: 4,
-      fat: 1
-    },
-    amino_acid_profile: {
-      leucine: 2.3,
-      isoleucine: 1.4,
-      valine: 1.3
-    }
+    nutritional_info: [
+      { name: "Calories", perServing: "120", per100g: "400" },
+      { name: "Protein", perServing: "24g", per100g: "80g" },
+      { name: "Carbs", perServing: "4g", per100g: "13g" },
+      { name: "Fat", perServing: "1g", per100g: "3g" }
+    ],
+    amino_acid_profile: [
+      { name: "Leucine", amount: "2.3g" },
+      { name: "Isoleucine", amount: "1.4g" },
+      { name: "Valine", amount: "1.3g" }
+    ]
   },
   {
     id: '8',
@@ -195,17 +196,17 @@ let productsList: Product[] = [
     number_of_servings: 16,
     serving_size: '155g',
     ingredients: 'Maltodextrin, Whey Protein Concentrate, Natural Flavors, Sucralose',
-    nutritional_info: {
-      calories: 600,
-      protein: 30,
-      carbs: 120,
-      fat: 5
-    },
-    amino_acid_profile: {
-      leucine: 3,
-      isoleucine: 2,
-      valine: 2
-    }
+    nutritional_info: [
+      { name: "Calories", perServing: "600", per100g: "387" },
+      { name: "Protein", perServing: "30g", per100g: "19g" },
+      { name: "Carbs", perServing: "120g", per100g: "77g" },
+      { name: "Fat", perServing: "5g", per100g: "3g" }
+    ],
+    amino_acid_profile: [
+      { name: "Leucine", amount: "3g" },
+      { name: "Isoleucine", amount: "2g" },
+      { name: "Valine", amount: "2g" }
+    ]
   },
   {
     id: '9',
@@ -223,13 +224,13 @@ let productsList: Product[] = [
     number_of_servings: 50,
     serving_size: '10g',
     ingredients: 'Collagen Peptides',
-    nutritional_info: {
-      calories: 35,
-      protein: 9,
-      carbs: 0,
-      fat: 0
-    },
-    amino_acid_profile: {}
+    nutritional_info: [
+      { name: "Calories", perServing: "35", per100g: "350" },
+      { name: "Protein", perServing: "9g", per100g: "90g" },
+      { name: "Carbs", perServing: "0g", per100g: "0g" },
+      { name: "Fat", perServing: "0g", per100g: "0g" }
+    ],
+    amino_acid_profile: []
   },
   {
     id: '10',
@@ -247,12 +248,12 @@ let productsList: Product[] = [
     number_of_servings: 120,
     serving_size: '1 softgel',
     ingredients: 'Fish Oil, EPA, DHA',
-    nutritional_info: {
-      calories: 10,
-      epa: 180,
-      dha: 120
-    },
-    amino_acid_profile: {}
+    nutritional_info: [
+      { name: "Calories", perServing: "10", per100g: "833" },
+      { name: "EPA", perServing: "180mg", per100g: "15000mg" },
+      { name: "DHA", perServing: "120mg", per100g: "10000mg" }
+    ],
+    amino_acid_profile: []
   }
 ];
 
@@ -362,7 +363,8 @@ let ordersList: Order[] = [
       phone: '555-987-6543'
     },
     notes: 'Leave package at the front door.',
-    invoiceUrl: 'https://example.com/invoice/102.pdf'
+    invoiceUrl: 'https://example.com/invoice/102.pdf',
+    updatedAt: '2024-07-05T14:30:00.000Z'
   },
   {
     id: '103',
@@ -386,7 +388,8 @@ let ordersList: Order[] = [
       country: 'USA',
       phone: '555-123-4567'
     },
-    notes: 'Call before delivery.'
+    notes: 'Call before delivery.',
+    updatedAt: '2024-07-10T19:45:00.000Z'
   },
   {
     id: '104',
@@ -410,7 +413,8 @@ let ordersList: Order[] = [
       country: 'USA',
       phone: '555-456-7890'
     },
-    notes: 'Deliver to the back entrance.'
+    notes: 'Deliver to the back entrance.',
+    updatedAt: '2024-07-15T16:45:00.000Z'
   },
   {
     id: '105',
@@ -434,7 +438,8 @@ let ordersList: Order[] = [
       country: 'USA',
       phone: '555-987-6543'
     },
-    notes: 'Cancelled by customer.'
+    notes: 'Cancelled by customer.',
+    updatedAt: '2024-07-20T13:30:00.000Z'
   }
 ];
 

@@ -7,15 +7,44 @@ import { Json } from '@/integrations/supabase/types';
  * and ensures proper type casting for JSON fields
  */
 export const mapProductForClient = (product: any): Product => {
+  if (!product) return {} as Product;
+  
+  // Handle conversion of JSON types
+  let aminoAcidProfile: AminoAcid[] | null = null;
+  if (product.amino_acid_profile) {
+    if (Array.isArray(product.amino_acid_profile)) {
+      aminoAcidProfile = product.amino_acid_profile;
+    } else if (typeof product.amino_acid_profile === 'object') {
+      // Convert object format to array format if needed
+      aminoAcidProfile = Object.entries(product.amino_acid_profile).map(([name, amount]) => ({
+        name,
+        amount: typeof amount === 'number' ? `${amount}g` : amount as string
+      }));
+    }
+  }
+  
+  let nutritionalInfo: NutritionalValue[] | null = null;
+  if (product.nutritional_info) {
+    if (Array.isArray(product.nutritional_info)) {
+      nutritionalInfo = product.nutritional_info;
+    } else if (typeof product.nutritional_info === 'object') {
+      // Convert object format to array format if needed
+      nutritionalInfo = Object.entries(product.nutritional_info).map(([name, value]) => ({
+        name,
+        perServing: typeof value === 'number' ? `${value}g` : value as string,
+        per100g: typeof value === 'number' ? `${value * 100 / 30}g` : value as string 
+      }));
+    }
+  }
+  
   return {
     ...product,
     minQuantity: product.min_quantity,
     bagSize: product.bag_size,
     numberOfServings: product.number_of_servings,
     servingSize: product.serving_size,
-    // Cast JSON types correctly
-    aminoAcidProfile: product.amino_acid_profile as unknown as AminoAcid[] | null,
-    nutritionalInfo: product.nutritional_info as unknown as NutritionalValue[] | null,
+    aminoAcidProfile: aminoAcidProfile,
+    nutritionalInfo: nutritionalInfo,
   };
 };
 

@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -19,61 +12,47 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { useAuth } from '@/contexts/AuthContext';
-import { getOrders, updateOrderStatus, getOrderById, deleteOrder } from '@/services/mockData';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/use-toast';
 import { Order, OrderStatus } from '@/types/product';
-import { Eye, Edit, Trash2 } from 'lucide-react';
-import { useForm } from "react-hook-form";
+import { getOrders, updateOrderStatus, deleteOrder } from '@/services/mockData';
+import { formatDate, formatCurrency } from '@/utils/formatters';
 
 const OrdersManagement = () => {
-  const { isAdmin } = useAuth();
-  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 5;
-  
-  // State for order details modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
-  // State for edit order dialog
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  
-  // State for delete confirmation
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
-
-  // Form for editing orders
-  const editForm = useForm<{
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<{
     userName: string;
     status: OrderStatus;
     paymentMethod: string;
@@ -82,101 +61,40 @@ const OrdersManagement = () => {
   }>();
 
   useEffect(() => {
-    if (!isAdmin) {
-      navigate('/');
-      return;
-    }
-
-    const loadOrders = async () => {
+    const fetchOrders = async () => {
       try {
+        setIsLoading(true);
         const data = await getOrders();
         setOrders(data);
-        setIsLoading(false);
       } catch (error) {
         console.error('Error fetching orders:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load orders. Please try again.",
+        });
+      } finally {
         setIsLoading(false);
       }
     };
 
-    loadOrders();
-  }, [isAdmin, navigate]);
+    fetchOrders();
+  }, [toast]);
 
-  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      await updateOrderStatus(orderId, newStatus);
-      
-      // Update the local state to reflect the change
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
-      );
-      
-      // If the order is currently selected in the details view, update it there too
-      if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus });
-      }
-      
-      toast.success(`Order #${orderId} status updated to ${newStatus}`);
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
-    }
-  };
-
-  // Function to view order details
-  const handleViewOrderDetails = async (orderId: string) => {
-    try {
-      const order = await getOrderById(orderId);
-      if (order) {
-        setSelectedOrder(order);
-        setIsOrderDetailsOpen(true);
-      } else {
-        toast.error('Order not found');
-      }
-    } catch (error) {
-      console.error('Error fetching order details:', error);
-      toast.error('Failed to fetch order details');
-    }
-  };
-  
-  // Function to open edit dialog
-  const handleEditOrder = async (orderId: string) => {
-    try {
-      const order = await getOrderById(orderId);
-      if (order) {
-        setEditingOrder(order);
-        editForm.reset({
-          userName: order.userName,
-          status: order.status,
-          paymentMethod: order.paymentMethod,
-          invoiceUrl: order.invoiceUrl || '',
-          notes: order.notes || '',
-        });
-        setIsEditDialogOpen(true);
-      } else {
-        toast.error('Order not found');
-      }
-    } catch (error) {
-      console.error('Error fetching order details:', error);
-      toast.error('Failed to fetch order details');
-    }
-  };
-  
-  // Function to save edited order
-  const handleSaveOrderEdit = (data: { 
-    userName: string; 
-    status: OrderStatus; 
-    paymentMethod: string; 
-    invoiceUrl: string; 
-    notes: string; 
+  const handleOrderUpdate = async (data: {
+    userName: string;
+    status: OrderStatus;
+    paymentMethod: string;
+    invoiceUrl: string;
+    notes: string;
   }) => {
-    if (!editingOrder) return;
-    
     try {
-      // In a real app, this would call an API to update the order
+      setIsSubmitting(true);
+      
+      if (!selectedOrder) return;
+      
       const updatedOrder = {
-        ...editingOrder,
+        ...selectedOrder,
         userName: data.userName,
         status: data.status,
         paymentMethod: data.paymentMethod,
@@ -184,264 +102,273 @@ const OrdersManagement = () => {
         notes: data.notes,
       };
       
-      // Update orders list
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order.id === editingOrder.id ? updatedOrder : order
+      // Here you would call your API to update the order
+      // For now, let's just update the local state
+      setOrders(currentOrders => 
+        currentOrders.map(order => 
+          order.id === selectedOrder.id ? updatedOrder : order
         )
       );
       
-      // If the order is currently selected in the details view, update it there too
-      if (selectedOrder && selectedOrder.id === editingOrder.id) {
-        setSelectedOrder(updatedOrder);
-      }
-      
-      toast.success(`Order #${editingOrder.id} updated successfully`);
-      setIsEditDialogOpen(false);
+      setSelectedOrder(null);
+      setShowEditDialog(false);
+      toast({
+        title: "Order Updated",
+        description: `Order #${selectedOrder.id} has been updated successfully.`,
+      });
     } catch (error) {
-      console.error('Error updating order:', error);
-      toast.error('Failed to update order');
+      console.error("Error updating order:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "There was a problem updating the order.",
+      });
+    } finally {
+      setIsSubmitting(false);
+      reset();
     }
   };
-  
-  // Function to handle delete confirmation
-  const handleDeleteConfirm = async () => {
-    if (!orderToDelete) return;
+
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      setOrders(currentOrders => 
+        currentOrders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+      toast({
+        title: "Status Updated",
+        description: `Order #${orderId} status changed to ${newStatus}.`,
+      });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "There was a problem updating the order status.",
+      });
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!selectedOrder) return;
     
     try {
-      await deleteOrder(orderToDelete);
-      
-      // Update the orders list
-      setOrders(prevOrders => prevOrders.filter(order => order.id !== orderToDelete));
-      
-      toast.success(`Order #${orderToDelete} deleted successfully`);
-      setIsDeleteDialogOpen(false);
-      
-      // If the deleted order was being viewed, close the details dialog
-      if (selectedOrder && selectedOrder.id === orderToDelete) {
-        setIsOrderDetailsOpen(false);
-      }
+      setIsSubmitting(true);
+      await deleteOrder(selectedOrder.id);
+      setOrders(currentOrders => currentOrders.filter(order => order.id !== selectedOrder.id));
+      setSelectedOrder(null);
+      setShowDeleteDialog(false);
+      toast({
+        title: "Order Deleted",
+        description: `Order #${selectedOrder.id} has been deleted.`,
+      });
     } catch (error) {
-      console.error('Error deleting order:', error);
-      toast.error('Failed to delete order');
+      console.error("Error deleting order:", error);
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "There was a problem deleting the order.",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const getStatusColor = (status: Order['status']) => {
+  const openEditDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setValue("userName", order.userName);
+    setValue("status", order.status);
+    setValue("paymentMethod", order.paymentMethod);
+    setValue("invoiceUrl", order.invoiceUrl || "");
+    setValue("notes", order.notes || "");
+    setShowEditDialog(true);
+  };
+
+  const openDeleteDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setShowDeleteDialog(true);
+  };
+
+  const viewOrderDetails = (orderId: string) => {
+    navigate(`/admin/orders/${orderId}`);
+  };
+
+  const getStatusBadgeVariant = (status: OrderStatus) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'outline';
       case 'processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'secondary';
       case 'shipped':
-        return 'bg-purple-100 text-purple-800';
+        return 'default';
       case 'delivered':
-        return 'bg-green-100 text-green-800';
+        return 'success';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'destructive';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'outline';
     }
   };
 
-  // Calculate pagination
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = orders.slice(indexOfFirstOrder, indexOfLastOrder);
-  const totalPages = Math.ceil(orders.length / ordersPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  if (!isAdmin) return null;
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">
+          <h1 className="text-3xl font-bold mb-6">Orders Management</h1>
+          <Card>
+            <CardHeader>
+              <CardTitle>Orders</CardTitle>
+              <CardDescription>Manage customer orders</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex items-center space-x-4">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[250px]" />
+                      <Skeleton className="h-4 w-[200px]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Order Management</h1>
-        </div>
-
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-6">Orders Management</h1>
+        
         <Card>
           <CardHeader>
-            <CardTitle>All Orders</CardTitle>
+            <CardTitle>Orders</CardTitle>
+            <CardDescription>Manage customer orders</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <p>Loading orders...</p>
-            ) : orders.length > 0 ? (
-              <>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Order ID</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {currentOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium">{order.id}</TableCell>
-                          <TableCell>{order.userName}</TableCell>
-                          <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
-                          <TableCell>${order.total.toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(order.status)}>
-                              {order.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleViewOrderDetails(order.id)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleEditOrder(order.id)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => {
-                                  setOrderToDelete(order.id);
-                                  setIsDeleteDialogOpen(true);
-                                }}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                              <Select
-                                defaultValue={order.status}
-                                onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)}
-                              >
-                                <SelectTrigger className="w-[140px]">
-                                  <SelectValue placeholder="Update status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="pending">Pending</SelectItem>
-                                  <SelectItem value="processing">Processing</SelectItem>
-                                  <SelectItem value="shipped">Shipped</SelectItem>
-                                  <SelectItem value="delivered">Delivered</SelectItem>
-                                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <Pagination className="mt-6">
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => paginate(Math.max(currentPage - 1, 1))}
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                        />
-                      </PaginationItem>
-                      
-                      {Array.from({ length: totalPages }).map((_, index) => {
-                        const pageNumber = index + 1;
-                        // Only show a few pages to avoid clutter
-                        if (
-                          pageNumber === 1 ||
-                          pageNumber === totalPages ||
-                          (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                        ) {
-                          return (
-                            <PaginationItem key={pageNumber}>
-                              <PaginationLink 
-                                isActive={pageNumber === currentPage}
-                                onClick={() => paginate(pageNumber)}
-                              >
-                                {pageNumber}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        } else if (
-                          pageNumber === currentPage - 2 ||
-                          pageNumber === currentPage + 2
-                        ) {
-                          return (
-                            <PaginationItem key={pageNumber}>
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                        }
-                        return null;
-                      })}
-                      
-                      <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => paginate(Math.min(currentPage + 1, totalPages))}
-                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                )}
-              </>
+            {orders.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No orders found</p>
+              </div>
             ) : (
-              <p>No orders found.</p>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order ID</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.id}</TableCell>
+                        <TableCell>{order.userName}</TableCell>
+                        <TableCell>{formatDate(order.createdAt)}</TableCell>
+                        <TableCell>{formatCurrency(order.total)}</TableCell>
+                        <TableCell>
+                          <Select
+                            defaultValue={order.status}
+                            onValueChange={(value: OrderStatus) => handleStatusChange(order.id, value)}
+                          >
+                            <SelectTrigger className="w-[130px]">
+                              <SelectValue>
+                                <Badge variant={getStatusBadgeVariant(order.status)}>
+                                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                </Badge>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="processing">Processing</SelectItem>
+                              <SelectItem value="shipped">Shipped</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>{order.paymentMethod}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => viewOrderDetails(order.id)}
+                            >
+                              View
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openEditDialog(order)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => openDeleteDialog(order)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Order Details Modal */}
-      <Dialog open={isOrderDetailsOpen} onOpenChange={setIsOrderDetailsOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
-            <DialogDescription>
-              Order #{selectedOrder?.id} • {selectedOrder?.createdAt ? new Date(selectedOrder.createdAt).toLocaleDateString() : ''}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <div className="space-y-6 py-4">
-              {/* Customer Information */}
-              <div>
-                <h3 className="text-lg font-medium">Customer Information</h3>
-                <p className="text-sm text-gray-500">{selectedOrder.userName}</p>
-                {selectedOrder.email && (
-                  <p className="text-sm text-gray-500">{selectedOrder.email}</p>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Order Status */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">Status</h3>
-                  <Badge className={getStatusColor(selectedOrder.status)}>
-                    {selectedOrder.status}
-                  </Badge>
+        
+        {/* Edit Order Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Order</DialogTitle>
+              <DialogDescription>
+                Make changes to the order details.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit(handleOrderUpdate)}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="userName" className="text-right">
+                    Customer
+                  </label>
+                  <Input
+                    id="userName"
+                    className="col-span-3"
+                    {...register("userName", { required: "Customer name is required" })}
+                  />
+                  {errors.userName && (
+                    <p className="col-span-3 col-start-2 text-sm text-red-500">
+                      {errors.userName.message}
+                    </p>
+                  )}
                 </div>
-                <div className="mt-2">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="status" className="text-right">
+                    Status
+                  </label>
                   <Select
-                    value={selectedOrder.status}
-                    onValueChange={(value) => handleStatusChange(selectedOrder.id, value as OrderStatus)}
+                    defaultValue={selectedOrder?.status}
+                    onValueChange={(value) => setValue("status", value as OrderStatus)}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Update status" />
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Pending</SelectItem>
@@ -452,262 +379,69 @@ const OrdersManagement = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <Separator />
-
-              {/* Order Items */}
-              <div>
-                <h3 className="text-lg font-medium mb-4">Order Items</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedOrder.items.map((item, index) => (
-                      <TableRow key={`${selectedOrder.id}-${item.product.id}-${index}`}>
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <img 
-                              src={item.product.image} 
-                              alt={item.product.name} 
-                              className="h-10 w-10 rounded-md object-cover"
-                            />
-                            <div>
-                              <p className="font-medium">{item.product.name}</p>
-                              <p className="text-xs text-gray-500">#{item.product.id}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>${item.product.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
-                          ${(item.product.price * item.quantity).toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-right font-medium">Total</TableCell>
-                      <TableCell className="text-right font-bold">
-                        ${selectedOrder.total.toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {/* Shipping Address (if available) */}
-              {selectedOrder.shippingAddress && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Shipping Address</h3>
-                    <div className="bg-gray-50 p-4 rounded-md">
-                      <p className="font-medium">{selectedOrder.shippingAddress.name}</p>
-                      <p>{selectedOrder.shippingAddress.street}</p>
-                      <p>
-                        {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.postalCode}
-                      </p>
-                      <p>{selectedOrder.shippingAddress.country}</p>
-                      <p>Phone: {selectedOrder.shippingAddress.phone}</p>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Payment Information */}
-              <Separator />
-              <div>
-                <h3 className="text-lg font-medium mb-2">Payment Information</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <p className="text-gray-500">Payment Method:</p>
-                  <p className="capitalize">{selectedOrder.paymentMethod.replace('-', ' ')}</p>
-                  
-                  <p className="text-gray-500">Payment Status:</p>
-                  <p className="capitalize">{selectedOrder.invoiceUrl || 'pending'}</p>
-                  
-                  {selectedOrder.invoiceUrl && (
-                    <>
-                      <p className="text-gray-500">Invoice URL:</p>
-                      <p>{selectedOrder.invoiceUrl}</p>
-                    </>
-                  )}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="paymentMethod" className="text-right">
+                    Payment
+                  </label>
+                  <Input
+                    id="paymentMethod"
+                    className="col-span-3"
+                    {...register("paymentMethod")}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="invoiceUrl" className="text-right">
+                    Invoice URL
+                  </label>
+                  <Input
+                    id="invoiceUrl"
+                    className="col-span-3"
+                    {...register("invoiceUrl")}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="notes" className="text-right">
+                    Notes
+                  </label>
+                  <Textarea
+                    id="notes"
+                    className="col-span-3"
+                    {...register("notes")}
+                  />
                 </div>
               </div>
-
-              {/* Additional Notes (if available) */}
-              {selectedOrder.notes && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Notes</h3>
-                    <p className="text-gray-700">{selectedOrder.notes}</p>
-                  </div>
-                </>
-              )}
-
-              <div className="flex justify-end gap-2 mt-6">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsOrderDetailsOpen(false)}
-                >
-                  Close
-                </Button>
-                <Button 
-                  variant="default"
-                  onClick={() => {
-                    setIsOrderDetailsOpen(false);
-                    handleEditOrder(selectedOrder.id);
-                  }}
-                >
-                  Edit
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Order Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Order</DialogTitle>
-            <DialogDescription>
-              Make changes to order #{editingOrder?.id}
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleSaveOrderEdit)} className="space-y-4">
-              <FormField
-                control={editForm.control}
-                name="userName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={editForm.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={editForm.control}
-                name="paymentMethod"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Method</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select payment method" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="credit-card">Credit Card</SelectItem>
-                        <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="paypal">PayPal</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={editForm.control}
-                name="invoiceUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Invoice URL</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={editForm.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">
-                  Save Changes
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
               </DialogFooter>
             </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Order</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete order #{orderToDelete}? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="pt-4">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Delete Order Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete order #{selectedOrder?.id}? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteOrder} disabled={isSubmitting}>
+                {isSubmitting ? "Deleting..." : "Delete Order"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </Layout>
   );
 };
