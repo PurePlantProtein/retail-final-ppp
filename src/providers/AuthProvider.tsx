@@ -3,10 +3,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthContextType, UserProfile } from '@/types/auth';
+import { AuthContextType, UserProfile, AppRole } from '@/types/auth';
 import { useFetchProfile } from '@/hooks/useFetchProfile';
-import { cleanupAuthState, isAdminUser } from '@/utils/authUtils';
+import { cleanupAuthState } from '@/utils/authUtils';
 import { isSessionExpired, SESSION_TIMEOUT_MS } from '@/utils/securityUtils';
+import { fetchUserRoles } from '@/services/userService';
 
 // Create the context with undefined as initial value
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -14,6 +15,7 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [lastActivity, setLastActivity] = useState<number>(Date.now());
@@ -22,12 +24,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Use the custom hook to fetch profile
   const { fetchProfile } = useFetchProfile(user, setProfile);
 
-  // Add a function to refresh the profile
+  // Add a function to refresh the profile and roles
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user.id);
+      await loadUserRoles(user.id);
     }
   };
+
+  // Function to load user roles
+  const loadUserRoles = async (userId: string) => {
+    try {
+      const userRoles = await fetchUserRoles(userId);
+      setRoles(userRoles);
+    } catch (error) {
+      console.error("Error loading user roles:", error);
+      setRoles([]);
+    }
+  };
+
+  // Role checking functions
+  const hasRole = useCallback((role: AppRole) => {
+    return roles.includes(role);
+  }, [roles]);
+  
+  const isAdmin = useCallback(() => {
+    return hasRole('admin');
+  }, [hasRole]);
+  
+  const isDistributor = useCallback(() => {
+    return hasRole('distributor');
+  }, [hasRole]);
+  
+  const isRetailer = useCallback(() => {
+    return hasRole('retailer');
+  }, [hasRole]);
 
   // Track user activity to handle session timeouts
   const updateActivity = useCallback(() => {
@@ -65,25 +96,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearInterval(interval);
       events.forEach(event => window.removeEventListener(event, updateActivity));
     };
-  }, [session, updateActivity]);
+  }, [session, updateActivity, toast]);
 
   useEffect(() => {
     const setupAuth = async () => {
       // Set up auth state listener FIRST
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (event, session) => {
+        async (event, session) => {
           console.log('Auth state changed:', event, session?.user?.email);
           setUser(session?.user ?? null);
           setSession(session); // Store the session
+          
           if (session?.user) {
             // Use setTimeout to prevent auth deadlocks
-            setTimeout(() => {
-              fetchProfile(session.user.id);
+            setTimeout(async () => {
+              await fetchProfile(session.user.id);
+              await loadUserRoles(session.user.id);
             }, 0);
+            
             // Update the activity timestamp
             updateActivity();
           } else {
             setProfile(null);
+            setRoles([]);
           }
         }
       );
@@ -96,6 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           await fetchProfile(session.user.id);
+          await loadUserRoles(session.user.id);
           updateActivity(); // Update activity timestamp on session retrieval
         }
       } catch (err) {
@@ -233,7 +269,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     signup,
     logout,
-    isAdmin: isAdminUser(user),
+    isAdmin: isAdmin(),
+    isDistributor: isDistributor(),
+    isRetailer: isRetailer(),
+    hasRole,
+    roles,
     session,
     refreshProfile,
   };

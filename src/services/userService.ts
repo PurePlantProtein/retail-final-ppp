@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '@/types/auth';
+import { UserProfile, AppRole } from '@/types/auth';
 
 /**
  * Fetch all users from Supabase
@@ -17,6 +17,27 @@ export const fetchUsers = async () => {
       throw profilesError;
     }
 
+    // Fetch roles for each user
+    const userIds = profiles.map(profile => profile.id);
+    const { data: userRoles, error: userRolesError } = await supabase
+      .from('user_roles')
+      .select('user_id, role')
+      .in('user_id', userIds);
+    
+    if (userRolesError) {
+      console.error('Error fetching user roles:', userRolesError);
+      throw userRolesError;
+    }
+
+    // Create a map of user IDs to their roles
+    const userRolesMap = new Map();
+    userRoles.forEach(role => {
+      if (!userRolesMap.has(role.user_id)) {
+        userRolesMap.set(role.user_id, []);
+      }
+      userRolesMap.get(role.user_id).push(role.role);
+    });
+
     // Map profiles to the expected user format
     const users = profiles.map(profile => ({
       id: profile.id,
@@ -28,7 +49,9 @@ export const fetchUsers = async () => {
       phone: profile.phone || '',
       payment_terms: profile.payment_terms || 14,
       status: 'Active', // Default status, could be stored in profile in the future
-      role: profile.email?.includes('admin') ? 'admin' : 'retailer' // Simple role inference, could be more sophisticated
+      role: userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('admin') ? 'admin' : 
+            userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('distributor') ? 'distributor' : 'retailer',
+      roles: userRolesMap.get(profile.id) || ['retailer'], // Include all roles
     }));
     
     return users;
@@ -40,13 +63,58 @@ export const fetchUsers = async () => {
 };
 
 /**
+ * Fetch roles for a specific user
+ */
+export const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error fetching user roles:', error);
+      throw error;
+    }
+
+    return data.map(item => item.role as AppRole);
+  } catch (error) {
+    console.error('Error in fetchUserRoles:', error);
+    return [];
+  }
+};
+
+/**
  * Update user role
  */
 export const updateUserRole = async (userId: string, newRole: string) => {
   try {
-    // In a real application, we might store roles in a separate table
-    // For now, we just log the change
-    console.log(`Updating user ${userId} role to ${newRole}`);
+    // First check if the role already exists for this user
+    const { data: existingRole, error: checkError } = await supabase
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('role', newRole);
+
+    if (checkError) {
+      console.error('Error checking existing role:', checkError);
+      throw checkError;
+    }
+
+    // If role doesn't exist, add it
+    if (!existingRole || existingRole.length === 0) {
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: newRole
+        });
+      
+      if (insertError) {
+        console.error('Error adding user role:', insertError);
+        throw insertError;
+      }
+    }
     
     return {
       success: true,
@@ -54,6 +122,51 @@ export const updateUserRole = async (userId: string, newRole: string) => {
     };
   } catch (error) {
     console.error('Error updating user role:', error);
+    throw error;
+  }
+};
+
+/**
+ * Remove a user role
+ */
+export const removeUserRole = async (userId: string, roleToRemove: string) => {
+  try {
+    // Never remove the last role from a user
+    const { data: existingRoles, error: checkError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    if (checkError) {
+      console.error('Error checking existing roles:', checkError);
+      throw checkError;
+    }
+
+    // If this is the only role, don't remove it
+    if (existingRoles.length <= 1) {
+      return {
+        success: false,
+        message: "Cannot remove the user's only role"
+      };
+    }
+
+    const { error } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId)
+      .eq('role', roleToRemove);
+    
+    if (error) {
+      console.error('Error removing user role:', error);
+      throw error;
+    }
+    
+    return {
+      success: true,
+      message: `Role ${roleToRemove} removed successfully`
+    };
+  } catch (error) {
+    console.error('Error removing user role:', error);
     throw error;
   }
 };

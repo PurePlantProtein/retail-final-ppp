@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import {
@@ -34,6 +34,7 @@ const UsersManagement = () => {
     setIsCreateUserDialogOpen,
     fetchUsers,
     updateUserRole,
+    removeUserRole,
     toggleUserStatus,
     updateUserDetails,
     deleteUser,
@@ -104,6 +105,7 @@ const UsersManagement = () => {
             <UsersTable 
               users={filteredUsers} 
               updateUserRole={updateUserRole}
+              removeUserRole={removeUserRole}
               toggleUserStatus={toggleUserStatus}
               updateUserDetails={updateUserDetails}
               deleteUser={deleteUser}

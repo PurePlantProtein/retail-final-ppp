@@ -2,7 +2,7 @@
 import React from 'react';
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash } from "lucide-react";
+import { MoreHorizontal, Edit, Trash, Plus, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { User } from '@/components/admin/UsersTable';
+import { AppRole } from '@/types/auth';
 
 interface UserTableRowProps {
   user: User;
   currentUser: any;
   updateUserRole: (userId: string, newRole: string) => Promise<void>;
+  removeUserRole?: (userId: string, roleToRemove: string) => Promise<void>;
   toggleUserStatus: (userId: string, currentStatus: string) => Promise<void>;
   onEditClick: (user: User) => void;
   onDeleteClick: (user: User) => void;
@@ -27,6 +29,7 @@ const UserTableRow: React.FC<UserTableRowProps> = ({
   user,
   currentUser,
   updateUserRole,
+  removeUserRole,
   toggleUserStatus,
   onEditClick,
   onDeleteClick
@@ -40,6 +43,8 @@ const UserTableRow: React.FC<UserTableRowProps> = ({
     switch (role) {
       case 'admin':
         return 'bg-purple-500 hover:bg-purple-600';
+      case 'distributor':
+        return 'bg-orange-500 hover:bg-orange-600';
       case 'retailer':
         return 'bg-blue-500 hover:bg-blue-600';
       default:
@@ -64,8 +69,19 @@ const UserTableRow: React.FC<UserTableRowProps> = ({
     await toggleUserStatus(user.id, user.status);
   };
 
-  const handleUpdateRole = async (role: string) => {
+  const handleUpdateRole = async (role: AppRole) => {
     await updateUserRole(user.id, role);
+  };
+
+  const handleRemoveRole = async (role: AppRole) => {
+    if (removeUserRole) {
+      await removeUserRole(user.id, role);
+    }
+  };
+  
+  // Check if user has a specific role
+  const hasRole = (role: AppRole) => {
+    return user.roles && user.roles.includes(role);
   };
 
   return (
@@ -74,9 +90,24 @@ const UserTableRow: React.FC<UserTableRowProps> = ({
       <TableCell>{user.email}</TableCell>
       <TableCell>{user.business_type || '-'}</TableCell>
       <TableCell>
-        <Badge className={`${getRoleBadgeColor(user.role)}`}>
-          {user.role}
-        </Badge>
+        <div className="flex flex-wrap gap-1">
+          {user.roles && user.roles.map((role) => (
+            <Badge key={role} className={`${getRoleBadgeColor(role)} flex items-center gap-1`}>
+              {role}
+              {canEditRole && removeUserRole && role !== 'retailer' && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveRole(role as AppRole);
+                  }}
+                  className="ml-1 hover:bg-red-400 rounded-full p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </Badge>
+          ))}
+        </div>
       </TableCell>
       <TableCell>
         <Badge className={`${getStatusBadgeColor(user.status)}`}>
@@ -108,13 +139,25 @@ const UserTableRow: React.FC<UserTableRowProps> = ({
             {canEditRole && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => handleUpdateRole('admin')} disabled={user.role === 'admin'}>
-                  Make Admin
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleUpdateRole('retailer')} disabled={user.role === 'retailer'}>
-                  Make Retailer
-                </DropdownMenuItem>
+                <DropdownMenuLabel>Manage Roles</DropdownMenuLabel>
+                
+                {!hasRole('admin') && (
+                  <DropdownMenuItem onClick={() => handleUpdateRole('admin')}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Admin Role
+                  </DropdownMenuItem>
+                )}
+                
+                {!hasRole('distributor') && (
+                  <DropdownMenuItem onClick={() => handleUpdateRole('distributor')}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Distributor Role
+                  </DropdownMenuItem>
+                )}
+                
+                {!hasRole('retailer') && (
+                  <DropdownMenuItem onClick={() => handleUpdateRole('retailer')}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Retailer Role
+                  </DropdownMenuItem>
+                )}
               </>
             )}
             

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { User } from '@/components/admin/UsersTable';
 import * as userService from '@/services/userService';
-import { UserProfile } from '@/types/auth';
+import { UserProfile, AppRole } from '@/types/auth';
 
 export const useUsersManagement = () => {
   const { toast } = useToast();
@@ -44,16 +44,42 @@ export const useUsersManagement = () => {
         description: `User role updated to ${newRole}.`,
       });
       
-      setUsers(prevUsers => 
-        prevUsers.map(u => 
-          u.id === userId ? { ...u, role: newRole } : u
-        )
-      );
+      // Refresh the user list to reflect the new roles
+      fetchUsers();
     } catch (error) {
       console.error('Error updating user role:', error);
       toast({
         title: "Error",
         description: "Failed to update user role.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeUserRole = async (userId: string, roleToRemove: string) => {
+    try {
+      const result = await userService.removeUserRole(userId, roleToRemove);
+      
+      if (result.success) {
+        toast({
+          title: "Role Removed",
+          description: `${roleToRemove} role has been removed.`,
+        });
+        
+        // Refresh the user list to reflect the updated roles
+        fetchUsers();
+      } else {
+        toast({
+          title: "Cannot Remove Role",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error removing user role:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove user role.",
         variant: "destructive",
       });
     }
@@ -160,8 +186,9 @@ export const useUsersManagement = () => {
         (user.business_type?.toLowerCase().includes(searchTerm.toLowerCase()) || '');
       
       if (activeTab === 'all-users') return matchesSearch;
-      if (activeTab === 'retailers') return matchesSearch && user.role === 'retailer';
-      if (activeTab === 'admins') return matchesSearch && user.role === 'admin';
+      if (activeTab === 'retailers') return matchesSearch && user.roles && user.roles.includes('retailer');
+      if (activeTab === 'distributors') return matchesSearch && user.roles && user.roles.includes('distributor');
+      if (activeTab === 'admins') return matchesSearch && user.roles && user.roles.includes('admin');
       return matchesSearch;
     });
   };
@@ -177,6 +204,7 @@ export const useUsersManagement = () => {
     setIsCreateUserDialogOpen,
     fetchUsers,
     updateUserRole,
+    removeUserRole,
     toggleUserStatus,
     updateUserDetails,
     deleteUser,

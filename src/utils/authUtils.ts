@@ -1,9 +1,6 @@
 
 import { User } from '@supabase/supabase-js';
 
-// For development purposes only - to identify admin users
-export const ADMIN_EMAILS = ['admin@example.com', 'myles@sparkflare.com.au'];
-
 // Helper function to clean up auth state
 export const cleanupAuthState = () => {
   // Remove standard auth tokens
@@ -21,9 +18,3 @@ export const cleanupAuthState = () => {
     }
   });
 };
-
-// Utility function to check if a user is an admin
-export const isAdminUser = (user: User | null): boolean => {
-  return ADMIN_EMAILS.includes(user?.email || '');
-};
-

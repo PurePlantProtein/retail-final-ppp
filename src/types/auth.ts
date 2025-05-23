@@ -1,6 +1,8 @@
 
 import { User, Session } from '@supabase/supabase-js';
 
+export type AppRole = 'admin' | 'distributor' | 'retailer';
+
 export type UserProfile = {
   id: string;
   business_name: string;
@@ -8,8 +10,11 @@ export type UserProfile = {
   phone?: string;
   business_type?: string;
   email?: string;
-  role: 'admin' | 'retailer';
   payment_terms?: number;
+};
+
+export type UserWithRoles = UserProfile & {
+  roles: AppRole[];
 };
 
 export type AuthContextType = {
@@ -20,6 +25,10 @@ export type AuthContextType = {
   signup: (email: string, password: string, businessName: string, businessType?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: boolean;
+  isDistributor: boolean;
+  isRetailer: boolean;
+  hasRole: (role: AppRole) => boolean;
+  roles: AppRole[];
   session: Session | null;
   refreshProfile: () => Promise<void>;
 };

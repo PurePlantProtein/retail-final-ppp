@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Table,
@@ -14,6 +15,7 @@ import EditUserDialog from '@/components/admin/users/EditUserDialog';
 import DeleteUserDialog from '@/components/admin/users/DeleteUserDialog';
 import LoadingState from '@/components/admin/users/LoadingState';
 import EmptyState from '@/components/admin/users/EmptyState';
+import { AppRole } from '@/types/auth';
 
 export interface User {
   id: string;
@@ -23,6 +25,7 @@ export interface User {
   business_type: string;
   status: string;
   role: string;
+  roles?: AppRole[];
   business_address?: string;
   phone?: string;
   payment_terms?: number;
@@ -31,6 +34,7 @@ export interface User {
 interface UsersTableProps {
   users: User[];
   updateUserRole: (userId: string, newRole: string) => Promise<void>;
+  removeUserRole?: (userId: string, roleToRemove: string) => Promise<void>;
   toggleUserStatus: (userId: string, currentStatus: string) => Promise<void>;
   updateUserDetails?: (userId: string, userData: Partial<User>) => Promise<void>;
   deleteUser?: (userId: string) => Promise<void>;
@@ -40,7 +44,8 @@ interface UsersTableProps {
 
 const UsersTable: React.FC<UsersTableProps> = ({ 
   users, 
-  updateUserRole, 
+  updateUserRole,
+  removeUserRole,
   toggleUserStatus, 
   updateUserDetails,
   deleteUser,
@@ -141,7 +146,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
             <TableHead>Business Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Business Type</TableHead>
-            <TableHead>Role</TableHead>
+            <TableHead>Roles</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Payment Terms</TableHead>
             <TableHead>Actions</TableHead>
@@ -154,6 +159,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
               user={user}
               currentUser={currentUser}
               updateUserRole={updateUserRole}
+              removeUserRole={removeUserRole}
               toggleUserStatus={toggleUserStatus}
               onEditClick={handleEditClick}
               onDeleteClick={handleDeleteClick}

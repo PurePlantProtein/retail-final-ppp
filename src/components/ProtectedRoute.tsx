@@ -4,17 +4,20 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { isSessionExpired } from '@/utils/securityUtils';
+import { AppRole } from '@/types/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiresAdmin?: boolean;
+  requiredRoles?: AppRole[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children,
-  requiresAdmin = false 
+  requiresAdmin = false,
+  requiredRoles = []
 }) => {
-  const { user, isLoading, isAdmin, session } = useAuth();
+  const { user, isLoading, isAdmin, hasRole, session } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -34,19 +37,37 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return;
       }
     }
-  }, [session, navigate]);
+  }, [session, navigate, toast]);
   
-  // Check for admin requirement
+  // Check for role requirements
   useEffect(() => {
-    if (user && requiresAdmin && !isAdmin) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access this page.",
-        variant: "destructive",
-      });
-      navigate('/products');
+    if (user) {
+      // Check admin requirement
+      if (requiresAdmin && !isAdmin) {
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to access this page.",
+          variant: "destructive",
+        });
+        navigate('/products');
+        return;
+      }
+
+      // Check for specific roles
+      if (requiredRoles.length > 0) {
+        const hasRequiredRole = requiredRoles.some(role => hasRole(role));
+        if (!hasRequiredRole) {
+          toast({
+            title: "Access Denied",
+            description: "You don't have the required role to access this page.",
+            variant: "destructive",
+          });
+          navigate('/products');
+          return;
+        }
+      }
     }
-  }, [user, requiresAdmin, isAdmin, navigate]);
+  }, [user, requiresAdmin, isAdmin, requiredRoles, hasRole, navigate, toast]);
 
   // Show nothing while checking authentication status
   if (isLoading) {
@@ -68,6 +89,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Redirect if admin route but not admin
   if (requiresAdmin && !isAdmin) {
     return <Navigate to="/products" replace />;
+  }
+
+  // Redirect if required role is not met
+  if (requiredRoles.length > 0) {
+    const hasRequiredRole = requiredRoles.some(role => hasRole(role));
+    if (!hasRequiredRole) {
+      return <Navigate to="/products" replace />;
+    }
   }
 
   return <>{children}</>;
