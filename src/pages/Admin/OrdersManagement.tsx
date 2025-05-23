@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -81,13 +82,13 @@ const OrdersManagement = () => {
     fetchOrders();
   }, [toast]);
 
-  const handleOrderUpdate = async (data: {
+  const handleOrderUpdate: SubmitHandler<{
     userName: string;
     status: OrderStatus;
     paymentMethod: string;
     invoiceUrl: string;
     notes: string;
-  }) => {
+  }> = async (data) => {
     try {
       setIsSubmitting(true);
       
@@ -204,7 +205,8 @@ const OrdersManagement = () => {
       case 'shipped':
         return 'default';
       case 'delivered':
-        return 'success';
+        // Changed from 'success' to 'default' as 'success' is not a valid variant
+        return 'default';
       case 'cancelled':
         return 'destructive';
       default:
