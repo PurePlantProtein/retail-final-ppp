@@ -21,13 +21,13 @@ port = 54324
 [auth]
 enabled = true
 port = 54325
+# Set a more secure OTP expiry time of 1 hour (3600 seconds)
+otp_expiry_seconds = 3600
 # Disable CAPTCHA protection temporarily
 enable_captcha = false
 captcha_provider = "hcaptcha"
 # Enable leaked password protection
 enable_leaked_password_protection = true
-# Set OTP expiry time to 1 hour (3600 seconds) as recommended
-otp_expiry_seconds = 3600
 
 [storage]
 enabled = true
