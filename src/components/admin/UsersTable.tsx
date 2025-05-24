@@ -42,7 +42,7 @@ interface UsersTableProps {
   currentUser: any;
   isLoading: boolean;
   onEditClick?: (user: User) => void;
-  onPricingTierChange?: (tierId: string) => Promise<boolean>;
+  onPricingTierChange?: (tierId: string) => Promise<boolean | void>; // Updated to accept boolean or void
   currentPricingTierId?: string | null;
 }
 

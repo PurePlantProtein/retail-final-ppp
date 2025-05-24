@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Minus } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { calculateTieredPrice } from '@/types/pricing';
 
 interface ProductPurchaseFormProps {
   user: any;
@@ -18,6 +19,7 @@ interface ProductPurchaseFormProps {
   handleAddToCart: () => void;
   minQuantity?: number;
   categoryMOQ?: number;
+  discountPercentage?: number; // Added for tiered pricing
 }
 
 const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
@@ -31,10 +33,14 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
   handleQuantityChange,
   handleAddToCart,
   minQuantity = 1,
-  categoryMOQ
+  categoryMOQ,
+  discountPercentage
 }) => {
   // Determine the effective minimum quantity (product-specific or category-based)
   const effectiveMinQuantity = categoryMOQ || minQuantity || 1;
+  
+  // Calculate the tiered price if a discount is applicable
+  const actualPrice = calculateTieredPrice(price, discountPercentage);
 
   // Show warning if the quantity is below the minimum
   useEffect(() => {
@@ -85,6 +91,11 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
               * Minimum order: {effectiveMinQuantity} units for {category} products
             </div>
           )}
+          {discountPercentage && (
+            <div className="mb-4 text-sm text-green-600 font-medium">
+              * You have a special pricing discount of {discountPercentage}% applied!
+            </div>
+          )}
           <div className="flex flex-col space-y-3">
             <Button 
               size="lg"
@@ -99,7 +110,12 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
           </div>
           {quantity > 0 && (
             <p className="mt-4 text-sm text-gray-600 text-left">
-              Total: ${(price * quantity).toFixed(2)}
+              Total: ${(actualPrice * quantity).toFixed(2)}
+              {price !== actualPrice && (
+                <span className="ml-2 text-green-600">
+                  (Saved: ${((price - actualPrice) * quantity).toFixed(2)})
+                </span>
+              )}
             </p>
           )}
         </>

@@ -50,8 +50,8 @@ const UsersManagement = () => {
   const { userTier, assignUserTier, removeUserTier } = useUserPricingTier(selectedUserId);
 
   // Handle pricing tier assignment
-  const handlePricingTierChange = async (tierId: string) => {
-    if (!selectedUserId) return false;
+  const handlePricingTierChange = async (tierId: string): Promise<boolean | void> => {
+    if (!selectedUserId) return;
     
     if (tierId === "") {
       return await removeUserTier();

@@ -23,7 +23,7 @@ interface EditUserDialogProps {
   editFormData: Partial<User>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onFormSubmit: () => Promise<void>;
-  onPricingTierChange?: (tierId: string) => Promise<void>;
+  onPricingTierChange?: (tierId: string) => Promise<boolean | void>;
   currentPricingTierId?: string | null;
 }
 

@@ -12,13 +12,15 @@ export const usePricingTiers = () => {
   const fetchPricingTiers = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Use type casting to work around type issues with Supabase client
       const { data, error } = await supabase
         .from('pricing_tiers')
         .select('*')
         .order('discount_percentage', { ascending: false });
 
       if (error) throw error;
-      setTiers(data || []);
+      // Cast the data to the correct type
+      setTiers((data as unknown) as PricingTier[]);
     } catch (error) {
       console.error('Error fetching pricing tiers:', error);
       toast({
@@ -33,9 +35,10 @@ export const usePricingTiers = () => {
 
   const createPricingTier = useCallback(async (tierData: Partial<PricingTier>) => {
     try {
+      // Use type casting to work around type issues with Supabase client
       const { data, error } = await supabase
         .from('pricing_tiers')
-        .insert(tierData)
+        .insert(tierData as any)
         .select()
         .single();
 
@@ -47,7 +50,7 @@ export const usePricingTiers = () => {
       });
       
       fetchPricingTiers();
-      return data;
+      return (data as unknown) as PricingTier;
     } catch (error) {
       console.error('Error creating pricing tier:', error);
       toast({
@@ -63,7 +66,7 @@ export const usePricingTiers = () => {
     try {
       const { error } = await supabase
         .from('pricing_tiers')
-        .update(tierData)
+        .update(tierData as any)
         .eq('id', id);
 
       if (error) throw error;
@@ -138,6 +141,7 @@ export const useUserPricingTier = (userId: string | undefined) => {
     
     setIsLoading(true);
     try {
+      // Use type casting to work around type issues with Supabase client
       const { data, error } = await supabase
         .from('user_pricing_tiers')
         .select('*, tier:pricing_tiers(*)')
@@ -145,7 +149,7 @@ export const useUserPricingTier = (userId: string | undefined) => {
         .maybeSingle();
 
       if (error) throw error;
-      setUserTier(data);
+      setUserTier((data as unknown) as UserPricingTier);
     } catch (error) {
       console.error('Error fetching user pricing tier:', error);
       setUserTier(null);
@@ -167,7 +171,7 @@ export const useUserPricingTier = (userId: string | undefined) => {
         // Update existing tier
         const { error } = await supabase
           .from('user_pricing_tiers')
-          .update({ tier_id: tierId })
+          .update({ tier_id: tierId } as any)
           .eq('user_id', userId);
         
         if (error) throw error;
@@ -175,7 +179,7 @@ export const useUserPricingTier = (userId: string | undefined) => {
         // Create new user tier
         const { error } = await supabase
           .from('user_pricing_tiers')
-          .insert({ user_id: userId, tier_id: tierId });
+          .insert({ user_id: userId, tier_id: tierId } as any);
         
         if (error) throw error;
       }
