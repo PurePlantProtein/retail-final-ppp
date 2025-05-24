@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -13,6 +12,8 @@ import ProductImage from '@/components/product/ProductImage';
 import ProductSpecifications from '@/components/product/ProductSpecifications';
 import ProductPurchaseForm from '@/components/product/ProductPurchaseForm';
 import ProductDetailTabs from '@/components/product/ProductDetailTabs';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,18 @@ const ProductDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
+  const navigate = useNavigate();
+
+  // Add a utility function to get category MOQ
+  const getCategoryMOQ = (category: string): number | undefined => {
+    // Here we define the MOQ values for different categories
+    const categoryMOQs: Record<string, number> = {
+      'Protein Powder': 12,
+      // Add more categories with their MOQ as needed
+    };
+
+    return categoryMOQs[category];
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -42,29 +55,49 @@ const ProductDetail = () => {
     fetchProduct();
   }, [id]);
 
+  // Handle quantity changes in the component
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuantity = parseInt(e.target.value);
+    if (!isNaN(newQuantity) && newQuantity >= 1) {
+      setQuantity(newQuantity);
+    }
+  };
+
   const handleIncrementQuantity = () => {
-    if (product) {
-      setQuantity(prev => prev + 1);
+    const categoryMOQ = getCategoryMOQ(product?.category || '');
+    const minQty = Math.max(product?.min_quantity || 1, categoryMOQ || 1);
+    
+    if (quantity < (product?.stock || 0)) {
+      setQuantity(prevQty => prevQty + 1);
     }
   };
 
   const handleDecrementQuantity = () => {
-    if (product && quantity > 1) {
-      setQuantity(prev => prev - 1);
-    }
-  };
-
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (product && !isNaN(value) && value >= 1) {
-      setQuantity(value);
+    const categoryMOQ = getCategoryMOQ(product?.category || '');
+    const minQty = Math.max(product?.min_quantity || 1, categoryMOQ || 1);
+    
+    if (quantity > minQty) {
+      setQuantity(prevQty => prevQty - 1);
     }
   };
 
   const handleAddToCart = () => {
-    if (product) {
-      addToCart(product, quantity);
+    if (!product) return;
+    
+    const categoryMOQ = getCategoryMOQ(product.category || '');
+    const minQty = Math.max(product.min_quantity || 1, categoryMOQ || 1);
+    
+    if (quantity < minQty) {
+      toast({
+        title: "Minimum quantity not met",
+        description: `You must order at least ${minQty} units of this product.`,
+        variant: "destructive"
+      });
+      return;
     }
+    
+    addToCart(product, quantity);
+    navigate('/cart');
   };
 
   if (isLoading) {
@@ -139,11 +172,14 @@ const ProductDetail = () => {
               user={user}
               price={product.price}
               stock={product.stock}
+              category={product.category || ''}
               quantity={quantity}
               handleIncrementQuantity={handleIncrementQuantity}
               handleDecrementQuantity={handleDecrementQuantity}
               handleQuantityChange={handleQuantityChange}
               handleAddToCart={handleAddToCart}
+              minQuantity={product.min_quantity}
+              categoryMOQ={getCategoryMOQ(product.category || '')}
             />
           </div>
         </div>

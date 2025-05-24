@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Users, Settings, BarChart3, Mail, Truck } from 'lucide-react';
+import { Package, Users, Settings, BarChart3, Mail, Truck, DollarSign } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -177,6 +177,35 @@ const Admin = () => {
               <Button asChild variant="outline" className="w-full">
                 <Link to="/admin/settings">
                   Manage Settings
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          {/* Pricing Tiers */}
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-primary/10">
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Pricing Tiers
+              </CardTitle>
+              <CardDescription>
+                Manage custom pricing for users
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/admin/pricing-tiers" className="text-primary hover:underline">
+                    Manage Pricing Tiers
+                  </Link>
+                </li>
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <Button asChild variant="outline" className="w-full">
+                <Link to="/admin/pricing-tiers">
+                  Manage Pricing Tiers
                 </Link>
               </Button>
             </CardFooter>

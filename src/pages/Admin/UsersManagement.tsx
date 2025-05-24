@@ -1,7 +1,8 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import { AdminLayout } from '@/components/AdminLayout';
 import {
   Card,
   CardContent,
@@ -19,6 +20,7 @@ import UserSearchAndFilter from '@/components/admin/users/UserSearchAndFilter';
 import UserApprovalRequests from '@/components/admin/users/UserApprovalRequests';
 import { useUsersManagement } from '@/hooks/useUsersManagement';
 import { AppRole } from '@/types/auth';
+import { useUserPricingTier } from '@/hooks/usePricingTiers';
 
 const UsersManagement = () => {
   const { isAdmin, user, session } = useAuth();
@@ -42,6 +44,26 @@ const UsersManagement = () => {
     getFilteredUsers,
     users
   } = useUsersManagement();
+
+  // Store the currently selected user for pricing tier updates
+  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
+  const { userTier, assignUserTier, removeUserTier } = useUserPricingTier(selectedUserId);
+
+  // Handle pricing tier assignment
+  const handlePricingTierChange = async (tierId: string) => {
+    if (!selectedUserId) return false;
+    
+    if (tierId === "") {
+      return await removeUserTier();
+    }
+    
+    return await assignUserTier(tierId);
+  };
+
+  // Prepare user edit to include pricing tier info
+  const handleEditUser = (user: any) => {
+    setSelectedUserId(user.id);
+  };
 
   useEffect(() => {
     if (!user) {
@@ -80,57 +102,62 @@ const UsersManagement = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto py-8 px-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 text-left">
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
-            <Button 
-              onClick={() => setIsCreateUserDialogOpen(true)} 
-              className="flex items-center"
-            >
-              <Plus className="mr-1" /> Create User
-            </Button>
+      <AdminLayout>
+        <div className="max-w-6xl mx-auto py-8 px-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 text-left">
+            <h1 className="text-3xl font-bold">User Management</h1>
+            <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
+              <Button 
+                onClick={() => setIsCreateUserDialogOpen(true)} 
+                className="flex items-center"
+              >
+                <Plus className="mr-1" /> Create User
+              </Button>
+            </div>
           </div>
+          
+          <Card className="mb-8">
+            <CardHeader className="text-left">
+              <CardTitle>Users</CardTitle>
+              <CardDescription>
+                Manage user accounts, roles, and permissions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UserSearchAndFilter 
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+              />
+              
+              <UsersTable 
+                users={filteredUsers} 
+                updateUserRole={updateUserRole}
+                removeUserRole={removeUserRole}
+                toggleUserStatus={handleToggleStatus}
+                updateUserDetails={updateUserDetails}
+                deleteUser={deleteUser}
+                currentUser={user}
+                isLoading={isLoading}
+                onEditClick={(user) => handleEditUser(user)}
+                currentPricingTierId={userTier?.tier_id}
+                onPricingTierChange={handlePricingTierChange}
+              />
+            </CardContent>
+          </Card>
+
+          <UserApprovalRequests />
+
+          {/* Create User Dialog */}
+          <CreateUserDialog
+            isOpen={isCreateUserDialogOpen}
+            onClose={() => setIsCreateUserDialogOpen(false)}
+            onUserCreated={fetchUsers}
+            session={session}
+          />
         </div>
-        
-        <Card className="mb-8">
-          <CardHeader className="text-left">
-            <CardTitle>Users</CardTitle>
-            <CardDescription>
-              Manage user accounts, roles, and permissions.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <UserSearchAndFilter 
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-            />
-            
-            <UsersTable 
-              users={filteredUsers} 
-              updateUserRole={updateUserRole}
-              removeUserRole={removeUserRole}
-              toggleUserStatus={handleToggleStatus}
-              updateUserDetails={updateUserDetails}
-              deleteUser={deleteUser}
-              currentUser={user}
-              isLoading={isLoading}
-            />
-          </CardContent>
-        </Card>
-
-        <UserApprovalRequests />
-
-        {/* Create User Dialog */}
-        <CreateUserDialog
-          isOpen={isCreateUserDialogOpen}
-          onClose={() => setIsCreateUserDialogOpen(false)}
-          onUserCreated={fetchUsers}
-          session={session}
-        />
-      </div>
+      </AdminLayout>
     </Layout>
   );
 };

@@ -1,3 +1,4 @@
+
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -33,6 +34,7 @@ import ShippingSettings from '@/pages/Admin/ShippingSettings';
 import EmailSettings from '@/pages/Admin/EmailSettings';
 import Marketing from '@/pages/Marketing';
 import MarketingMaterialsManagement from '@/pages/Admin/MarketingMaterialsManagement';
+import PricingTiersManagement from '@/pages/Admin/PricingTiersManagement';
 import NotFound from '@/pages/NotFound';
 import FAQ from '@/pages/FAQ';
 import Terms from '@/pages/Terms';
@@ -84,6 +86,7 @@ function App() {
                 <Route path="/admin/shipping-settings" element={<ProtectedRoute requiresAdmin><ShippingSettings /></ProtectedRoute>} />
                 <Route path="/admin/email-settings" element={<ProtectedRoute requiresAdmin><EmailSettings /></ProtectedRoute>} />
                 <Route path="/admin/marketing" element={<ProtectedRoute requiresAdmin><MarketingMaterialsManagement /></ProtectedRoute>} />
+                <Route path="/admin/pricing-tiers" element={<ProtectedRoute requiresAdmin><PricingTiersManagement /></ProtectedRoute>} />
                 
                 {/* 404 route */}
                 <Route path="*" element={<NotFound />} />

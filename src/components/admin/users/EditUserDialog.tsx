@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { User } from '@/components/admin/UsersTable';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { usePricingTiers } from '@/hooks/usePricingTiers';
 
 interface EditUserDialogProps {
   isOpen: boolean;
@@ -21,6 +23,8 @@ interface EditUserDialogProps {
   editFormData: Partial<User>;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onFormSubmit: () => Promise<void>;
+  onPricingTierChange?: (tierId: string) => Promise<void>;
+  currentPricingTierId?: string | null;
 }
 
 const EditUserDialog: React.FC<EditUserDialogProps> = ({
@@ -30,7 +34,26 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   editFormData,
   onInputChange,
   onFormSubmit,
+  onPricingTierChange,
+  currentPricingTierId
 }) => {
+  const { tiers, isLoading: loadingTiers } = usePricingTiers();
+  const [selectedTierId, setSelectedTierId] = useState<string | undefined>(
+    currentPricingTierId || undefined
+  );
+
+  // Update selected tier when currentPricingTierId changes
+  useEffect(() => {
+    setSelectedTierId(currentPricingTierId || undefined);
+  }, [currentPricingTierId]);
+
+  const handleTierChange = async (value: string) => {
+    setSelectedTierId(value);
+    if (onPricingTierChange) {
+      await onPricingTierChange(value);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px]">
@@ -105,6 +128,30 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
               placeholder="Days (e.g. 14)"
             />
           </div>
+          {onPricingTierChange && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="pricing_tier" className="text-right">
+                Pricing Tier
+              </Label>
+              <Select
+                value={selectedTierId}
+                onValueChange={handleTierChange}
+                disabled={loadingTiers}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select pricing tier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Default (No special pricing)</SelectItem>
+                  {tiers.map((tier) => (
+                    <SelectItem key={tier.id} value={tier.id}>
+                      {tier.name} ({tier.discount_percentage}% discount)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="business_address" className="text-right">
               Address

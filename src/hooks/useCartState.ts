@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { CartItem, EmailSettings } from '@/types/cart';
@@ -17,6 +16,17 @@ export const defaultEmailSettings: EmailSettings = {
   adminTemplate: '',
   dispatchTemplate: '',
   accountsTemplate: ''
+};
+
+// Add the utility function for category MOQ
+const getCategoryMOQ = (category: string): number | undefined => {
+  // Define the MOQ values for different categories
+  const categoryMOQs: Record<string, number> = {
+    'Protein Powder': 12,
+    // Add more categories with their MOQ as needed
+  };
+
+  return categoryMOQs[category];
 };
 
 export function useCartState() {
@@ -67,6 +77,19 @@ export function useCartState() {
   }, []);
 
   const addToCart = useCallback((product: Product, quantity: number) => {
+    // Check for category MOQ
+    const categoryMOQ = getCategoryMOQ(product.category || '');
+    const minQty = Math.max(product.min_quantity || 1, categoryMOQ || 1);
+    
+    if (quantity < minQty) {
+      toast({
+        title: "Minimum quantity not met",
+        description: `You must order at least ${minQty} units of this ${product.category} product.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setItems(prevItems => {
       const existingItem = prevItems.find(item => item.product.id === product.id);
       

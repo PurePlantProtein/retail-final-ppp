@@ -1,19 +1,23 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Minus } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface ProductPurchaseFormProps {
   user: any;
   price: number;
   stock: number;
   quantity: number;
+  category: string;
   handleIncrementQuantity: () => void;
   handleDecrementQuantity: () => void;
   handleQuantityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleAddToCart: () => void;
+  minQuantity?: number;
+  categoryMOQ?: number;
 }
 
 const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
@@ -21,11 +25,28 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
   price,
   stock,
   quantity,
+  category,
   handleIncrementQuantity,
   handleDecrementQuantity,
   handleQuantityChange,
-  handleAddToCart
+  handleAddToCart,
+  minQuantity = 1,
+  categoryMOQ
 }) => {
+  // Determine the effective minimum quantity (product-specific or category-based)
+  const effectiveMinQuantity = categoryMOQ || minQuantity || 1;
+
+  // Show warning if the quantity is below the minimum
+  useEffect(() => {
+    if (quantity < effectiveMinQuantity) {
+      toast({
+        title: "Minimum order quantity",
+        description: `This ${category} requires a minimum order of ${effectiveMinQuantity} units.`,
+        variant: "default"
+      });
+    }
+  }, []);
+
   return (
     <div className="border-t pt-6">
       {user ? (
@@ -37,7 +58,7 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
                 variant="outline" 
                 size="icon" 
                 onClick={handleDecrementQuantity}
-                disabled={quantity <= 1}
+                disabled={quantity <= effectiveMinQuantity}
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -45,7 +66,7 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
                 type="number"
                 value={quantity}
                 onChange={handleQuantityChange}
-                min={1}
+                min={effectiveMinQuantity}
                 max={stock}
                 className="w-20 mx-2 text-center"
               />
@@ -59,11 +80,16 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
               </Button>
             </div>
           </div>
+          {categoryMOQ && (
+            <div className="mb-4 text-sm text-amber-600 font-medium">
+              * Minimum order: {effectiveMinQuantity} units for {category} products
+            </div>
+          )}
           <div className="flex flex-col space-y-3">
             <Button 
               size="lg"
               onClick={handleAddToCart}
-              disabled={quantity < 1 || quantity > stock}
+              disabled={quantity < effectiveMinQuantity || quantity > stock}
             >
               Add to Cart
             </Button>

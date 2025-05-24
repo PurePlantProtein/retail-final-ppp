@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Table,
@@ -28,6 +29,7 @@ export interface User {
   business_address?: string;
   phone?: string;
   payment_terms?: number;
+  pricing_tier_id?: string;
 }
 
 interface UsersTableProps {
@@ -39,6 +41,9 @@ interface UsersTableProps {
   deleteUser?: (userId: string) => Promise<boolean>;
   currentUser: any;
   isLoading: boolean;
+  onEditClick?: (user: User) => void;
+  onPricingTierChange?: (tierId: string) => Promise<boolean>;
+  currentPricingTierId?: string | null;
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({ 
@@ -49,7 +54,10 @@ const UsersTable: React.FC<UsersTableProps> = ({
   updateUserDetails,
   deleteUser,
   currentUser,
-  isLoading
+  isLoading,
+  onEditClick,
+  onPricingTierChange,
+  currentPricingTierId
 }) => {
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -78,6 +86,11 @@ const UsersTable: React.FC<UsersTableProps> = ({
       payment_terms: user.payment_terms
     });
     setIsEditDialogOpen(true);
+    
+    // Call the parent onEditClick if provided
+    if (onEditClick) {
+      onEditClick(user);
+    }
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -175,6 +188,8 @@ const UsersTable: React.FC<UsersTableProps> = ({
         editFormData={editFormData}
         onInputChange={handleEditInputChange}
         onFormSubmit={handleEditFormSubmit}
+        onPricingTierChange={onPricingTierChange}
+        currentPricingTierId={currentPricingTierId}
       />
 
       {/* Delete User Confirmation Dialog */}
