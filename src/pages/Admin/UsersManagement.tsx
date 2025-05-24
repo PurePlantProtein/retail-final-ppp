@@ -74,8 +74,7 @@ const UsersManagement = () => {
   }
 
   // Convert string status to boolean for toggleUserStatus
-  const handleToggleStatus = (userId: string, currentStatus: string) => {
-    const isActive = currentStatus !== 'Active';
+  const handleToggleStatus = (userId: string, isActive: boolean) => {
     return toggleUserStatus(userId, isActive);
   };
 
