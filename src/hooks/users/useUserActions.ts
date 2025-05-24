@@ -35,16 +35,26 @@ export const useUserActions = (fetchUsers: () => Promise<void>) => {
   
   const deleteUser = useCallback(async (userId: string) => {
     try {
-      // Delete user from auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) throw authError;
+      // We can only delete the profile, not the auth user without admin rights
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      // Remove user roles
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
 
       // Refresh the users list
       await fetchUsers();
 
       toast({
-        title: "User deleted",
-        description: "User deleted successfully.",
+        title: "User removed",
+        description: "User has been removed successfully.",
       });
       return true;
     } catch (error) {

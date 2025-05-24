@@ -61,7 +61,7 @@ const UsersManagement = () => {
       console.error('Failed to fetch users:', error);
       toast({
         title: "Error",
-        description: "Failed to load users. Using placeholder data instead.",
+        description: "Failed to load users. Please try again later.",
         variant: "destructive",
       });
     });

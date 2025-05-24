@@ -100,11 +100,9 @@ export const updateUserDetails = async (userId: string, userData: Partial<UserPr
  */
 export const deleteUser = async (userId: string) => {
   try {
-    console.log(`Request to delete user ${userId}`);
-    // In a production environment, you would need admin privileges 
-    // to delete users from auth.users
+    console.log(`Request to remove user ${userId}`);
     
-    // For now, we just remove their profile
+    // Remove user profile
     const { error } = await supabase
       .from('profiles')
       .delete()
@@ -115,12 +113,18 @@ export const deleteUser = async (userId: string) => {
       throw error;
     }
     
+    // Remove user roles
+    await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId);
+    
     return {
       success: true,
-      message: "User profile deleted successfully"
+      message: "User removed successfully"
     };
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('Error removing user:', error);
     throw error;
   }
 };

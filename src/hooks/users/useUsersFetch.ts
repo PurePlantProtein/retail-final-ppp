@@ -11,38 +11,45 @@ export const useUsersFetch = () => {
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch all users
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) throw authError;
-      
-      // Fetch profiles
+      // First, try to fetch profiles which contains user details
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
+      
       if (profilesError) throw profilesError;
-      
+
       // Fetch user roles
-      const { data: roles, error: rolesError } = await supabase
+      const { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
-        .select('*');
-      if (rolesError) throw rolesError;
+        .select('user_id, role');
       
-      const usersWithDetails = authUsers.users.map((user) => {
-        const profile = profiles?.find(p => p.id === user.id) || {};
-        const userRoles = roles?.filter(r => r.user_id === user.id).map(r => r.role) || [];
-        
-        return {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at,
-          last_sign_in_at: user.last_sign_in_at,
-          roles: userRoles,
-          isAdmin: userRoles.includes('admin'),
-          isDistributor: userRoles.includes('distributor'),
-          isRetailer: userRoles.includes('retailer'),
-          ...profile,
-        };
+      if (userRolesError) throw userRolesError;
+
+      // Create a map of user IDs to their roles
+      const userRolesMap = new Map();
+      userRoles.forEach(role => {
+        if (!userRolesMap.has(role.user_id)) {
+          userRolesMap.set(role.user_id, []);
+        }
+        userRolesMap.get(role.user_id).push(role.role);
       });
+
+      // Map profiles to users with roles
+      const usersWithDetails = profiles.map(profile => ({
+        id: profile.id,
+        email: profile.email || '',
+        created_at: profile.created_at,
+        business_name: profile.business_name || '',
+        business_type: profile.business_type || '',
+        business_address: profile.business_address || '',
+        phone: profile.phone || '',
+        payment_terms: profile.payment_terms || 14,
+        status: 'Active', // Default status
+        roles: userRolesMap.get(profile.id) || ['retailer'],
+        isAdmin: userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('admin'),
+        isDistributor: userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('distributor'),
+        isRetailer: userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('retailer'),
+      }));
       
       setUsers(usersWithDetails);
     } catch (error) {
