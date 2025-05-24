@@ -29,6 +29,11 @@ const CartItemList = ({
     );
   }
 
+  // Wrapper function to ensure we're passing the correct product ID
+  const handleRemoveItem = (productId: string) => {
+    onRemoveItem(productId);
+  };
+
   return (
     <div className="space-y-4">
       {items.map((item) => (
@@ -36,7 +41,7 @@ const CartItemList = ({
           key={item.product.id}
           product={item.product}
           quantity={item.quantity}
-          onRemove={onRemoveItem}
+          onRemove={handleRemoveItem}
           onUpdateQuantity={onUpdateQuantity}
         />
       ))}

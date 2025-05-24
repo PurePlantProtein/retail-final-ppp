@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import Layout from '@/components/Layout';
 import LoginRequired from '@/components/cart/LoginRequired';
 import EmptyCart from '@/components/cart/EmptyCart';
@@ -15,8 +15,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 const Cart = () => {
-  const cart = useCart();
-  const { items, totalItems, removeFromCart, updateQuantity, clearCart } = cart;
+  const { items, totalItems, removeFromCart, updateQuantity, clearCart, subtotal } = useCart();
   const { user } = useAuth();
   const {
     checkoutStep,
@@ -30,19 +29,15 @@ const Cart = () => {
     selectedShippingOption,
     setSelectedShippingOption,
     isLoadingShippingOptions,
-    subtotal,
     totalWithShipping,
     bankDetails
   } = useCartCheckout();
 
-  // Fix: Removing the extra arguments in setCheckoutStep call
   const goBackToCart = () => setCheckoutStep('cart');
-  
-  // Fix: Removing the extra arguments in setCheckoutStep call
   const goBackToShipping = () => setCheckoutStep('shipping');
 
   // If no items in cart, show empty cart view
-  if (totalItems === 0) { // Changed from itemCount to totalItems
+  if (totalItems === 0) {
     return (
       <Layout>
         <EmptyCart />

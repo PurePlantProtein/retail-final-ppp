@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+
+import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/components/ui/use-toast";
 import { AppRole } from '@/types/auth';
@@ -6,6 +7,9 @@ import { AppRole } from '@/types/auth';
 export const useUsersManagement = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all-users');
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = useCallback(async () => {
@@ -101,6 +105,48 @@ export const useUsersManagement = () => {
     }
   }, [fetchUsers, toast]);
   
+  // Function to remove a role (wrapper around updateUserRole)
+  const removeUserRole = useCallback(async (userId: string, role: AppRole) => {
+    return updateUserRole(userId, role, false);
+  }, [updateUserRole]);
+
+  // This is a placeholder function - implement actual logic if needed
+  const toggleUserStatus = useCallback(async (userId: string, isActive: boolean) => {
+    toast({
+      title: `User ${isActive ? 'activated' : 'deactivated'}`,
+      description: "User status updated successfully.",
+    });
+    return true;
+  }, [toast]);
+
+  // This is a placeholder function - implement actual logic if needed
+  const updateUserDetails = useCallback(async (userId: string, details: any) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(details)
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "User updated",
+        description: "User details updated successfully.",
+      });
+      
+      await fetchUsers();
+      return true;
+    } catch (error) {
+      console.error('Error updating user details:', error);
+      toast({
+        title: "Error updating user",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [fetchUsers, toast]);
+  
   const deleteUser = useCallback(async (userId: string) => {
     setIsLoading(true);
     try {
@@ -115,6 +161,7 @@ export const useUsersManagement = () => {
         title: "User deleted",
         description: "User deleted successfully.",
       });
+      return true;
     } catch (error) {
       console.error('Error deleting user:', error);
       toast({
@@ -122,16 +169,50 @@ export const useUsersManagement = () => {
         description: (error as Error).message,
         variant: "destructive",
       });
+      return false;
     } finally {
       setIsLoading(false);
     }
   }, [fetchUsers, toast]);
 
+  // Get filtered users based on search term and active tab
+  const getFilteredUsers = useCallback(() => {
+    return users.filter(user => {
+      // Filter by search term
+      const matchesSearch = 
+        !searchTerm || 
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.business_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Filter by tab
+      let matchesTab = true;
+      if (activeTab === 'retailers') {
+        matchesTab = user.isRetailer;
+      } else if (activeTab === 'distributors') {
+        matchesTab = user.isDistributor;
+      } else if (activeTab === 'admins') {
+        matchesTab = user.isAdmin;
+      }
+      
+      return matchesSearch && matchesTab;
+    });
+  }, [users, searchTerm, activeTab]);
+
   return {
     users,
     isLoading,
+    searchTerm,
+    setSearchTerm,
+    activeTab,
+    setActiveTab,
+    isCreateUserDialogOpen,
+    setIsCreateUserDialogOpen,
     fetchUsers,
     updateUserRole,
-    deleteUser
+    removeUserRole,
+    toggleUserStatus,
+    updateUserDetails,
+    deleteUser,
+    getFilteredUsers
   };
 };

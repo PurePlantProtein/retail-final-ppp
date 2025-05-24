@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Product } from '@/types/product';
 
@@ -7,7 +8,7 @@ type CartItem = {
   quantity: number;
 };
 
-// Added email notification settings
+// Email notification settings
 type EmailSettings = {
   adminEmail: string;
   dispatchEmail?: string;
@@ -38,29 +39,22 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 // Default email settings
 const defaultEmailSettings: EmailSettings = {
-  adminEmail: 'admin@pureplantprotein.com',
+  adminEmail: 'sales@ppprotein.com.au',
+  dispatchEmail: '',
+  accountsEmail: '',
   notifyAdmin: true,
-  notifyCustomer: true
+  notifyDispatch: false,
+  notifyAccounts: false,
+  notifyCustomer: true,
+  customerTemplate: '',
+  adminTemplate: '',
+  dispatchTemplate: '',
+  accountsTemplate: ''
 };
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [emailSettings, setEmailSettings] = useState<EmailSettings>(() => {
-    const savedSettings = localStorage.getItem('emailSettings');
-    return savedSettings ? JSON.parse(savedSettings) : {
-      adminEmail: 'sales@ppprotein.com.au',
-      dispatchEmail: '',
-      accountsEmail: '',
-      notifyAdmin: true,
-      notifyDispatch: false,
-      notifyAccounts: false,
-      notifyCustomer: true,
-      customerTemplate: '',
-      adminTemplate: '',
-      dispatchTemplate: '',
-      accountsTemplate: ''
-    };
-  });
+  const [emailSettings, setEmailSettings] = useState<EmailSettings>(defaultEmailSettings);
   const { toast } = useToast();
 
   // Load cart from localStorage
@@ -71,11 +65,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setItems(JSON.parse(savedCart));
       } catch (e) {
         console.error('Failed to parse cart data', e);
+        localStorage.removeItem('cart'); // Clear invalid data
+      }
+    }
+    
+    // Load email settings
+    const savedSettings = localStorage.getItem('emailSettings');
+    if (savedSettings) {
+      try {
+        setEmailSettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error('Failed to parse email settings', e);
+        localStorage.removeItem('emailSettings');
+        setEmailSettings(defaultEmailSettings);
       }
     }
   }, []);
 
-  // Save cart to localStorage
+  // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
@@ -85,36 +92,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('emailSettings', JSON.stringify(emailSettings));
   }, [emailSettings]);
 
-  const updateEmailSettings = (settings: Partial<EmailSettings>) => {
+  const updateEmailSettings = useCallback((settings: Partial<EmailSettings>) => {
     setEmailSettings(prev => {
       const updated = { ...prev, ...settings };
-      localStorage.setItem('emailSettings', JSON.stringify(updated));
       return updated;
     });
-  };
+  }, []);
 
-  // Mock email sending function - in a real app, this would call a backend API
-  const sendOrderEmails = (order: any, customerEmail: string) => {
-    console.log('Sending order confirmation emails:');
-    
-    if (emailSettings.notifyCustomer) {
-      console.log(`- Customer email sent to: ${customerEmail}`);
-      console.log(`  Subject: Your Order Confirmation #${order.id}`);
-      console.log(`  Content: Thank you for your order! Your order #${order.id} has been received.`);
-    }
-    
-    if (emailSettings.notifyAdmin) {
-      console.log(`- Admin notification sent to: ${emailSettings.adminEmail}`);
-      console.log(`  Subject: New Order Received #${order.id}`);
-      console.log(`  Content: A new order #${order.id} has been placed by ${customerEmail}.`);
-    }
-
-    // In a real app with Supabase integration, this would be an API call to a backend service
-    // that would use a library like Resend, SendGrid, etc. to send the emails
-  };
-
-  const addToCart = (product: Product, quantity: number) => {
-    setItems((prevItems) => {
+  const addToCart = useCallback((product: Product, quantity: number) => {
+    setItems(prevItems => {
       const existingItem = prevItems.find(item => item.product.id === product.id);
       
       if (existingItem) {
@@ -134,18 +120,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       title: "Added to cart",
       description: `${quantity} x ${product.name} added to your cart.`,
     });
-  };
+  }, [toast]);
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = useCallback((productId: string) => {
     setItems(prevItems => prevItems.filter(item => item.product.id !== productId));
     
     toast({
       title: "Removed from cart",
       description: "Item removed from your cart.",
     });
-  };
+  }, [toast]);
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
@@ -158,15 +144,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : item
       )
     );
-  };
+  }, [removeFromCart]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setItems([]);
     toast({
       title: "Cart cleared",
       description: "All items have been removed from your cart.",
     });
-  };
+  }, [toast]);
 
   const totalItems = items.reduce((total, item) => total + item.quantity, 0);
   
