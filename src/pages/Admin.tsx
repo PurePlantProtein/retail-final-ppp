@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Users, Settings, BarChart3, Mail } from 'lucide-react';
+import { Package, Users, Settings, BarChart3, Mail, Truck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -162,7 +162,7 @@ const Admin = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/admin/settings/shipping" className="text-primary hover:underline">
+                  <Link to="/admin/shipping-settings" className="text-primary hover:underline">
                     Shipping Options
                   </Link>
                 </li>

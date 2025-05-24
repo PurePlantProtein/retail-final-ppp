@@ -1,4 +1,3 @@
-
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -82,7 +81,7 @@ function App() {
                 <Route path="/admin/users" element={<ProtectedRoute requiresAdmin><UsersManagement /></ProtectedRoute>} />
                 <Route path="/admin/analytics" element={<ProtectedRoute requiresAdmin><AnalyticsManagement /></ProtectedRoute>} />
                 <Route path="/admin/settings" element={<ProtectedRoute requiresAdmin><SettingsManagement /></ProtectedRoute>} />
-                <Route path="/admin/settings/shipping" element={<ProtectedRoute requiresAdmin><ShippingSettings /></ProtectedRoute>} />
+                <Route path="/admin/shipping-settings" element={<ProtectedRoute requiresAdmin><ShippingSettings /></ProtectedRoute>} />
                 <Route path="/admin/email-settings" element={<ProtectedRoute requiresAdmin><EmailSettings /></ProtectedRoute>} />
                 <Route path="/admin/marketing" element={<ProtectedRoute requiresAdmin><MarketingMaterialsManagement /></ProtectedRoute>} />
                 
