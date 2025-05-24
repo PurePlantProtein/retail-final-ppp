@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Table,
@@ -33,11 +32,11 @@ export interface User {
 
 interface UsersTableProps {
   users: User[];
-  updateUserRole: (userId: string, newRole: string) => Promise<void>;
-  removeUserRole?: (userId: string, roleToRemove: string) => Promise<void>;
-  toggleUserStatus: (userId: string, currentStatus: string) => Promise<void>;
-  updateUserDetails?: (userId: string, userData: Partial<User>) => Promise<void>;
-  deleteUser?: (userId: string) => Promise<void>;
+  updateUserRole: (userId: string, role: AppRole, addRole: boolean) => Promise<boolean>;
+  removeUserRole?: (userId: string, role: AppRole) => Promise<boolean>;
+  toggleUserStatus: (userId: string, isActive: boolean) => Promise<boolean>;
+  updateUserDetails?: (userId: string, userData: Partial<User>) => Promise<boolean>;
+  deleteUser?: (userId: string) => Promise<boolean>;
   currentUser: any;
   isLoading: boolean;
 }

@@ -18,6 +18,7 @@ import CreateUserDialog from '@/components/admin/CreateUserDialog';
 import UserSearchAndFilter from '@/components/admin/users/UserSearchAndFilter';
 import UserApprovalRequests from '@/components/admin/users/UserApprovalRequests';
 import { useUsersManagement } from '@/hooks/useUsersManagement';
+import { AppRole } from '@/types/auth';
 
 const UsersManagement = () => {
   const { isAdmin, user, session } = useAuth();
@@ -72,6 +73,12 @@ const UsersManagement = () => {
     return null;
   }
 
+  // Convert string status to boolean for toggleUserStatus
+  const handleToggleStatus = (userId: string, currentStatus: string) => {
+    const isActive = currentStatus !== 'Active';
+    return toggleUserStatus(userId, isActive);
+  };
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto py-8 px-4">
@@ -106,7 +113,7 @@ const UsersManagement = () => {
               users={filteredUsers} 
               updateUserRole={updateUserRole}
               removeUserRole={removeUserRole}
-              toggleUserStatus={toggleUserStatus}
+              toggleUserStatus={handleToggleStatus}
               updateUserDetails={updateUserDetails}
               deleteUser={deleteUser}
               currentUser={user}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -18,9 +17,9 @@ import { AppRole } from '@/types/auth';
 interface UserTableRowProps {
   user: User;
   currentUser: any;
-  updateUserRole: (userId: string, newRole: string) => Promise<void>;
-  removeUserRole?: (userId: string, roleToRemove: string) => Promise<void>;
-  toggleUserStatus: (userId: string, currentStatus: string) => Promise<void>;
+  updateUserRole: (userId: string, role: AppRole, addRole: boolean) => Promise<boolean>;
+  removeUserRole?: (userId: string, role: AppRole) => Promise<boolean>;
+  toggleUserStatus: (userId: string, isActive: boolean) => Promise<boolean>;
   onEditClick: (user: User) => void;
   onDeleteClick: (user: User) => void;
 }
@@ -66,11 +65,13 @@ const UserTableRow: React.FC<UserTableRowProps> = ({
   };
 
   const handleToggleStatus = async () => {
-    await toggleUserStatus(user.id, user.status);
+    // Convert string status to boolean for the toggleUserStatus function
+    const isActive = user.status !== 'Active';
+    await toggleUserStatus(user.id, isActive);
   };
 
   const handleUpdateRole = async (role: AppRole) => {
-    await updateUserRole(user.id, role);
+    await updateUserRole(user.id, role, true);
   };
 
   const handleRemoveRole = async (role: AppRole) => {
