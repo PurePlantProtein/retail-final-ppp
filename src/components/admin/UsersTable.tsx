@@ -1,36 +1,14 @@
 
-import React, { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import React from 'react';
 import { useToast } from "@/components/ui/use-toast";
-import UserTableRow from '@/components/admin/users/UserTableRow';
+import UsersTableContainer from '@/components/admin/users/UsersTableContainer';
 import EditUserDialog from '@/components/admin/users/EditUserDialog';
 import DeleteUserDialog from '@/components/admin/users/DeleteUserDialog';
 import LoadingState from '@/components/admin/users/LoadingState';
 import EmptyState from '@/components/admin/users/EmptyState';
+import { useUserDialogs } from '@/hooks/users/useUserDialogs';
+import { User } from '@/types/user';
 import { AppRole } from '@/types/auth';
-
-export interface User {
-  id: string;
-  email: string;
-  created_at: string;
-  business_name: string;
-  business_type: string;
-  status: string;
-  role: string;
-  roles?: AppRole[];
-  business_address?: string;
-  phone?: string;
-  payment_terms?: number;
-  pricing_tier_id?: string;
-}
 
 interface UsersTableProps {
   users: User[];
@@ -42,7 +20,7 @@ interface UsersTableProps {
   currentUser: any;
   isLoading: boolean;
   onEditClick?: (user: User) => void;
-  onPricingTierChange?: (tierId: string) => Promise<boolean | void>; // Updated to accept boolean or void
+  onPricingTierChange?: (tierId: string) => Promise<boolean | void>;
   currentPricingTierId?: string | null;
 }
 
@@ -60,12 +38,22 @@ const UsersTable: React.FC<UsersTableProps> = ({
   currentPricingTierId
 }) => {
   const { toast } = useToast();
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editFormData, setEditFormData] = useState<Partial<User>>({});
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const {
+    editingUser,
+    setEditingUser,
+    editFormData,
+    setEditFormData,
+    isEditDialogOpen,
+    setIsEditDialogOpen,
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    userToDelete,
+    setUserToDelete,
+    isDeletingUser,
+    setIsDeletingUser,
+    initEditFormData,
+    handleEditInputChange
+  } = useUserDialogs();
 
   if (isLoading) {
     return <LoadingState />;
@@ -77,28 +65,13 @@ const UsersTable: React.FC<UsersTableProps> = ({
 
   const handleEditClick = (user: User) => {
     setEditingUser(user);
-    setEditFormData({
-      business_name: user.business_name,
-      business_type: user.business_type,
-      business_address: user.business_address || '',
-      phone: user.phone || '',
-      email: user.email,
-      payment_terms: user.payment_terms
-    });
+    initEditFormData(user);
     setIsEditDialogOpen(true);
     
     // Call the parent onEditClick if provided
     if (onEditClick) {
       onEditClick(user);
     }
-  };
-
-  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setEditFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const handleEditFormSubmit = async () => {
@@ -151,34 +124,15 @@ const UsersTable: React.FC<UsersTableProps> = ({
 
   return (
     <div className="overflow-x-auto">
-      <Table>
-        <TableCaption>List of users in the system.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Business Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Business Type</TableHead>
-            <TableHead>Roles</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Payment Terms</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.map((user) => (
-            <UserTableRow
-              key={user.id}
-              user={user}
-              currentUser={currentUser}
-              updateUserRole={updateUserRole}
-              removeUserRole={removeUserRole}
-              toggleUserStatus={toggleUserStatus}
-              onEditClick={handleEditClick}
-              onDeleteClick={handleDeleteClick}
-            />
-          ))}
-        </TableBody>
-      </Table>
+      <UsersTableContainer 
+        users={users}
+        updateUserRole={updateUserRole}
+        removeUserRole={removeUserRole}
+        toggleUserStatus={toggleUserStatus}
+        currentUser={currentUser}
+        onEditClick={handleEditClick}
+        onDeleteClick={handleDeleteClick}
+      />
 
       {/* Edit User Dialog */}
       <EditUserDialog
