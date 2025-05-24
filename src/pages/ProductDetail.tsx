@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -22,7 +21,7 @@ const ProductDetail = () => {
   const { user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [quantity, setQuantity] = useState(0);
+  const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
 
   useEffect(() => {
@@ -32,7 +31,7 @@ const ProductDetail = () => {
         const data = await getProductById(id);
         if (data) {
           setProduct(data);
-          setQuantity(data.minQuantity);
+          setQuantity(1); // Default to 1 instead of minQuantity
         }
         setIsLoading(false);
       } catch (error) {
@@ -51,14 +50,14 @@ const ProductDetail = () => {
   };
 
   const handleDecrementQuantity = () => {
-    if (product && quantity > product.minQuantity) {
+    if (product && quantity > 1) {
       setQuantity(prev => prev - 1);
     }
   };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
-    if (product && !isNaN(value) && value >= product.minQuantity) {
+    if (product && !isNaN(value) && value >= 1) {
       setQuantity(value);
     }
   };
@@ -124,8 +123,8 @@ const ProductDetail = () => {
             <Card className="overflow-hidden">
               <CardContent className="p-0">
                 <img 
-                  src={product.image} 
-                  alt={product.name}
+                  src={product?.image} 
+                  alt={product?.name}
                   className="w-full h-auto object-cover aspect-square"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -138,37 +137,33 @@ const ProductDetail = () => {
           
           <div className="flex-1 space-y-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2 text-left">{product.name}</h1>
-              <p className="text-xl font-semibold text-primary">${product.price.toFixed(2)}</p>
+              <h1 className="text-3xl font-bold mb-2 text-left">{product?.name}</h1>
+              <p className="text-xl font-semibold text-primary">${product?.price.toFixed(2)}</p>
             </div>
             
             {/* Product specifications */}
             <div className="grid grid-cols-2 gap-4 py-2">
               <div>
-                <h4 className="text-sm text-gray-500">Minimum Order</h4>
-                <p className="text-left">{product.minQuantity} units</p>
-              </div>
-              <div>
                 <h4 className="text-sm text-gray-500">Available Stock</h4>
-                <p className="text-left">{product.stock} units</p>
+                <p className="text-left">{product?.stock} units</p>
               </div>
               
-              {/* New product details */}
-              {product.servingSize && (
+              {/* Product details */}
+              {product?.servingSize && (
                 <div>
                   <h4 className="text-sm text-gray-500">Serving Size</h4>
                   <p className="text-left">{product.servingSize}</p>
                 </div>
               )}
               
-              {product.numberOfServings !== undefined && (
+              {product?.numberOfServings !== undefined && (
                 <div>
                   <h4 className="text-sm text-gray-500">Number of Servings</h4>
                   <p className="text-left">{product.numberOfServings}</p>
                 </div>
               )}
               
-              {product.bagSize && (
+              {product?.bagSize && (
                 <div>
                   <h4 className="text-sm text-gray-500">Bag Size</h4>
                   <p className="text-left">{product.bagSize}</p>
@@ -186,7 +181,7 @@ const ProductDetail = () => {
                         variant="outline" 
                         size="icon" 
                         onClick={handleDecrementQuantity}
-                        disabled={quantity <= product.minQuantity}
+                        disabled={quantity <= 1}
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -194,15 +189,15 @@ const ProductDetail = () => {
                         type="number"
                         value={quantity}
                         onChange={handleQuantityChange}
-                        min={product.minQuantity}
-                        max={product.stock}
+                        min={1}
+                        max={product?.stock}
                         className="w-20 mx-2 text-center"
                       />
                       <Button 
                         variant="outline" 
                         size="icon" 
                         onClick={handleIncrementQuantity}
-                        disabled={quantity >= product.stock}
+                        disabled={quantity >= (product?.stock || 0)}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -212,7 +207,7 @@ const ProductDetail = () => {
                     <Button 
                       size="lg"
                       onClick={handleAddToCart}
-                      disabled={quantity < product.minQuantity || quantity > product.stock}
+                      disabled={quantity < 1 || quantity > (product?.stock || 0)}
                     >
                       Add to Cart
                     </Button>
@@ -220,7 +215,7 @@ const ProductDetail = () => {
                       <Link to="/cart">View Cart</Link>
                     </Button>
                   </div>
-                  {quantity > 0 && (
+                  {quantity > 0 && product && (
                     <p className="mt-4 text-sm text-gray-600 text-left">
                       Total: ${(product.price * quantity).toFixed(2)}
                     </p>

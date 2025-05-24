@@ -7,14 +7,16 @@ import { getProducts } from '@/services/productService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck, Grid, Table as TableIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ProductTable from '@/components/ProductTable';
 
 const Products = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const categoryParam = searchParams.get('category');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryParam);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Update selected category when URL params change
   useEffect(() => {
@@ -60,6 +62,11 @@ const Products = () => {
     ? filteredProducts?.filter(product => product.category === selectedCategory) 
     : filteredProducts;
 
+  // Toggle view mode
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'grid' ? 'table' : 'grid');
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -95,7 +102,26 @@ const Products = () => {
   return (
     <Layout>
       <div className="container mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-4 text-left">Products</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold text-left">Products</h1>
+          <Button 
+            variant="outline" 
+            onClick={toggleViewMode}
+            className="flex items-center gap-2"
+          >
+            {viewMode === 'grid' ? (
+              <>
+                <TableIcon className="h-4 w-4" />
+                Table View
+              </>
+            ) : (
+              <>
+                <Grid className="h-4 w-4" />
+                Grid View
+              </>
+            )}
+          </Button>
+        </div>
         
         {/* Categories section */}
         <div className="mb-6 text-left">
@@ -118,23 +144,27 @@ const Products = () => {
         
         <Separator className="my-6" />
         
-        {/* Products grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayProducts && displayProducts.length > 0 ? (
-            displayProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))
-          ) : (
-            <div className="col-span-full py-8 text-center">
-              <p className="text-muted-foreground">
-                {selectedCategory ? 
-                  `No products found in the ${selectedCategory} category.` : 
-                  "No products available."
-                }
-              </p>
+        {/* Products view - grid or table */}
+        {displayProducts && displayProducts.length > 0 ? (
+          viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
             </div>
-          )}
-        </div>
+          ) : (
+            <ProductTable products={displayProducts} />
+          )
+        ) : (
+          <div className="py-8 text-center">
+            <p className="text-muted-foreground">
+              {selectedCategory ? 
+                `No products found in the ${selectedCategory} category.` : 
+                "No products available."
+              }
+            </p>
+          </div>
+        )}
       </div>
     </Layout>
   );

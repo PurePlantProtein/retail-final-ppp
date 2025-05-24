@@ -13,7 +13,7 @@ const ShippingSettings = () => {
   const { toast } = useToast();
   const [settings, setSettings] = useState({
     freeShippingThreshold: 12,
-    freeShippingMessage: 'Free shipping for orders with 12+ protein products',
+    freeShippingMessage: 'Free shipping for orders with 12+ items',
     freeShippingDays: '5-7 business days',
   });
   
@@ -66,7 +66,7 @@ const ShippingSettings = () => {
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="freeShippingThreshold">
-                      Free Shipping Threshold (Number of protein products)
+                      Free Shipping Threshold (Total number of items in order)
                     </Label>
                     <Input
                       id="freeShippingThreshold"

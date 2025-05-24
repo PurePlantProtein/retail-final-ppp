@@ -17,7 +17,7 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
-  const [quantity, setQuantity] = useState(product.min_quantity);
+  const [quantity, setQuantity] = useState(1);
 
   // Set up property aliases for cleaner code
   useEffect(() => {
@@ -37,14 +37,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleDecrementQuantity = () => {
-    if (quantity > product.min_quantity) {
+    if (quantity > 1) {
       setQuantity(prev => prev - 1);
     }
   };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value) && value >= product.min_quantity) {
+    if (!isNaN(value) && value >= 1) {
       setQuantity(value);
     }
   };
@@ -76,7 +76,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {product.name}
           </CardTitle>
         </Link>
-        <p className="text-gray-500 text-sm">Min order: {product.min_quantity} units</p>
+        <p className="text-gray-500 text-sm">In stock: {product.stock} units</p>
       </CardHeader>
       <CardContent className="pb-2 flex-grow">
         <p className="text-gray-600 text-sm line-clamp-2">{product.description}</p>
@@ -84,7 +84,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <CardFooter className="flex flex-col pt-2 space-y-3 border-t">
         <div className="flex justify-between items-center w-full">
           <p className="font-bold text-lg">${product.price.toFixed(2)}</p>
-          <p className="text-sm text-gray-500">{product.stock} available</p>
         </div>
         
         {user ? (
@@ -95,6 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 size="icon" 
                 className="h-8 w-8"
                 onClick={handleDecrementQuantity}
+                disabled={quantity <= 1}
               >
                 <Minus className="h-3 w-3" />
               </Button>
@@ -102,7 +102,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 type="number"
                 value={quantity}
                 onChange={handleQuantityChange}
-                min={product.min_quantity}
+                min={1}
                 max={product.stock}
                 className="h-8 text-center"
               />
@@ -111,6 +111,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 size="icon" 
                 className="h-8 w-8"
                 onClick={handleIncrementQuantity}
+                disabled={quantity >= product.stock}
               >
                 <Plus className="h-3 w-3" />
               </Button>
@@ -119,7 +120,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <Button 
               onClick={handleAddToCart} 
               className="w-full"
-              disabled={quantity < product.min_quantity || quantity > product.stock}
+              disabled={quantity < 1 || quantity > product.stock}
             >
               Add to Cart
             </Button>
