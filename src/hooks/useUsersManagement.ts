@@ -1,213 +1,137 @@
-
-import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/components/ui/use-toast';
-import { User } from '@/components/admin/UsersTable';
-import * as userService from '@/services/userService';
-import { UserProfile, AppRole } from '@/types/auth';
+import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from "@/components/ui/use-toast";
+import { AppRole } from '@/types/auth';
 
 export const useUsersManagement = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all-users');
-  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
 
   const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const fetchedUsers = await userService.fetchUsers();
-      setUsers(fetchedUsers);
+      // Fetch all users
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      if (authError) throw authError;
+      
+      // Fetch profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+      if (profilesError) throw profilesError;
+      
+      // Fetch user roles
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*');
+      if (rolesError) throw rolesError;
+      
+      const usersWithDetails = authUsers.users.map((user) => {
+        const profile = profiles?.find(p => p.id === user.id) || {};
+        const userRoles = roles?.filter(r => r.user_id === user.id).map(r => r.role as AppRole) || [];
+        
+        return {
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+          last_sign_in_at: user.last_sign_in_at,
+          roles: userRoles,
+          isAdmin: userRoles.includes('admin' as AppRole),
+          isDistributor: userRoles.includes('distributor' as AppRole),
+          isRetailer: userRoles.includes('retailer' as AppRole),
+          ...profile,
+        };
+      });
+      
+      setUsers(usersWithDetails);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
-        title: "Error",
-        description: "Failed to load users. Please try again.",
+        title: "Error fetching users",
+        description: (error as Error).message,
         variant: "destructive",
       });
-      setUsers([]);
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const updateUserRole = useCallback(async (userId: string, role: AppRole, addRole: boolean) => {
     try {
-      await userService.updateUserRole(userId, newRole);
+      if (addRole) {
+        // Add role
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role });
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Role added",
+          description: `${role} role added successfully.`,
+        });
+      } else {
+        // Remove role
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', role);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Role removed",
+          description: `${role} role removed successfully.`,
+        });
+      }
       
-      toast({
-        title: "Role Updated",
-        description: `User role updated to ${newRole}.`,
-      });
-      
-      // Refresh the user list to reflect the new roles
-      fetchUsers();
+      // Refresh the users list
+      await fetchUsers();
+      return true;
     } catch (error) {
       console.error('Error updating user role:', error);
       toast({
-        title: "Error",
-        description: "Failed to update user role.",
+        title: "Error updating role",
+        description: (error as Error).message,
         variant: "destructive",
       });
+      return false;
     }
-  };
-
-  const removeUserRole = async (userId: string, roleToRemove: string) => {
+  }, [fetchUsers, toast]);
+  
+  const deleteUser = useCallback(async (userId: string) => {
+    setIsLoading(true);
     try {
-      const result = await userService.removeUserRole(userId, roleToRemove);
-      
-      if (result.success) {
-        toast({
-          title: "Role Removed",
-          description: `${roleToRemove} role has been removed.`,
-        });
-        
-        // Refresh the user list to reflect the updated roles
-        fetchUsers();
-      } else {
-        toast({
-          title: "Cannot Remove Role",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error removing user role:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove user role.",
-        variant: "destructive",
-      });
-    }
-  };
+      // Delete user from auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) throw authError;
 
-  const toggleUserStatus = async (userId: string, currentStatus: string) => {
-    try {
-      // Convert string status to boolean for the API
-      const isCurrentlyActive = currentStatus === 'Active';
-      const newStatus = await userService.toggleUserStatus(userId, !isCurrentlyActive);
-      
-      toast({
-        title: "Status Updated",
-        description: `User status updated to ${newStatus?.status || (!isCurrentlyActive ? 'Active' : 'Inactive')}.`,
-      });
-      
-      setUsers(prevUsers => 
-        prevUsers.map(u => 
-          u.id === userId ? { ...u, status: newStatus?.status || (!isCurrentlyActive ? 'Active' : 'Inactive') } : u
-        )
-      );
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user status.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateUserDetails = async (userId: string, userData: Partial<User>) => {
-    try {
-      // Convert User type to UserProfile type for the API
-      const userProfileData: Partial<UserProfile> = {
-        business_name: userData.business_name,
-        business_type: userData.business_type,
-        business_address: userData.business_address,
-        phone: userData.phone,
-        email: userData.email,
-        payment_terms: userData.payment_terms
-      };
-      
-      await userService.updateUserDetails(userId, userProfileData);
-
-      // Update local state
-      setUsers(prevUsers =>
-        prevUsers.map(u =>
-          u.id === userId ? { ...u, ...userData } : u
-        )
-      );
+      // Refresh the users list
+      await fetchUsers();
 
       toast({
-        title: "Success",
-        description: "User details updated successfully.",
+        title: "User deleted",
+        description: "User deleted successfully.",
       });
-
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Error updating user details:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to update user details.",
-        variant: "destructive",
-      });
-      
-      return Promise.reject(error);
-    }
-  };
-
-  const deleteUser = async (userId: string) => {
-    try {
-      await userService.deleteUser(userId);
-      
-      // Update local state after successful deletion
-      setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
-      
-      toast({
-        title: "Success",
-        description: "User has been successfully deleted.",
-      });
-      
-      return Promise.resolve();
     } catch (error) {
       console.error('Error deleting user:', error);
-      
       toast({
-        title: "Error",
-        description: "Failed to delete user. Please try again.",
+        title: "Error deleting user",
+        description: (error as Error).message,
         variant: "destructive",
       });
-      
-      return Promise.reject(error);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  // Filter users based on search term and active tab
-  const getFilteredUsers = () => {
-    return users.filter(user => {
-      const matchesSearch = 
-        (user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || '') || 
-        (user.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
-        (user.business_type?.toLowerCase().includes(searchTerm.toLowerCase()) || '');
-      
-      if (activeTab === 'all-users') return matchesSearch;
-      if (activeTab === 'retailers') return matchesSearch && user.roles && user.roles.includes('retailer');
-      if (activeTab === 'distributors') return matchesSearch && user.roles && user.roles.includes('distributor');
-      if (activeTab === 'admins') return matchesSearch && user.roles && user.roles.includes('admin');
-      return matchesSearch;
-    });
-  };
+  }, [fetchUsers, toast]);
 
   return {
     users,
-    searchTerm,
-    setSearchTerm,
     isLoading,
-    activeTab,
-    setActiveTab,
-    isCreateUserDialogOpen,
-    setIsCreateUserDialogOpen,
     fetchUsers,
     updateUserRole,
-    removeUserRole,
-    toggleUserStatus,
-    updateUserDetails,
-    deleteUser,
-    getFilteredUsers
+    deleteUser
   };
 };

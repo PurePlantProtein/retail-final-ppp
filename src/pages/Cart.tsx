@@ -8,14 +8,15 @@ import OrderSummary from '@/components/cart/OrderSummary';
 import ShippingStep from '@/components/cart/ShippingStep';
 import PaymentStep from '@/components/cart/PaymentStep';
 import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/providers/AuthProvider';
 import { useCartCheckout } from '@/hooks/useCartCheckout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 const Cart = () => {
-  const { items, totalItems } = useCart(); // Changed from itemCount to totalItems
+  const cart = useCart();
+  const { items, totalItems, removeFromCart, updateQuantity, clearCart } = cart;
   const { user } = useAuth();
   const {
     checkoutStep,
@@ -81,9 +82,9 @@ const Cart = () => {
                 <CardContent className="p-6">
                   <CartItemList 
                     items={items}
-                    onRemoveItem={(id) => useCart().removeFromCart(id)}
-                    onUpdateQuantity={(id, qty) => useCart().updateQuantity(id, qty)}
-                    onClearCart={() => useCart().clearCart()}
+                    onRemoveItem={removeFromCart}
+                    onUpdateQuantity={updateQuantity}
+                    onClearCart={clearCart}
                   />
                 </CardContent>
               </Card>
