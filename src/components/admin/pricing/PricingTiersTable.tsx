@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Table,
   TableBody,
@@ -10,19 +10,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { PencilIcon, TrashIcon, PlusIcon } from "lucide-react";
 import { PricingTier } from '@/types/pricing';
+import { usePricingTierDialogs } from '@/hooks/pricing/usePricingTierDialogs';
+import CreatePricingTierDialog from './dialogs/CreatePricingTierDialog';
+import EditPricingTierDialog from './dialogs/EditPricingTierDialog';
+import DeletePricingTierDialog from './dialogs/DeletePricingTierDialog';
 
 interface PricingTiersTableProps {
   tiers: PricingTier[];
@@ -39,70 +32,23 @@ const PricingTiersTable: React.FC<PricingTiersTableProps> = ({
   onUpdate,
   onDelete
 }) => {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
-  const [formData, setFormData] = useState<Partial<PricingTier>>({
-    name: '',
-    description: '',
-    discount_percentage: 0
-  });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'discount_percentage' ? parseFloat(value) : value
-    }));
-  };
-
-  const handleCreateClick = () => {
-    setFormData({
-      name: '',
-      description: '',
-      discount_percentage: 0
-    });
-    setIsCreateDialogOpen(true);
-  };
-
-  const handleEditClick = (tier: PricingTier) => {
-    setSelectedTier(tier);
-    setFormData({
-      name: tier.name,
-      description: tier.description,
-      discount_percentage: tier.discount_percentage
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const handleDeleteClick = (tier: PricingTier) => {
-    setSelectedTier(tier);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleCreateSubmit = async () => {
-    const result = await onCreate(formData);
-    if (result) {
-      setIsCreateDialogOpen(false);
-    }
-  };
-
-  const handleEditSubmit = async () => {
-    if (!selectedTier) return;
-    const result = await onUpdate(selectedTier.id, formData);
-    if (result) {
-      setIsEditDialogOpen(false);
-    }
-  };
-
-  const handleDeleteSubmit = async () => {
-    if (!selectedTier) return;
-    const result = await onDelete(selectedTier.id);
-    if (result) {
-      setIsDeleteDialogOpen(false);
-    }
-  };
+  const {
+    isCreateDialogOpen,
+    setIsCreateDialogOpen,
+    isEditDialogOpen,
+    setIsEditDialogOpen,
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    selectedTier,
+    formData,
+    handleInputChange,
+    handleCreateClick,
+    handleEditClick,
+    handleDeleteClick,
+    handleCreateSubmit,
+    handleEditSubmit,
+    handleDeleteSubmit
+  } = usePricingTierDialogs(onCreate, onUpdate, onDelete);
 
   if (isLoading) {
     return <div className="py-8 text-center">Loading pricing tiers...</div>;
@@ -165,146 +111,29 @@ const PricingTiersTable: React.FC<PricingTiersTableProps> = ({
         </Table>
       </div>
 
-      {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Create Pricing Tier</DialogTitle>
-            <DialogDescription>
-              Create a new pricing tier for your users.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name || ''}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="discount_percentage" className="text-right">
-                Discount %
-              </Label>
-              <Input
-                id="discount_percentage"
-                name="discount_percentage"
-                type="number"
-                value={formData.discount_percentage || 0}
-                onChange={handleInputChange}
-                min="0"
-                max="100"
-                step="0.1"
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description || ''}
-                onChange={handleInputChange}
-                className="col-span-3"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateSubmit}>Create</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialog Components */}
+      <CreatePricingTierDialog 
+        isOpen={isCreateDialogOpen}
+        setIsOpen={setIsCreateDialogOpen}
+        formData={formData}
+        handleInputChange={handleInputChange}
+        handleSubmit={handleCreateSubmit}
+      />
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit Pricing Tier</DialogTitle>
-            <DialogDescription>
-              Make changes to the pricing tier.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="edit-name"
-                name="name"
-                value={formData.name || ''}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-discount" className="text-right">
-                Discount %
-              </Label>
-              <Input
-                id="edit-discount"
-                name="discount_percentage"
-                type="number"
-                value={formData.discount_percentage || 0}
-                onChange={handleInputChange}
-                min="0"
-                max="100"
-                step="0.1"
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-description" className="text-right">
-                Description
-              </Label>
-              <Textarea
-                id="edit-description"
-                name="description"
-                value={formData.description || ''}
-                onChange={handleInputChange}
-                className="col-span-3"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditSubmit}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditPricingTierDialog
+        isOpen={isEditDialogOpen}
+        setIsOpen={setIsEditDialogOpen}
+        formData={formData}
+        handleInputChange={handleInputChange}
+        handleSubmit={handleEditSubmit}
+      />
 
-      {/* Delete Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Delete Pricing Tier</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this pricing tier?
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteSubmit}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeletePricingTierDialog
+        isOpen={isDeleteDialogOpen}
+        setIsOpen={setIsDeleteDialogOpen}
+        selectedTier={selectedTier}
+        handleSubmit={handleDeleteSubmit}
+      />
     </div>
   );
 };
