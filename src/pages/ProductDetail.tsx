@@ -1,136 +1,108 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { getProductById } from '@/services/productService';
-import { Product } from '@/types/product';
-import { ArrowLeft } from 'lucide-react';
 import ProductImage from '@/components/product/ProductImage';
+import ProductDetailTabs from '@/components/product/ProductDetailTabs';
 import ProductSpecifications from '@/components/product/ProductSpecifications';
 import ProductPurchaseForm from '@/components/product/ProductPurchaseForm';
-import ProductDetailTabs from '@/components/product/ProductDetailTabs';
-import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Heart } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserPricingTier } from '@/hooks/usePricingTiers';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  images: string[];
+  price: number;
+  stock: number;
+  category: string;
+  specifications: any;
+  min_quantity?: number;
+  category_moq?: number;
+}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { addToCart } = useCart();
-  const { user } = useAuth();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState("description");
   const navigate = useNavigate();
-
-  // Add a utility function to get category MOQ
-  const getCategoryMOQ = (category: string): number | undefined => {
-    // Here we define the MOQ values for different categories
-    const categoryMOQs: Record<string, number> = {
-      'Protein Powder': 12,
-      // Add more categories with their MOQ as needed
-    };
-
-    return categoryMOQs[category];
-  };
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { addItemToCart } = useCart();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const { userTier } = useUserPricingTier(user?.id);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        if (!id) return;
-        const data = await getProductById(id);
-        if (data) {
-          setProduct(data);
-          setQuantity(1);
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) {
+          throw error;
         }
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching product:', error);
-        setIsLoading(false);
+
+        setProduct(data);
+      } catch (error: any) {
+        console.error("Error fetching product:", error.message);
+        toast({
+          title: "Error",
+          description: "Failed to load product details.",
+          variant: "destructive",
+        });
+        navigate('/products');
       }
     };
 
-    fetchProduct();
-  }, [id]);
-
-  // Handle quantity changes in the component
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newQuantity = parseInt(e.target.value);
-    if (!isNaN(newQuantity) && newQuantity >= 1) {
-      setQuantity(newQuantity);
+    if (id) {
+      fetchProduct();
     }
-  };
+  }, [id, navigate, toast]);
 
   const handleIncrementQuantity = () => {
-    const categoryMOQ = getCategoryMOQ(product?.category || '');
-    const minQty = Math.max(product?.min_quantity || 1, categoryMOQ || 1);
-    
-    if (quantity < (product?.stock || 0)) {
-      setQuantity(prevQty => prevQty + 1);
+    if (product && quantity < product.stock) {
+      setQuantity(quantity + 1);
     }
   };
 
   const handleDecrementQuantity = () => {
-    const categoryMOQ = getCategoryMOQ(product?.category || '');
-    const minQty = Math.max(product?.min_quantity || 1, categoryMOQ || 1);
-    
-    if (quantity > minQty) {
-      setQuantity(prevQty => prevQty - 1);
+    if (product && quantity > (product.category_moq || product.min_quantity || 1)) {
+      setQuantity(quantity - 1);
+    }
+  };
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (product) {
+      const min = product.category_moq || product.min_quantity || 1;
+      if (!isNaN(value) && value >= min && value <= product.stock) {
+        setQuantity(value);
+      }
     }
   };
 
   const handleAddToCart = () => {
-    if (!product) return;
-    
-    const categoryMOQ = getCategoryMOQ(product.category || '');
-    const minQty = Math.max(product.min_quantity || 1, categoryMOQ || 1);
-    
-    if (quantity < minQty) {
+    if (product) {
+      addItemToCart(product, quantity);
       toast({
-        title: "Minimum quantity not met",
-        description: `You must order at least ${minQty} units of this product.`,
-        variant: "destructive"
+        title: "Added to cart",
+        description: `${product.name} x ${quantity} has been added to your cart.`,
       });
-      return;
     }
-    
-    addToCart(product, quantity);
-    navigate('/cart');
   };
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row gap-8">
-            <Skeleton className="flex-1 h-96" />
-            <div className="flex-1 space-y-4">
-              <Skeleton className="h-10 w-3/4" />
-              <Skeleton className="h-6 w-1/2" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-10 w-1/3" />
-              <div className="space-y-4 pt-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   if (!product) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-16 text-left">
-          <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
-          <p className="mb-8">The product you are looking for does not exist.</p>
-          <Button asChild>
-            <Link to="/products">Back to Products</Link>
-          </Button>
+        <div className="container mx-auto px-4 py-16">
+          <p>Loading product details...</p>
         </div>
       </Layout>
     );
@@ -138,62 +110,39 @@ const ProductDetail = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          className="mb-6 flex items-center"
-          asChild
-        >
-          <Link to="/products">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Products
-          </Link>
+      <div className="container mx-auto px-4 py-16">
+        <Button variant="ghost" onClick={() => navigate('/products')} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Products
         </Button>
-
-        <div className="flex flex-col md:flex-row gap-8">
-          <div className="flex-1">
-            <ProductImage image={product.image} name={product.name} />
-          </div>
-          
-          <div className="flex-1 space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-2 text-left">{product.name}</h1>
-              <p className="text-xl font-semibold text-primary">${product.price.toFixed(2)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <ProductImage images={product.images} name={product.name} />
+          <div>
+            <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-gray-700">${product.price.toFixed(2)}</p>
+              <Button variant="outline" size="icon">
+                <Heart className="h-4 w-4" />
+              </Button>
             </div>
-            
-            <ProductSpecifications 
-              stock={product.stock}
-              servingSize={product.servingSize}
-              numberOfServings={product.numberOfServings}
-              bagSize={product.bagSize}
-            />
-            
-            <ProductPurchaseForm 
+            <ProductPurchaseForm
               user={user}
               price={product.price}
               stock={product.stock}
-              category={product.category || ''}
               quantity={quantity}
+              category={product.category}
               handleIncrementQuantity={handleIncrementQuantity}
               handleDecrementQuantity={handleDecrementQuantity}
               handleQuantityChange={handleQuantityChange}
               handleAddToCart={handleAddToCart}
               minQuantity={product.min_quantity}
-              categoryMOQ={getCategoryMOQ(product.category || '')}
+              categoryMOQ={product.category_moq}
+              discountPercentage={userTier?.tier?.discount_percentage}
             />
+            <ProductDetailTabs>
+              <ProductSpecifications specifications={product.specifications} />
+            </ProductDetailTabs>
           </div>
-        </div>
-        
-        <div className="mt-12">
-          <ProductDetailTabs 
-            description={product.description}
-            ingredients={product.ingredients || undefined}
-            aminoAcidProfile={product.aminoAcidProfile}
-            nutritionalInfo={product.nutritionalInfo}
-            servingSize={product.servingSize}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-          />
         </div>
       </div>
     </Layout>
