@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { User } from '@/components/admin/UsersTable';
+import { User } from '@/types/user';
 import { AppRole } from '@/types/auth';
 
 interface UserTableRowProps {
