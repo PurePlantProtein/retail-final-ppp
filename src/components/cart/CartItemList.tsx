@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import CartItem from './CartItem';
 import { Product } from '@/types/product';
+import { CartItem as CartItemType } from '@/types/cart';
 
 type CartItemListProps = {
-  items: Array<{ product: Product; quantity: number }>;
+  items: CartItemType[];
   onRemoveItem: (productId: string) => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onClearCart: () => void;
@@ -29,11 +30,6 @@ const CartItemList = ({
     );
   }
 
-  // Wrapper function to ensure we're passing the correct product ID
-  const handleRemoveItem = (productId: string) => {
-    onRemoveItem(productId);
-  };
-
   return (
     <div className="space-y-4">
       {items.map((item) => (
@@ -41,7 +37,7 @@ const CartItemList = ({
           key={item.product.id}
           product={item.product}
           quantity={item.quantity}
-          onRemove={handleRemoveItem}
+          onRemove={onRemoveItem}
           onUpdateQuantity={onUpdateQuantity}
         />
       ))}
