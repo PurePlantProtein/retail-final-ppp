@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Settings, Package, Users, BarChart3, Mail } from 'lucide-react';
+import { Settings, Package, Users, BarChart3, Mail, Truck } from 'lucide-react';
 
 type AdminLayoutProps = {
   children: React.ReactNode;
@@ -36,6 +36,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       name: 'Settings', 
       path: '/admin/settings', 
       icon: <Settings className="h-5 w-5" /> 
+    },
+    { 
+      name: 'Shipping Settings', 
+      path: '/admin/shipping-settings', 
+      icon: <Truck className="h-5 w-5" /> 
     }
   ];
   

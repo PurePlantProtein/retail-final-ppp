@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -161,7 +162,7 @@ const Admin = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/admin/settings?tab=shipping" className="text-primary hover:underline">
+                  <Link to="/admin/settings/shipping" className="text-primary hover:underline">
                     Shipping Options
                   </Link>
                 </li>
