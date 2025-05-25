@@ -51,7 +51,8 @@ export const fetchUsers = async () => {
       status: 'Active', // Default status, could be stored in profile in the future
       role: userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('admin') ? 'admin' : 
             userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('distributor') ? 'distributor' : 'retailer',
-      roles: userRolesMap.get(profile.id) || ['retailer'], // Include all roles
+      roles: userRolesMap.get(profile.id) || ['retailer'], // Ensure roles is always an array
+      pricing_tier_id: undefined, // Will be populated separately if needed
     }));
     
     return users;

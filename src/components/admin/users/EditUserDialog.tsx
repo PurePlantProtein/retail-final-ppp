@@ -20,22 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
-
-interface User {
-  id: string;
-  email: string;
-  business_name?: string;
-  business_type?: string;
-  business_address?: string;
-  phone?: string;
-  payment_terms?: number;
-  roles: string[];
-  pricing_tier?: {
-    id: string;
-    name: string;
-    description: string;
-  };
-}
+import { User } from '@/types/user';
 
 interface PricingTier {
   id: string;
@@ -78,7 +63,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
         phone: user.phone || '',
         payment_terms: user.payment_terms || 14,
         role: user.roles[0] || '',
-        pricing_tier_id: user.pricing_tier?.id || ''
+        pricing_tier_id: user.pricing_tier_id || ''
       });
     }
     loadPricingTiers();
@@ -150,7 +135,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
       }
 
       // Update pricing tier if changed
-      if (formData.pricing_tier_id !== user.pricing_tier?.id) {
+      if (formData.pricing_tier_id !== user.pricing_tier_id) {
         // Delete existing pricing tier assignment
         await supabase
           .from('user_pricing_tiers')

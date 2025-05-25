@@ -9,7 +9,7 @@ export interface User {
   business_type: string;
   status: string;
   role: string;
-  roles?: AppRole[];
+  roles: AppRole[]; // Made required
   business_address?: string;
   phone?: string;
   payment_terms?: number;
