@@ -185,6 +185,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           business_address: string | null
           business_name: string | null
           business_type: string | null
@@ -196,6 +199,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           business_address?: string | null
           business_name?: string | null
           business_type?: string | null
@@ -207,6 +213,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           business_address?: string | null
           business_name?: string | null
           business_type?: string | null
@@ -290,6 +299,10 @@ export type Database = {
       }
       is_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_user_approved: {
+        Args: { _user_id: string }
         Returns: boolean
       }
     }

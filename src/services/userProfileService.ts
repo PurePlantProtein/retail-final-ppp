@@ -53,6 +53,9 @@ export const fetchUsers = async () => {
             userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('distributor') ? 'distributor' : 'retailer',
       roles: userRolesMap.get(profile.id) || ['retailer'], // Ensure roles is always an array
       pricing_tier_id: undefined, // Will be populated separately if needed
+      approval_status: profile.approval_status || 'pending',
+      approved_at: profile.approved_at,
+      approved_by: profile.approved_by,
     }));
     
     return users;
@@ -92,6 +95,63 @@ export const updateUserDetails = async (userId: string, userData: Partial<UserPr
     };
   } catch (error) {
     console.error('Error updating user details:', error);
+    throw error;
+  }
+};
+
+/**
+ * Approve user account
+ */
+export const approveUser = async (userId: string, approvedBy: string) => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        approval_status: 'approved',
+        approved_at: new Date().toISOString(),
+        approved_by: approvedBy
+      })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Error approving user:', error);
+      throw error;
+    }
+    
+    return {
+      success: true,
+      message: "User approved successfully"
+    };
+  } catch (error) {
+    console.error('Error approving user:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reject user account
+ */
+export const rejectUser = async (userId: string, rejectedBy: string) => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        approval_status: 'rejected',
+        approved_by: rejectedBy
+      })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Error rejecting user:', error);
+      throw error;
+    }
+    
+    return {
+      success: true,
+      message: "User rejected successfully"
+    };
+  } catch (error) {
+    console.error('Error rejecting user:', error);
     throw error;
   }
 };

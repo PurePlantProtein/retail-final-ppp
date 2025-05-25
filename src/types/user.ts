@@ -14,4 +14,7 @@ export interface User {
   phone?: string;
   payment_terms?: number;
   pricing_tier_id?: string;
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  approved_at?: string;
+  approved_by?: string;
 }

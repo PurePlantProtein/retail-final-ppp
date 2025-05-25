@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { isSessionExpired } from '@/utils/securityUtils';
 import { AppRole } from '@/types/auth';
+import ApprovedRoute from '@/components/ApprovedRoute';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -99,7 +100,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
-  return <>{children}</>;
+  // For admin routes, bypass approval check
+  if (requiresAdmin) {
+    return <>{children}</>;
+  }
+
+  // For regular routes, check approval status
+  return (
+    <ApprovedRoute>
+      {children}
+    </ApprovedRoute>
+  );
 };
 
 export default ProtectedRoute;

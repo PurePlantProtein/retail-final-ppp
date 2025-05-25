@@ -176,11 +176,11 @@ const Signup = () => {
       
       toast({
         title: "Account created successfully",
-        description: "Welcome to PP Protein Wholesale!",
+        description: "Your account is pending approval. You'll receive an email once approved.",
       });
       
-      // Navigate to products page
-      navigate('/products');
+      // Navigate to a success page instead of products
+      navigate('/signup-success');
     } catch (error: any) {
       console.error("Error during signup process:", error);
       setErrorMessage(error.message || "Error creating account");
