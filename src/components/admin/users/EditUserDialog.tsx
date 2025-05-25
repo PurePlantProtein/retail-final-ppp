@@ -8,169 +8,307 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { User } from '@/types/user';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { usePricingTiers } from '@/hooks/usePricingTiers';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+
+interface User {
+  id: string;
+  email: string;
+  business_name?: string;
+  business_type?: string;
+  business_address?: string;
+  phone?: string;
+  payment_terms?: number;
+  roles: string[];
+  pricing_tier?: {
+    id: string;
+    name: string;
+    description: string;
+  };
+}
+
+interface PricingTier {
+  id: string;
+  name: string;
+  description: string;
+}
 
 interface EditUserDialogProps {
+  user: User | null;
   isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  editingUser: User | null;
-  editFormData: Partial<User>;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onFormSubmit: () => Promise<void>;
-  onPricingTierChange?: (tierId: string) => Promise<boolean | void>;
-  currentPricingTierId?: string | null;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
 
 const EditUserDialog: React.FC<EditUserDialogProps> = ({
+  user,
   isOpen,
-  setIsOpen,
-  editingUser,
-  editFormData,
-  onInputChange,
-  onFormSubmit,
-  onPricingTierChange,
-  currentPricingTierId
+  onOpenChange,
+  onSuccess
 }) => {
-  const { tiers, isLoading: loadingTiers } = usePricingTiers();
-  const [selectedTierId, setSelectedTierId] = useState<string | undefined>(
-    currentPricingTierId || undefined
-  );
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
+  const [formData, setFormData] = useState({
+    business_name: '',
+    business_type: '',
+    business_address: '',
+    phone: '',
+    payment_terms: 14,
+    role: '',
+    pricing_tier_id: ''
+  });
 
-  // Update selected tier when currentPricingTierId changes
   useEffect(() => {
-    setSelectedTierId(currentPricingTierId || undefined);
-  }, [currentPricingTierId]);
+    if (user) {
+      setFormData({
+        business_name: user.business_name || '',
+        business_type: user.business_type || '',
+        business_address: user.business_address || '',
+        phone: user.phone || '',
+        payment_terms: user.payment_terms || 14,
+        role: user.roles[0] || '',
+        pricing_tier_id: user.pricing_tier?.id || ''
+      });
+    }
+    loadPricingTiers();
+  }, [user]);
 
-  const handleTierChange = async (value: string) => {
-    setSelectedTierId(value);
-    if (onPricingTierChange) {
-      await onPricingTierChange(value);
+  const loadPricingTiers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pricing_tiers')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setPricingTiers(data || []);
+    } catch (error) {
+      console.error('Error loading pricing tiers:', error);
     }
   };
 
+  const handleInputChange = (field: string, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          business_name: formData.business_name,
+          business_type: formData.business_type,
+          business_address: formData.business_address,
+          phone: formData.phone,
+          payment_terms: formData.payment_terms
+        })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Update role if changed
+      if (formData.role && formData.role !== user.roles[0]) {
+        // Delete existing role
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id);
+
+        // Insert new role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role: formData.role
+          });
+
+        if (roleError) throw roleError;
+      }
+
+      // Update pricing tier if changed
+      if (formData.pricing_tier_id !== user.pricing_tier?.id) {
+        // Delete existing pricing tier assignment
+        await supabase
+          .from('user_pricing_tiers')
+          .delete()
+          .eq('user_id', user.id);
+
+        // Insert new pricing tier if one is selected
+        if (formData.pricing_tier_id) {
+          const { error: tierError } = await supabase
+            .from('user_pricing_tiers')
+            .insert({
+              user_id: user.id,
+              tier_id: formData.pricing_tier_id
+            });
+
+          if (tierError) throw tierError;
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "User has been updated successfully.",
+      });
+
+      onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!user) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit User</DialogTitle>
           <DialogDescription>
-            Make changes to the user's profile information.
+            Update user information and settings.
           </DialogDescription>
         </DialogHeader>
+        
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              Email
-            </Label>
-            <Input
-              id="email"
-              name="email"
-              value={editFormData.email || ''}
-              onChange={onInputChange}
-              className="col-span-3"
-              disabled
-            />
+            <Label className="text-right">Email</Label>
+            <div className="col-span-3 py-2 text-sm text-gray-600">
+              {user.email}
+            </div>
           </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="business_name" className="text-right">
               Business Name
             </Label>
             <Input
               id="business_name"
-              name="business_name"
-              value={editFormData.business_name || ''}
-              onChange={onInputChange}
+              value={formData.business_name}
+              onChange={(e) => handleInputChange('business_name', e.target.value)}
               className="col-span-3"
             />
           </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="business_type" className="text-right">
               Business Type
             </Label>
             <Input
               id="business_type"
-              name="business_type"
-              value={editFormData.business_type || ''}
-              onChange={onInputChange}
+              value={formData.business_type}
+              onChange={(e) => handleInputChange('business_type', e.target.value)}
               className="col-span-3"
             />
           </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="business_address" className="text-right">
+              Address
+            </Label>
+            <Input
+              id="business_address"
+              value={formData.business_address}
+              onChange={(e) => handleInputChange('business_address', e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="phone" className="text-right">
               Phone
             </Label>
             <Input
               id="phone"
-              name="phone"
-              value={editFormData.phone || ''}
-              onChange={onInputChange}
+              value={formData.phone}
+              onChange={(e) => handleInputChange('phone', e.target.value)}
               className="col-span-3"
             />
           </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="payment_terms" className="text-right">
               Payment Terms
             </Label>
             <Input
               id="payment_terms"
-              name="payment_terms"
               type="number"
-              value={editFormData.payment_terms || 14}
-              onChange={onInputChange}
+              value={formData.payment_terms}
+              onChange={(e) => handleInputChange('payment_terms', parseInt(e.target.value))}
               className="col-span-3"
-              min="0"
-              placeholder="Days (e.g. 14)"
             />
           </div>
-          {onPricingTierChange && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="pricing_tier" className="text-right">
-                Pricing Tier
-              </Label>
-              <Select
-                value={selectedTierId}
-                onValueChange={handleTierChange}
-                disabled={loadingTiers}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select pricing tier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Default (No special pricing)</SelectItem>
-                  {tiers.map((tier) => (
-                    <SelectItem key={tier.id} value={tier.id}>
-                      {tier.name} ({tier.discount_percentage}% discount)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="business_address" className="text-right">
-              Address
+            <Label htmlFor="role" className="text-right">
+              Role
             </Label>
-            <Textarea
-              id="business_address"
-              name="business_address"
-              value={editFormData.business_address || ''}
-              onChange={onInputChange}
-              className="col-span-3"
-              rows={3}
-            />
+            <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="retailer">Retailer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="pricing_tier" className="text-right">
+              Pricing Tier
+            </Label>
+            <Select 
+              value={formData.pricing_tier_id} 
+              onValueChange={(value) => handleInputChange('pricing_tier_id', value)}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select pricing tier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No tier assigned</SelectItem>
+                {pricingTiers.map((tier) => (
+                  <SelectItem key={tier.id} value={tier.id}>
+                    {tier.name} - {tier.description}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={onFormSubmit}>Save changes</Button>
+          <Button onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? 'Saving...' : 'Save changes'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -35,7 +35,7 @@ const CreatePricingTierDialog: React.FC<CreatePricingTierDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Create Pricing Tier</DialogTitle>
           <DialogDescription>
-            Create a new pricing tier for your users.
+            Create a new pricing tier for your users. You can set specific prices for each product in this tier later.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -49,22 +49,7 @@ const CreatePricingTierDialog: React.FC<CreatePricingTierDialogProps> = ({
               value={formData.name || ''}
               onChange={handleInputChange}
               className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="discount_percentage" className="text-right">
-              Discount %
-            </Label>
-            <Input
-              id="discount_percentage"
-              name="discount_percentage"
-              type="number"
-              value={formData.discount_percentage || 0}
-              onChange={handleInputChange}
-              min="0"
-              max="100"
-              step="0.1"
-              className="col-span-3"
+              placeholder="e.g., Wholesale, VIP, etc."
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -78,6 +63,7 @@ const CreatePricingTierDialog: React.FC<CreatePricingTierDialogProps> = ({
               onChange={handleInputChange}
               className="col-span-3"
               rows={3}
+              placeholder="Describe this pricing tier..."
             />
           </div>
         </div>

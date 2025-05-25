@@ -15,7 +15,7 @@ export const usePricingTiersList = () => {
       const { data, error } = await supabase
         .from('pricing_tiers')
         .select('*')
-        .order('discount_percentage', { ascending: false });
+        .order('name');
 
       if (error) throw error;
       setTiers(data as PricingTier[]);

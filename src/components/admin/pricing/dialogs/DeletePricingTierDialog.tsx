@@ -31,13 +31,13 @@ const DeletePricingTierDialog: React.FC<DeletePricingTierDialogProps> = ({
           <DialogTitle>Delete Pricing Tier</DialogTitle>
           <DialogDescription>
             Are you sure you want to delete this pricing tier?
-            This action cannot be undone.
+            This action cannot be undone and will remove all associated product prices.
           </DialogDescription>
         </DialogHeader>
         {selectedTier && (
           <div className="py-4 space-y-2">
             <p><strong>Name:</strong> {selectedTier.name}</p>
-            <p><strong>Discount:</strong> {selectedTier.discount_percentage}%</p>
+            <p><strong>Description:</strong> {selectedTier.description}</p>
           </div>
         )}
         <DialogFooter>

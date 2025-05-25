@@ -52,22 +52,6 @@ const EditPricingTierDialog: React.FC<EditPricingTierDialogProps> = ({
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-discount" className="text-right">
-              Discount %
-            </Label>
-            <Input
-              id="edit-discount"
-              name="discount_percentage"
-              type="number"
-              value={formData.discount_percentage || 0}
-              onChange={handleInputChange}
-              min="0"
-              max="100"
-              step="0.1"
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="edit-description" className="text-right">
               Description
             </Label>
