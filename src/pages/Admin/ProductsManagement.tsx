@@ -13,7 +13,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import ProductsList from '@/components/admin/ProductsList';
 import DeleteConfirmDialog from '@/components/admin/DeleteConfirmDialog';
 import ImageMigrationButton from '@/components/admin/ImageMigrationButton';
-import { supabase } from '@/lib/supabase';
+import ProductPricingManager from '@/components/admin/pricing/ProductPricingManager';
+import { supabase } from '@/integrations/supabase/client';
 
 const ProductsManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);

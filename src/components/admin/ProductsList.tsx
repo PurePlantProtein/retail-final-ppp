@@ -9,6 +9,7 @@ interface ProductsListProps {
   onEditProduct: (product: Product) => void;
   onDeletePrompt: (product: Product) => void;
   onDuplicateProduct: (product: Product) => void;
+  onManagePricing: (product: Product) => void;
 }
 
 const ProductsList: React.FC<ProductsListProps> = ({
@@ -17,6 +18,7 @@ const ProductsList: React.FC<ProductsListProps> = ({
   onEditProduct,
   onDeletePrompt,
   onDuplicateProduct,
+  onManagePricing,
 }) => {
   if (loading) {
     return <div className="text-center py-8">Loading products...</div>;
@@ -39,6 +41,7 @@ const ProductsList: React.FC<ProductsListProps> = ({
           onEdit={onEditProduct}
           onDelete={onDeletePrompt}
           onDuplicate={onDuplicateProduct}
+          onManagePricing={onManagePricing}
         />
       ))}
     </div>

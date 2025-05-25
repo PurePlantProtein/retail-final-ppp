@@ -3,13 +3,14 @@ import React from 'react';
 import { Product } from '@/types/product';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash, Copy, Weight } from 'lucide-react';
+import { Edit, Trash, Copy, Weight, DollarSign } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
   onDuplicate: (product: Product) => void;
+  onManagePricing: (product: Product) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -17,6 +18,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onEdit,
   onDelete,
   onDuplicate,
+  onManagePricing,
 }) => {
   return (
     <Card key={product.id}>
@@ -56,6 +58,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
           >
             <Edit className="h-4 w-4" />
             Edit
+          </Button>
+          <Button 
+            variant="outline"
+            size="sm" 
+            onClick={() => onManagePricing(product)}
+            className="flex items-center gap-1"
+          >
+            <DollarSign className="h-4 w-4" />
+            Pricing
           </Button>
           <Button 
             variant="outline"

@@ -13,23 +13,21 @@ export const usePricingTierDialogs = (
   const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
   const [formData, setFormData] = useState<Partial<PricingTier>>({
     name: '',
-    description: '',
-    discount_percentage: 0
+    description: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'discount_percentage' ? parseFloat(value) : value
+      [name]: value
     }));
   };
 
   const handleCreateClick = () => {
     setFormData({
       name: '',
-      description: '',
-      discount_percentage: 0
+      description: ''
     });
     setIsCreateDialogOpen(true);
   };
@@ -38,8 +36,7 @@ export const usePricingTierDialogs = (
     setSelectedTier(tier);
     setFormData({
       name: tier.name,
-      description: tier.description,
-      discount_percentage: tier.discount_percentage
+      description: tier.description
     });
     setIsEditDialogOpen(true);
   };
