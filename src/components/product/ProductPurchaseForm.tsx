@@ -1,11 +1,12 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Minus } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { calculateTieredPrice } from '@/types/pricing';
+import { getProductTierPrice, calculateEffectivePrice } from '@/types/pricing';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProductPurchaseFormProps {
   user: any;
@@ -19,7 +20,7 @@ interface ProductPurchaseFormProps {
   handleAddToCart: () => void;
   minQuantity?: number;
   categoryMOQ?: number;
-  discountPercentage?: number; // Added for tiered pricing
+  discountPercentage?: number;
 }
 
 const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
@@ -34,13 +35,55 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
   handleAddToCart,
   minQuantity = 1,
   categoryMOQ,
-  discountPercentage
 }) => {
+  const [effectivePrice, setEffectivePrice] = useState(price);
+  const [userTier, setUserTier] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
   // Determine the effective minimum quantity (product-specific or category-based)
   const effectiveMinQuantity = categoryMOQ || minQuantity || 1;
-  
-  // Calculate the tiered price if a discount is applicable
-  const actualPrice = calculateTieredPrice(price, discountPercentage);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserTierAndPrice();
+    }
+  }, [user]);
+
+  const fetchUserTierAndPrice = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      // Get user's pricing tier
+      const { data: userTierData } = await supabase
+        .from('user_pricing_tiers')
+        .select(`
+          *,
+          tier:pricing_tiers(*)
+        `)
+        .eq('user_id', user.id)
+        .single();
+
+      if (userTierData) {
+        setUserTier(userTierData);
+        
+        // Get product price for this tier
+        const { data: productPrices } = await supabase
+          .from('product_prices')
+          .select('*')
+          .eq('product_id', window.location.pathname.split('/').pop()) // Get product ID from URL
+          .eq('tier_id', userTierData.tier_id);
+
+        if (productPrices && productPrices.length > 0) {
+          setEffectivePrice(productPrices[0].price);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user tier and pricing:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Show warning if the quantity is below the minimum
   useEffect(() => {
@@ -52,6 +95,8 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
       });
     }
   }, []);
+
+  const savings = price !== effectivePrice ? (price - effectivePrice) * quantity : 0;
 
   return (
     <div className="border-t pt-6">
@@ -86,37 +131,48 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
               </Button>
             </div>
           </div>
+          
           {categoryMOQ && (
             <div className="mb-4 text-sm text-amber-600 font-medium">
               * Minimum order: {effectiveMinQuantity} units for {category} products
             </div>
           )}
-          {discountPercentage && (
+          
+          {userTier && effectivePrice !== price && (
             <div className="mb-4 text-sm text-green-600 font-medium">
-              * You have a special pricing discount of {discountPercentage}% applied!
+              * Special pricing applied ({userTier.tier?.name} tier)
             </div>
           )}
+          
           <div className="flex flex-col space-y-3">
             <Button 
               size="lg"
               onClick={handleAddToCart}
-              disabled={quantity < effectiveMinQuantity || quantity > stock}
+              disabled={quantity < effectiveMinQuantity || quantity > stock || loading}
             >
-              Add to Cart
+              {loading ? 'Loading...' : 'Add to Cart'}
             </Button>
             <Button asChild variant="outline" size="lg">
               <Link to="/cart">View Cart</Link>
             </Button>
           </div>
+          
           {quantity > 0 && (
-            <p className="mt-4 text-sm text-gray-600 text-left">
-              Total: ${(actualPrice * quantity).toFixed(2)}
-              {price !== actualPrice && (
-                <span className="ml-2 text-green-600">
-                  (Saved: ${((price - actualPrice) * quantity).toFixed(2)})
-                </span>
+            <div className="mt-4 text-sm text-gray-600 text-left space-y-1">
+              <p>
+                Total: ${(effectivePrice * quantity).toFixed(2)}
+                {savings > 0 && (
+                  <span className="ml-2 text-green-600">
+                    (Saved: ${savings.toFixed(2)})
+                  </span>
+                )}
+              </p>
+              {effectivePrice !== price && (
+                <p className="text-xs text-gray-500">
+                  Base price: ${(price * quantity).toFixed(2)}
+                </p>
               )}
-            </p>
+            </div>
           )}
         </>
       ) : (

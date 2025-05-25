@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -14,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import ProductsList from '@/components/admin/ProductsList';
 import DeleteConfirmDialog from '@/components/admin/DeleteConfirmDialog';
 import ImageMigrationButton from '@/components/admin/ImageMigrationButton';
+import { supabase } from '@/lib/supabase';
 
 const ProductsManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -23,6 +23,8 @@ const ProductsManagement = () => {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState('list');
   const [error, setError] = useState<string | null>(null);
+  const [pricingProduct, setPricingProduct] = useState<Product | null>(null);
+  const [pricingTiers, setPricingTiers] = useState<any[]>([]);
   
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
@@ -43,6 +45,7 @@ const ProductsManagement = () => {
     }
     
     loadProducts();
+    loadPricingTiers();
   }, [user, isAdmin, navigate, toast]);
 
   const loadProducts = async () => {
@@ -61,6 +64,20 @@ const ProductsManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPricingTiers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pricing_tiers')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setPricingTiers(data || []);
+    } catch (error) {
+      console.error('Error loading pricing tiers:', error);
     }
   };
 
@@ -130,6 +147,10 @@ const ProductsManagement = () => {
     }
   };
 
+  const handleManagePricing = (product: Product) => {
+    setPricingProduct(product);
+  };
+
   if (!isAdmin) {
     return null;
   }
@@ -137,9 +158,9 @@ const ProductsManagement = () => {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Product Management</h1>
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold">Product Management</h1>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <ImageMigrationButton 
               products={products}
               onSuccess={loadProducts}
@@ -158,46 +179,57 @@ const ProductsManagement = () => {
           </Alert>
         )}
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="list">Product List</TabsTrigger>
-            <TabsTrigger value="add">Add Product</TabsTrigger>
-            {editProduct && (
-              <TabsTrigger value="edit">Edit Product</TabsTrigger>
-            )}
-          </TabsList>
-          
-          <TabsContent value="list">
-            <ProductsList
-              products={products}
-              loading={loading}
-              onEditProduct={handleEditProduct}
-              onDeletePrompt={handleDeletePrompt}
-              onDuplicateProduct={handleDuplicateProduct}
+        {pricingProduct ? (
+          <div className="mb-6">
+            <ProductPricingManager
+              product={pricingProduct}
+              tiers={pricingTiers}
+              onClose={() => setPricingProduct(null)}
             />
-            {products.length === 0 && !loading && (
-              <div className="text-center">
-                <Button onClick={() => setActiveTab('add')}>Add Your First Product</Button>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="add">
-            <div className="max-w-2xl mx-auto">
-              <h2 className="text-2xl font-semibold mb-4">Add New Product</h2>
-              <ProductForm onSuccess={handleProductSaved} />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="edit">
-            {editProduct && (
+          </div>
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6 grid w-full grid-cols-2 sm:grid-cols-3 lg:w-auto lg:grid-cols-none lg:flex">
+              <TabsTrigger value="list">Product List</TabsTrigger>
+              <TabsTrigger value="add">Add Product</TabsTrigger>
+              {editProduct && (
+                <TabsTrigger value="edit">Edit Product</TabsTrigger>
+              )}
+            </TabsList>
+            
+            <TabsContent value="list">
+              <ProductsList
+                products={products}
+                loading={loading}
+                onEditProduct={handleEditProduct}
+                onDeletePrompt={handleDeletePrompt}
+                onDuplicateProduct={handleDuplicateProduct}
+                onManagePricing={handleManagePricing}
+              />
+              {products.length === 0 && !loading && (
+                <div className="text-center">
+                  <Button onClick={() => setActiveTab('add')}>Add Your First Product</Button>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="add">
               <div className="max-w-2xl mx-auto">
-                <h2 className="text-2xl font-semibold mb-4">Edit Product</h2>
-                <ProductForm product={editProduct} onSuccess={handleProductSaved} />
+                <h2 className="text-xl sm:text-2xl font-semibold mb-4">Add New Product</h2>
+                <ProductForm onSuccess={handleProductSaved} />
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+            
+            <TabsContent value="edit">
+              {editProduct && (
+                <div className="max-w-2xl mx-auto">
+                  <h2 className="text-xl sm:text-2xl font-semibold mb-4">Edit Product</h2>
+                  <ProductForm product={editProduct} onSuccess={handleProductSaved} />
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
 
       <DeleteConfirmDialog

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -94,7 +93,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-8 sm:py-16">
           <p>Loading product details...</p>
         </div>
       </Layout>
@@ -103,21 +102,30 @@ const ProductDetail = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-8 sm:py-16">
         <Button variant="ghost" onClick={() => navigate('/products')} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Products
         </Button>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <ProductImage image={product.image} name={product.name} />
-          <div>
-            <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-gray-700">${product.price.toFixed(2)}</p>
-              <Button variant="outline" size="icon">
-                <Heart className="h-4 w-4" />
-              </Button>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+          <div className="order-1 lg:order-1">
+            <ProductImage image={product.image} name={product.name} />
+          </div>
+          
+          <div className="order-2 lg:order-2 space-y-6">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold mb-2">{product.name}</h1>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-lg sm:text-xl text-gray-700 font-semibold">
+                  ${product.price.toFixed(2)}
+                </p>
+                <Button variant="outline" size="icon">
+                  <Heart className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+            
             <ProductPurchaseForm
               user={user}
               price={product.price}
@@ -130,18 +138,20 @@ const ProductDetail = () => {
               handleAddToCart={handleAddToCart}
               minQuantity={product.min_quantity}
               categoryMOQ={undefined}
-              discountPercentage={userTier?.tier?.discount_percentage}
-            />
-            <ProductDetailTabs
-              description={product.description}
-              ingredients={product.ingredients || undefined}
-              aminoAcidProfile={product.aminoAcidProfile}
-              nutritionalInfo={product.nutritionalInfo}
-              servingSize={product.servingSize}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
             />
           </div>
+        </div>
+        
+        <div className="mt-8 lg:mt-12">
+          <ProductDetailTabs
+            description={product.description}
+            ingredients={product.ingredients || undefined}
+            aminoAcidProfile={product.aminoAcidProfile}
+            nutritionalInfo={product.nutritionalInfo}
+            servingSize={product.servingSize}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
         </div>
       </div>
     </Layout>

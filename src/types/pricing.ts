@@ -3,7 +3,6 @@ export type PricingTier = {
   id: string;
   name: string;
   description: string;
-  discount_percentage: number;
   created_at: string;
   updated_at: string;
 };
@@ -26,12 +25,25 @@ export type ProductPrice = {
   updated_at: string;
 };
 
-// Helper function to calculate tiered price
-export const calculateTieredPrice = (
-  basePrice: number, 
-  discountPercentage: number | undefined
+// Helper function to get the price for a specific product and tier
+export const getProductTierPrice = (
+  productPrices: ProductPrice[],
+  productId: string,
+  tierId: string | undefined
+): number | null => {
+  if (!tierId) return null;
+  
+  const productPrice = productPrices.find(
+    pp => pp.product_id === productId && pp.tier_id === tierId
+  );
+  
+  return productPrice ? productPrice.price : null;
+};
+
+// Helper function to calculate the effective price (tier price or base price)
+export const calculateEffectivePrice = (
+  basePrice: number,
+  tierPrice: number | null
 ): number => {
-  if (!discountPercentage) return basePrice;
-  const discount = basePrice * (discountPercentage / 100);
-  return basePrice - discount;
+  return tierPrice !== null ? tierPrice : basePrice;
 };
