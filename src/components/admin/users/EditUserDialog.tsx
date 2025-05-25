@@ -126,6 +126,12 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
 
       // Update role if changed
       if (formData.role && formData.role !== user.roles[0]) {
+        // Validate role
+        const validRoles = ['admin', 'retailer'];
+        if (!validRoles.includes(formData.role)) {
+          throw new Error('Invalid role specified');
+        }
+
         // Delete existing role
         await supabase
           .from('user_roles')
@@ -137,7 +143,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
           .from('user_roles')
           .insert({
             user_id: user.id,
-            role: formData.role
+            role: formData.role as 'admin' | 'retailer'
           });
 
         if (roleError) throw roleError;

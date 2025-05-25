@@ -134,6 +134,9 @@ const ProductDetail = () => {
               <div className="text-sm text-gray-600 mb-4">
                 <p>Stock: {product.stock} units available</p>
                 {product.category && <p>Category: {product.category}</p>}
+                {product.min_quantity && product.min_quantity > 1 && (
+                  <p>Minimum order quantity: {product.min_quantity} units</p>
+                )}
               </div>
             </div>
             
@@ -151,6 +154,16 @@ const ProductDetail = () => {
               categoryMOQ={undefined}
             />
           </div>
+        </div>
+        
+        {/* Product Specifications */}
+        <div className="mt-6 sm:mt-8">
+          <ProductSpecifications
+            stock={product.stock}
+            servingSize={product.serving_size}
+            numberOfServings={product.number_of_servings}
+            bagSize={product.bag_size}
+          />
         </div>
         
         <div className="mt-6 sm:mt-8 lg:mt-12">

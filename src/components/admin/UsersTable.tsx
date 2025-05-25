@@ -136,14 +136,13 @@ const UsersTable: React.FC<UsersTableProps> = ({
 
       {/* Edit User Dialog */}
       <EditUserDialog
+        user={editingUser}
         isOpen={isEditDialogOpen}
-        setIsOpen={setIsEditDialogOpen}
-        editingUser={editingUser}
-        editFormData={editFormData}
-        onInputChange={handleEditInputChange}
-        onFormSubmit={handleEditFormSubmit}
-        onPricingTierChange={onPricingTierChange}
-        currentPricingTierId={currentPricingTierId}
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={() => {
+          // Refresh users list or handle success
+          setIsEditDialogOpen(false);
+        }}
       />
 
       {/* Delete User Confirmation Dialog */}
