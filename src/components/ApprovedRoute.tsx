@@ -13,18 +13,22 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
   const { user, isAdmin } = useAuth();
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
     const checkApprovalStatus = async () => {
-      if (!user) {
-        setIsLoading(false);
+      if (!user || hasChecked) {
         return;
       }
 
+      console.log('ApprovedRoute: Checking approval status for user', user.id);
+
       // Admins bypass approval
       if (isAdmin) {
+        console.log('ApprovedRoute: User is admin, bypassing approval check');
         setApprovalStatus('approved');
         setIsLoading(false);
+        setHasChecked(true);
         return;
       }
 
@@ -36,21 +40,27 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
           .single();
 
         if (error) {
-          console.error('Error checking approval status:', error);
+          console.error('ApprovedRoute: Error checking approval status:', error);
           setApprovalStatus('pending');
         } else {
+          console.log('ApprovedRoute: Approval status:', data?.approval_status);
           setApprovalStatus(data?.approval_status || 'pending');
         }
       } catch (error) {
-        console.error('Error checking approval status:', error);
+        console.error('ApprovedRoute: Error checking approval status:', error);
         setApprovalStatus('pending');
       } finally {
         setIsLoading(false);
+        setHasChecked(true);
       }
     };
 
-    checkApprovalStatus();
-  }, [user, isAdmin]);
+    if (user && !hasChecked) {
+      checkApprovalStatus();
+    } else if (!user) {
+      setIsLoading(false);
+    }
+  }, [user, isAdmin, hasChecked]);
 
   if (isLoading) {
     return (
