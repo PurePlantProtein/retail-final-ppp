@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -93,8 +94,8 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-8 sm:py-16">
-          <p>Loading product details...</p>
+        <div className="container mx-auto px-4 py-4 sm:py-8">
+          <p className="text-center">Loading product details...</p>
         </div>
       </Layout>
     );
@@ -102,27 +103,37 @@ const ProductDetail = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 sm:py-16">
-        <Button variant="ghost" onClick={() => navigate('/products')} className="mb-4">
+      <div className="container mx-auto px-4 py-4 sm:py-8">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/products')} 
+          className="mb-4 -ml-2 sm:ml-0"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Products
         </Button>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           <div className="order-1 lg:order-1">
             <ProductImage image={product.image} name={product.name} />
           </div>
           
-          <div className="order-2 lg:order-2 space-y-6">
+          <div className="order-2 lg:order-2 space-y-4 sm:space-y-6">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold mb-2">{product.name}</h1>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-lg sm:text-xl text-gray-700 font-semibold">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3">
+                {product.name}
+              </h1>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                <p className="text-xl sm:text-2xl text-gray-700 font-semibold">
                   ${product.price.toFixed(2)}
                 </p>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="self-start sm:self-auto">
                   <Heart className="h-4 w-4" />
                 </Button>
+              </div>
+              <div className="text-sm text-gray-600 mb-4">
+                <p>Stock: {product.stock} units available</p>
+                {product.category && <p>Category: {product.category}</p>}
               </div>
             </div>
             
@@ -142,7 +153,7 @@ const ProductDetail = () => {
           </div>
         </div>
         
-        <div className="mt-8 lg:mt-12">
+        <div className="mt-6 sm:mt-8 lg:mt-12">
           <ProductDetailTabs
             description={product.description}
             ingredients={product.ingredients || undefined}

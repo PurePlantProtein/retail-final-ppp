@@ -99,17 +99,18 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
   const savings = price !== effectivePrice ? (price - effectivePrice) * quantity : 0;
 
   return (
-    <div className="border-t pt-6">
+    <div className="border-t pt-4 sm:pt-6">
       {user ? (
         <>
-          <div className="flex items-center space-x-4 mb-6">
-            <span className="text-gray-700">Quantity:</span>
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-4 sm:mb-6">
+            <span className="text-gray-700 font-medium">Quantity:</span>
             <div className="flex items-center">
               <Button 
                 variant="outline" 
                 size="icon" 
                 onClick={handleDecrementQuantity}
                 disabled={quantity <= effectiveMinQuantity}
+                className="h-9 w-9 sm:h-10 sm:w-10"
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -119,13 +120,14 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
                 onChange={handleQuantityChange}
                 min={effectiveMinQuantity}
                 max={stock}
-                className="w-20 mx-2 text-center"
+                className="w-16 sm:w-20 mx-2 text-center h-9 sm:h-10"
               />
               <Button 
                 variant="outline" 
                 size="icon" 
                 onClick={handleIncrementQuantity}
                 disabled={quantity >= stock}
+                className="h-9 w-9 sm:h-10 sm:w-10"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -133,13 +135,13 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
           </div>
           
           {categoryMOQ && (
-            <div className="mb-4 text-sm text-amber-600 font-medium">
+            <div className="mb-4 text-sm text-amber-600 font-medium bg-amber-50 p-3 rounded-md">
               * Minimum order: {effectiveMinQuantity} units for {category} products
             </div>
           )}
           
           {userTier && effectivePrice !== price && (
-            <div className="mb-4 text-sm text-green-600 font-medium">
+            <div className="mb-4 text-sm text-green-600 font-medium bg-green-50 p-3 rounded-md">
               * Special pricing applied ({userTier.tier?.name} tier)
             </div>
           )}
@@ -149,17 +151,18 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
               size="lg"
               onClick={handleAddToCart}
               disabled={quantity < effectiveMinQuantity || quantity > stock || loading}
+              className="w-full"
             >
               {loading ? 'Loading...' : 'Add to Cart'}
             </Button>
-            <Button asChild variant="outline" size="lg">
+            <Button asChild variant="outline" size="lg" className="w-full">
               <Link to="/cart">View Cart</Link>
             </Button>
           </div>
           
           {quantity > 0 && (
-            <div className="mt-4 text-sm text-gray-600 text-left space-y-1">
-              <p>
+            <div className="mt-4 text-sm text-gray-600 space-y-1 bg-gray-50 p-3 rounded-md">
+              <p className="font-medium">
                 Total: ${(effectivePrice * quantity).toFixed(2)}
                 {savings > 0 && (
                   <span className="ml-2 text-green-600">
@@ -177,13 +180,13 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
         </>
       ) : (
         <div className="flex flex-col space-y-3">
-          <p className="text-gray-600 mb-2 text-left">
+          <p className="text-gray-600 mb-2 text-sm sm:text-base">
             Please log in to purchase this product.
           </p>
-          <Button asChild size="lg">
+          <Button asChild size="lg" className="w-full">
             <Link to="/login">Login to Purchase</Link>
           </Button>
-          <Button asChild variant="outline" size="lg">
+          <Button asChild variant="outline" size="lg" className="w-full">
             <Link to="/signup">Create Account</Link>
           </Button>
         </div>
