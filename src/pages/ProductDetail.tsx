@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -12,28 +13,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserPricingTier } from '@/hooks/usePricingTiers';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  images: string[];
-  price: number;
-  stock: number;
-  category: string;
-  specifications: any;
-  min_quantity?: number;
-  category_moq?: number;
-}
+import { mapProductForClient } from '@/utils/productUtils';
+import { Product } from '@/types/product';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { addItemToCart } = useCart();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [activeTab, setActiveTab] = useState('description');
   const { userTier } = useUserPricingTier(user?.id);
 
   useEffect(() => {
@@ -49,7 +40,9 @@ const ProductDetail = () => {
           throw error;
         }
 
-        setProduct(data);
+        // Map the database product to our frontend Product type
+        const mappedProduct = mapProductForClient(data);
+        setProduct(mappedProduct);
       } catch (error: any) {
         console.error("Error fetching product:", error.message);
         toast({
@@ -90,7 +83,7 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (product) {
-      addItemToCart(product, quantity);
+      addToCart(product, quantity);
       toast({
         title: "Added to cart",
         description: `${product.name} x ${quantity} has been added to your cart.`,
@@ -116,7 +109,7 @@ const ProductDetail = () => {
           Back to Products
         </Button>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <ProductImage images={product.images} name={product.name} />
+          <ProductImage image={product.image} name={product.name} />
           <div>
             <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
             <div className="flex items-center justify-between mb-4">
@@ -130,7 +123,7 @@ const ProductDetail = () => {
               price={product.price}
               stock={product.stock}
               quantity={quantity}
-              category={product.category}
+              category={product.category || ''}
               handleIncrementQuantity={handleIncrementQuantity}
               handleDecrementQuantity={handleDecrementQuantity}
               handleQuantityChange={handleQuantityChange}
@@ -139,9 +132,15 @@ const ProductDetail = () => {
               categoryMOQ={product.category_moq}
               discountPercentage={userTier?.tier?.discount_percentage}
             />
-            <ProductDetailTabs>
-              <ProductSpecifications specifications={product.specifications} />
-            </ProductDetailTabs>
+            <ProductDetailTabs
+              description={product.description}
+              ingredients={product.ingredients || undefined}
+              aminoAcidProfile={product.aminoAcidProfile}
+              nutritionalInfo={product.nutritionalInfo}
+              servingSize={product.servingSize}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
           </div>
         </div>
       </div>

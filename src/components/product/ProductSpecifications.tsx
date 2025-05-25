@@ -28,7 +28,7 @@ const ProductSpecifications: React.FC<ProductSpecificationsProps> = ({
         </div>
       )}
       
-      {numberOfServings !== undefined && (
+      {numberOfServings !== undefined && numberOfServings !== null && (
         <div>
           <h4 className="text-sm text-gray-500">Number of Servings</h4>
           <p className="text-left">{numberOfServings}</p>
