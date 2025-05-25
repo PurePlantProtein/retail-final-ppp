@@ -66,7 +66,7 @@ const ProductDetail = () => {
   };
 
   const handleDecrementQuantity = () => {
-    if (product && quantity > (product.category_moq || product.min_quantity || 1)) {
+    if (product && quantity > (product.min_quantity || 1)) {
       setQuantity(quantity - 1);
     }
   };
@@ -74,7 +74,7 @@ const ProductDetail = () => {
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
     if (product) {
-      const min = product.category_moq || product.min_quantity || 1;
+      const min = product.min_quantity || 1;
       if (!isNaN(value) && value >= min && value <= product.stock) {
         setQuantity(value);
       }
@@ -129,7 +129,7 @@ const ProductDetail = () => {
               handleQuantityChange={handleQuantityChange}
               handleAddToCart={handleAddToCart}
               minQuantity={product.min_quantity}
-              categoryMOQ={product.category_moq}
+              categoryMOQ={undefined}
               discountPercentage={userTier?.tier?.discount_percentage}
             />
             <ProductDetailTabs
