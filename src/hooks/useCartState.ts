@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { CartItem, EmailSettings } from '@/types/cart';
@@ -76,15 +77,30 @@ export function useCartState() {
     });
   }, []);
 
-  const addToCart = useCallback((product: Product, quantity: number) => {
-    // Check for category MOQ
+  // Helper function to get total quantity of products in a specific category
+  const getCategoryTotalQuantity = useCallback((items: CartItem[], category: string): number => {
+    return items
+      .filter(item => item.product.category === category)
+      .reduce((total, item) => total + item.quantity, 0);
+  }, []);
+
+  // Helper function to check if category MOQ is met after adding a product
+  const checkCategoryMOQ = useCallback((newItems: CartItem[], product: Product, quantity: number): boolean => {
     const categoryMOQ = getCategoryMOQ(product.category || '');
-    const minQty = Math.max(product.min_quantity || 1, categoryMOQ || 1);
+    if (!categoryMOQ) return true; // No MOQ requirement for this category
+    
+    const totalCategoryQuantity = getCategoryTotalQuantity(newItems, product.category || '');
+    return totalCategoryQuantity >= categoryMOQ;
+  }, [getCategoryTotalQuantity]);
+
+  const addToCart = useCallback((product: Product, quantity: number) => {
+    // Check for individual product minimum quantity
+    const minQty = product.min_quantity || 1;
     
     if (quantity < minQty) {
       toast({
         title: "Minimum quantity not met",
-        description: `You must order at least ${minQty} units of this ${product.category} product.`,
+        description: `You must order at least ${minQty} units of ${product.name}.`,
         variant: "destructive"
       });
       return;
@@ -92,34 +108,74 @@ export function useCartState() {
     
     setItems(prevItems => {
       const existingItem = prevItems.find(item => item.product.id === product.id);
+      let newItems: CartItem[];
       
       if (existingItem) {
         // Update quantity if product already in cart
-        return prevItems.map(item => 
+        newItems = prevItems.map(item => 
           item.product.id === product.id 
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       } else {
         // Add new item
-        return [...prevItems, { product, quantity }];
+        newItems = [...prevItems, { product, quantity }];
       }
+      
+      // Check category MOQ after adding the product
+      const categoryMOQ = getCategoryMOQ(product.category || '');
+      if (categoryMOQ) {
+        const totalCategoryQuantity = getCategoryTotalQuantity(newItems, product.category || '');
+        
+        if (totalCategoryQuantity < categoryMOQ) {
+          const remainingNeeded = categoryMOQ - totalCategoryQuantity;
+          toast({
+            title: "Category minimum not yet met",
+            description: `You need ${remainingNeeded} more units of ${product.category} products to meet the minimum order of ${categoryMOQ} units. You can mix and match different ${product.category} products.`,
+            variant: "default"
+          });
+        }
+      }
+      
+      return newItems;
     });
     
     toast({
       title: "Added to cart",
       description: `${quantity} x ${product.name} added to your cart.`,
     });
-  }, [toast]);
+  }, [toast, getCategoryTotalQuantity]);
 
   const removeFromCart = useCallback((productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.product.id !== productId));
+    setItems(prevItems => {
+      const itemToRemove = prevItems.find(item => item.product.id === productId);
+      const newItems = prevItems.filter(item => item.product.id !== productId);
+      
+      // Check if removing this item affects category MOQ
+      if (itemToRemove) {
+        const categoryMOQ = getCategoryMOQ(itemToRemove.product.category || '');
+        if (categoryMOQ) {
+          const totalCategoryQuantity = getCategoryTotalQuantity(newItems, itemToRemove.product.category || '');
+          
+          if (totalCategoryQuantity > 0 && totalCategoryQuantity < categoryMOQ) {
+            const remainingNeeded = categoryMOQ - totalCategoryQuantity;
+            toast({
+              title: "Category minimum warning",
+              description: `You now need ${remainingNeeded} more units of ${itemToRemove.product.category} products to meet the minimum order of ${categoryMOQ} units.`,
+              variant: "destructive"
+            });
+          }
+        }
+      }
+      
+      return newItems;
+    });
     
     toast({
       title: "Removed from cart",
       description: "Item removed from your cart.",
     });
-  }, [toast]);
+  }, [toast, getCategoryTotalQuantity]);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
@@ -127,14 +183,34 @@ export function useCartState() {
       return;
     }
     
-    setItems(prevItems => 
-      prevItems.map(item => 
+    setItems(prevItems => {
+      const newItems = prevItems.map(item => 
         item.product.id === productId 
           ? { ...item, quantity }
           : item
-      )
-    );
-  }, [removeFromCart]);
+      );
+      
+      // Check category MOQ after updating quantity
+      const updatedItem = newItems.find(item => item.product.id === productId);
+      if (updatedItem) {
+        const categoryMOQ = getCategoryMOQ(updatedItem.product.category || '');
+        if (categoryMOQ) {
+          const totalCategoryQuantity = getCategoryTotalQuantity(newItems, updatedItem.product.category || '');
+          
+          if (totalCategoryQuantity < categoryMOQ) {
+            const remainingNeeded = categoryMOQ - totalCategoryQuantity;
+            toast({
+              title: "Category minimum not met",
+              description: `You need ${remainingNeeded} more units of ${updatedItem.product.category} products to meet the minimum order of ${categoryMOQ} units.`,
+              variant: "destructive"
+            });
+          }
+        }
+      }
+      
+      return newItems;
+    });
+  }, [removeFromCart, toast, getCategoryTotalQuantity]);
 
   const clearCart = useCallback(() => {
     setItems([]);

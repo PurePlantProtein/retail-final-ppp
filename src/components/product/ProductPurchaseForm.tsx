@@ -40,8 +40,8 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
   const [userTier, setUserTier] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // Determine the effective minimum quantity (product-specific or category-based)
-  const effectiveMinQuantity = categoryMOQ || minQuantity || 1;
+  // Use the product's minimum quantity
+  const effectiveMinQuantity = minQuantity || 1;
 
   useEffect(() => {
     if (user) {
@@ -85,17 +85,6 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
     }
   };
 
-  // Show warning if the quantity is below the minimum
-  useEffect(() => {
-    if (quantity < effectiveMinQuantity) {
-      toast({
-        title: "Minimum order quantity",
-        description: `This ${category} requires a minimum order of ${effectiveMinQuantity} units.`,
-        variant: "default"
-      });
-    }
-  }, []);
-
   const savings = price !== effectivePrice ? (price - effectivePrice) * quantity : 0;
 
   return (
@@ -134,9 +123,15 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
             </div>
           </div>
           
-          {categoryMOQ && (
+          {effectiveMinQuantity > 1 && (
             <div className="mb-4 text-sm text-amber-600 font-medium bg-amber-50 p-3 rounded-md">
-              * Minimum order: {effectiveMinQuantity} units for {category} products
+              * Minimum order: {effectiveMinQuantity} units for this product
+            </div>
+          )}
+          
+          {category === 'Protein Powder' && (
+            <div className="mb-4 text-sm text-blue-600 font-medium bg-blue-50 p-3 rounded-md">
+              * Category requirement: You can mix and match different protein powder products to reach the minimum 12 units total
             </div>
           )}
           
