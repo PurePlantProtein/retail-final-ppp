@@ -13,20 +13,23 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    if (!mounted || isLoading) return;
+    if (!mounted) return;
 
-    console.log('Index: Checking auth state', { user: !!user, isLoading });
+    const timer = setTimeout(() => {
+      if (!isLoading) {
+        if (user) {
+          console.log('Index: User authenticated, navigating to products');
+          navigate('/products', { replace: true });
+        } else {
+          console.log('Index: No user, navigating to login');
+          navigate('/login', { replace: true });
+        }
+      }
+    }, 100);
 
-    if (user) {
-      console.log('Index: User authenticated, navigating to products');
-      navigate('/products', { replace: true });
-    } else {
-      console.log('Index: No user, navigating to login');
-      navigate('/login', { replace: true });
-    }
+    return () => clearTimeout(timer);
   }, [user, isLoading, navigate, mounted]);
 
-  // Don't render anything until mounted and auth is resolved
   if (!mounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

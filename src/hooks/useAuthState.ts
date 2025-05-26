@@ -12,7 +12,7 @@ export const useAuthState = () => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   // Use the custom hook to fetch profile
   const { fetchProfile } = useFetchProfile(user, setProfile);
@@ -54,6 +54,12 @@ export const useAuthState = () => {
   }, [hasRole]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     let isMounted = true;
 
     const initAuth = async () => {
@@ -69,13 +75,18 @@ export const useAuthState = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          await fetchProfile(session.user.id);
-          await loadUserRoles(session.user.id);
+          // Use setTimeout to defer these calls and prevent hydration issues
+          setTimeout(async () => {
+            if (isMounted) {
+              await fetchProfile(session.user.id);
+              await loadUserRoles(session.user.id);
+            }
+          }, 0);
         }
         
         // Set up auth listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          (event, session) => {
             if (!isMounted) return;
             
             console.log('Auth state changed:', event, session?.user?.email);
@@ -83,8 +94,12 @@ export const useAuthState = () => {
             setSession(session);
             
             if (session?.user) {
-              await fetchProfile(session.user.id);
-              await loadUserRoles(session.user.id);
+              setTimeout(async () => {
+                if (isMounted) {
+                  await fetchProfile(session.user.id);
+                  await loadUserRoles(session.user.id);
+                }
+              }, 0);
             } else {
               setProfile(null);
               setRoles([]);
@@ -92,7 +107,6 @@ export const useAuthState = () => {
           }
         );
 
-        setIsInitialized(true);
         setIsLoading(false);
 
         return () => {
@@ -102,7 +116,6 @@ export const useAuthState = () => {
         console.error('Error initializing auth:', err);
         if (isMounted) {
           setIsLoading(false);
-          setIsInitialized(true);
         }
       }
     };
@@ -112,13 +125,13 @@ export const useAuthState = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [mounted]);
 
   return {
     user,
     profile,
     roles,
-    isLoading: isLoading || !isInitialized,
+    isLoading,
     session,
     hasRole,
     isAdmin: isAdmin(),

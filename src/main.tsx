@@ -5,34 +5,8 @@ import App from './App.tsx'
 import './index.css'
 import { BrowserRouter } from "react-router-dom";
 
-// Security middleware for headers
+// Security middleware for headers - simplified to avoid meta tag issues
 if (typeof window !== 'undefined') {
-  // Set security headers using meta tags
-  const createSecurityMeta = (name: string, content: string) => {
-    const meta = document.createElement('meta');
-    meta.httpEquiv = name;
-    meta.content = content;
-    document.head.appendChild(meta);
-  };
-
-  // Content Security Policy - allow images from any source
-  createSecurityMeta(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' https://cdn.gpteng.co 'unsafe-inline'; connect-src 'self' https://*.supabase.co https://*.lovable.app; img-src 'self' data: https://*.supabase.co https://* blob:; style-src 'self' 'unsafe-inline';"
-  );
-
-  // Prevent XSS attacks
-  createSecurityMeta('X-XSS-Protection', '1; mode=block');
-  
-  // Prevent MIME type sniffing
-  createSecurityMeta('X-Content-Type-Options', 'nosniff');
-  
-  // Prevent clickjacking
-  createSecurityMeta('X-Frame-Options', 'DENY');
-  
-  // Enforce HTTPS
-  createSecurityMeta('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  
   // Remove Lovable badge after the app loads
   window.addEventListener('load', () => {
     setTimeout(() => {
