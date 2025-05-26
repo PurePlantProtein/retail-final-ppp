@@ -25,6 +25,13 @@ export const useUsersFetch = () => {
       
       if (userRolesError) throw userRolesError;
 
+      // Fetch user pricing tiers
+      const { data: userPricingTiers, error: pricingTiersError } = await supabase
+        .from('user_pricing_tiers')
+        .select('user_id, tier_id');
+      
+      if (pricingTiersError) throw pricingTiersError;
+
       // Create a map of user IDs to their roles
       const userRolesMap = new Map();
       userRoles.forEach(role => {
@@ -34,7 +41,13 @@ export const useUsersFetch = () => {
         userRolesMap.get(role.user_id).push(role.role);
       });
 
-      // Map profiles to users with roles
+      // Create a map of user IDs to their pricing tier
+      const userPricingTiersMap = new Map();
+      userPricingTiers.forEach(tier => {
+        userPricingTiersMap.set(tier.user_id, tier.tier_id);
+      });
+
+      // Map profiles to users with roles and pricing tiers
       const usersWithDetails = profiles.map(profile => ({
         id: profile.id,
         email: profile.email || '',
@@ -46,6 +59,7 @@ export const useUsersFetch = () => {
         payment_terms: profile.payment_terms || 14,
         status: 'Active', // Default status
         roles: userRolesMap.get(profile.id) || ['retailer'],
+        pricing_tier_id: userPricingTiersMap.get(profile.id) || null,
         isAdmin: userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('admin'),
         isDistributor: userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('distributor'),
         isRetailer: userRolesMap.has(profile.id) && userRolesMap.get(profile.id).includes('retailer'),

@@ -44,6 +44,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
+  const [currentUserTier, setCurrentUserTier] = useState<string>('no-tier');
   const [formData, setFormData] = useState({
     business_name: '',
     business_type: '',
@@ -51,7 +52,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     phone: '',
     payment_terms: 14,
     role: '',
-    pricing_tier_id: 'no-tier' // Use placeholder value instead of empty string
+    pricing_tier_id: 'no-tier'
   });
 
   useEffect(() => {
@@ -63,11 +64,38 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
         phone: user.phone || '',
         payment_terms: user.payment_terms || 14,
         role: user.roles[0] || '',
-        pricing_tier_id: user.pricing_tier_id || 'no-tier' // Use placeholder value
+        pricing_tier_id: user.pricing_tier_id || 'no-tier'
       });
+      
+      // Fetch the user's current pricing tier
+      loadUserPricingTier(user.id);
     }
     loadPricingTiers();
   }, [user]);
+
+  const loadUserPricingTier = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_pricing_tiers')
+        .select('tier_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error loading user pricing tier:', error);
+        return;
+      }
+      
+      const tierId = data?.tier_id || 'no-tier';
+      setCurrentUserTier(tierId);
+      setFormData(prev => ({
+        ...prev,
+        pricing_tier_id: tierId
+      }));
+    } catch (error) {
+      console.error('Error loading user pricing tier:', error);
+    }
+  };
 
   const loadPricingTiers = async () => {
     try {
@@ -135,8 +163,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
       }
 
       // Update pricing tier if changed
-      const currentTierId = user.pricing_tier_id || 'no-tier';
-      if (formData.pricing_tier_id !== currentTierId) {
+      if (formData.pricing_tier_id !== currentUserTier) {
         // Delete existing pricing tier assignment
         await supabase
           .from('user_pricing_tiers')
