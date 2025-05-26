@@ -24,10 +24,11 @@ const getCategoryMOQ = (category: string): number | undefined => {
   // Define the MOQ values for different categories
   const categoryMOQs: Record<string, number> = {
     'Protein Powder': 12,
+    'protein powder': 12, // Handle case variations
     // Add more categories with their MOQ as needed
   };
 
-  return categoryMOQs[category];
+  return categoryMOQs[category] || categoryMOQs[category?.toLowerCase()];
 };
 
 export function useCartState() {
@@ -80,18 +81,12 @@ export function useCartState() {
   // Helper function to get total quantity of products in a specific category
   const getCategoryTotalQuantity = useCallback((items: CartItem[], category: string): number => {
     return items
-      .filter(item => item.product.category === category)
+      .filter(item => 
+        item.product.category?.toLowerCase() === category?.toLowerCase() ||
+        item.product.category === category
+      )
       .reduce((total, item) => total + item.quantity, 0);
   }, []);
-
-  // Helper function to check if category MOQ is met after adding a product
-  const checkCategoryMOQ = useCallback((newItems: CartItem[], product: Product, quantity: number): boolean => {
-    const categoryMOQ = getCategoryMOQ(product.category || '');
-    if (!categoryMOQ) return true; // No MOQ requirement for this category
-    
-    const totalCategoryQuantity = getCategoryTotalQuantity(newItems, product.category || '');
-    return totalCategoryQuantity >= categoryMOQ;
-  }, [getCategoryTotalQuantity]);
 
   const addToCart = useCallback((product: Product, quantity: number) => {
     // Check for individual product minimum quantity
@@ -131,8 +126,13 @@ export function useCartState() {
           const remainingNeeded = categoryMOQ - totalCategoryQuantity;
           toast({
             title: "Category minimum not yet met",
-            description: `You need ${remainingNeeded} more units of ${product.category} products to meet the minimum order of ${categoryMOQ} units. You can mix and match different ${product.category} products.`,
+            description: `You need ${remainingNeeded} more units from the ${product.category} category to meet the minimum order of ${categoryMOQ} units. You can mix and match different products from this category.`,
             variant: "default"
+          });
+        } else {
+          toast({
+            title: "Category minimum met! ✅",
+            description: `Great! You now have ${totalCategoryQuantity} units from the ${product.category} category, meeting the minimum requirement.`,
           });
         }
       }
@@ -161,7 +161,7 @@ export function useCartState() {
             const remainingNeeded = categoryMOQ - totalCategoryQuantity;
             toast({
               title: "Category minimum warning",
-              description: `You now need ${remainingNeeded} more units of ${itemToRemove.product.category} products to meet the minimum order of ${categoryMOQ} units.`,
+              description: `You now need ${remainingNeeded} more units from the ${itemToRemove.product.category} category to meet the minimum order of ${categoryMOQ} units.`,
               variant: "destructive"
             });
           }
@@ -201,7 +201,7 @@ export function useCartState() {
             const remainingNeeded = categoryMOQ - totalCategoryQuantity;
             toast({
               title: "Category minimum not met",
-              description: `You need ${remainingNeeded} more units of ${updatedItem.product.category} products to meet the minimum order of ${categoryMOQ} units.`,
+              description: `You need ${remainingNeeded} more units from the ${updatedItem.product.category} category to meet the minimum order of ${categoryMOQ} units.`,
               variant: "destructive"
             });
           }
