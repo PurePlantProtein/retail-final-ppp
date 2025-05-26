@@ -53,47 +53,70 @@ export const useAuthState = () => {
   }, [hasRole]);
 
   useEffect(() => {
-    const setupAuth = async () => {
-      // Set up auth state listener FIRST
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log('Auth state changed:', event, session?.user?.email);
-          setUser(session?.user ?? null);
-          setSession(session); // Store the session
-          
-          if (session?.user) {
-            // Use setTimeout to prevent auth deadlocks
-            setTimeout(async () => {
-              await fetchProfile(session.user.id);
-              await loadUserRoles(session.user.id);
-            }, 0);
-          } else {
-            setProfile(null);
-            setRoles([]);
-          }
-        }
-      );
+    let isMounted = true;
 
-      // THEN check for existing session
+    const setupAuth = async () => {
       try {
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (!isMounted) return;
+            
+            console.log('Auth state changed:', event, session?.user?.email);
+            setUser(session?.user ?? null);
+            setSession(session);
+            
+            if (session?.user) {
+              // Use setTimeout to prevent auth deadlocks
+              setTimeout(async () => {
+                if (!isMounted) return;
+                try {
+                  await fetchProfile(session.user.id);
+                  await loadUserRoles(session.user.id);
+                } catch (error) {
+                  console.error('Error fetching user data:', error);
+                }
+              }, 0);
+            } else {
+              setProfile(null);
+              setRoles([]);
+            }
+          }
+        );
+
+        // THEN check for existing session
         const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        
         setUser(session?.user ?? null);
-        setSession(session); // Store the session
+        setSession(session);
         
         if (session?.user) {
-          await fetchProfile(session.user.id);
-          await loadUserRoles(session.user.id);
+          try {
+            await fetchProfile(session.user.id);
+            await loadUserRoles(session.user.id);
+          } catch (error) {
+            console.error('Error fetching initial user data:', error);
+          }
         }
-      } catch (err) {
-        console.error('Error getting session:', err);
-      } finally {
-        setIsLoading(false);
-      }
 
-      return () => subscription.unsubscribe();
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (err) {
+        console.error('Error setting up auth:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
     
     setupAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return {

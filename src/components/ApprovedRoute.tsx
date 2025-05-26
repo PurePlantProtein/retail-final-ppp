@@ -13,11 +13,11 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
   const { user, isAdmin } = useAuth();
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
     const checkApprovalStatus = async () => {
-      if (!user || hasChecked) {
+      if (!user) {
+        setIsLoading(false);
         return;
       }
 
@@ -28,7 +28,6 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
         console.log('ApprovedRoute: User is admin, bypassing approval check');
         setApprovalStatus('approved');
         setIsLoading(false);
-        setHasChecked(true);
         return;
       }
 
@@ -51,16 +50,11 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
         setApprovalStatus('pending');
       } finally {
         setIsLoading(false);
-        setHasChecked(true);
       }
     };
 
-    if (user && !hasChecked) {
-      checkApprovalStatus();
-    } else if (!user) {
-      setIsLoading(false);
-    }
-  }, [user, isAdmin, hasChecked]);
+    checkApprovalStatus();
+  }, [user, isAdmin]);
 
   if (isLoading) {
     return (

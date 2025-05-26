@@ -10,7 +10,7 @@ const Index = () => {
 
   useEffect(() => {
     // Prevent multiple navigation attempts
-    if (hasNavigated || isLoading) return;
+    if (hasNavigated) return;
 
     console.log('Index: Auth state check', { user: !!user, isLoading });
 
@@ -29,24 +29,11 @@ const Index = () => {
   }, [navigate, user, isLoading, hasNavigated]);
 
   // Show loading state while determining auth status
-  if (isLoading || !hasNavigated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Pure Plant Protein Wholesale</h1>
-          <p className="text-xl text-gray-600">Loading...</p>
-          <div className="mt-4 animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // This should not be reached but provides a fallback
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">Pure Plant Protein Wholesale</h1>
-        <p className="text-xl text-gray-600">Redirecting...</p>
+        <p className="text-xl text-gray-600">Loading...</p>
         <div className="mt-4 animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
       </div>
     </div>

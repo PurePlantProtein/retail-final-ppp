@@ -26,7 +26,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   // Additional session security check
   useEffect(() => {
-    if (!hasCheckedSession && session) {
+    if (!hasCheckedSession && session && user) {
       console.log('ProtectedRoute: Checking session validity');
       
       // Check for session expiration
@@ -43,8 +43,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       }
       
       setHasCheckedSession(true);
+    } else if (!session && !isLoading) {
+      setHasCheckedSession(true);
     }
-  }, [session, navigate, toast, hasCheckedSession]);
+  }, [session, navigate, toast, hasCheckedSession, user, isLoading]);
   
   // Check for role requirements
   useEffect(() => {
@@ -81,7 +83,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }, [user, requiresAdmin, isAdmin, requiredRoles, hasRole, navigate, toast, hasCheckedSession]);
 
   // Show loading while checking authentication status
-  if (isLoading || (session && !hasCheckedSession)) {
+  if (isLoading || !hasCheckedSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
