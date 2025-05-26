@@ -1,22 +1,14 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { Product } from '@/types/product';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Minus, ShoppingCart } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useProductQuantities } from '@/hooks/useProductQuantities';
+import MobileProductCard from './product/MobileProductCard';
+import DesktopProductTable from './product/DesktopProductTable';
 
 interface ProductTableProps {
   products: Product[];
@@ -26,36 +18,12 @@ const ProductTable: React.FC<ProductTableProps> = ({ products }) => {
   const { user } = useAuth();
   const { addToCart } = useCart();
   const isMobile = useIsMobile();
-  const [quantities, setQuantities] = useState<Record<string, number>>(
-    products.reduce((acc, product) => ({
-      ...acc,
-      [product.id]: 1
-    }), {})
-  );
-
-  const handleIncrementQuantity = (productId: string) => {
-    setQuantities(prev => ({
-      ...prev,
-      [productId]: (prev[productId] || 1) + 1
-    }));
-  };
-
-  const handleDecrementQuantity = (productId: string) => {
-    setQuantities(prev => ({
-      ...prev,
-      [productId]: Math.max(1, (prev[productId] || 1) - 1)
-    }));
-  };
-
-  const handleQuantityChange = (productId: string, value: string) => {
-    const quantity = parseInt(value);
-    if (!isNaN(quantity) && quantity >= 1) {
-      setQuantities(prev => ({
-        ...prev,
-        [productId]: quantity
-      }));
-    }
-  };
+  const {
+    quantities,
+    handleIncrementQuantity,
+    handleDecrementQuantity,
+    handleQuantityChange,
+  } = useProductQuantities(products);
 
   const handleAddToCart = (product: Product) => {
     addToCart(product, quantities[product.id] || 1);
@@ -74,79 +42,16 @@ const ProductTable: React.FC<ProductTableProps> = ({ products }) => {
     return (
       <div className="space-y-4">
         {products.map((product) => (
-          <Card key={product.id}>
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0">
-                    <img 
-                      src={product.image} 
-                      alt={product.name}
-                      className="w-16 h-16 object-cover rounded-md"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Link 
-                      to={`/products/${product.id}`} 
-                      className="font-medium text-lg hover:text-primary transition-colors"
-                    >
-                      {product.name}
-                    </Link>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>Category: {product.category || '-'}</p>
-                      <p>Price: ${product.price.toFixed(2)}</p>
-                      <p>Stock: {product.stock}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {user && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Quantity:</span>
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => handleDecrementQuantity(product.id)}
-                          className="h-8 w-8"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input 
-                          type="number"
-                          value={quantities[product.id] || 1}
-                          onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                          min="1"
-                          max={product.stock}
-                          className="h-8 w-16 text-center"
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => handleIncrementQuantity(product.id)}
-                          className="h-8 w-8"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => handleAddToCart(product)}
-                      className="w-full"
-                      size="sm"
-                    >
-                      Add to Cart
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <MobileProductCard
+            key={product.id}
+            product={product}
+            quantity={quantities[product.id] || 1}
+            onAddToCart={handleAddToCart}
+            onIncrementQuantity={handleIncrementQuantity}
+            onDecrementQuantity={handleDecrementQuantity}
+            onQuantityChange={handleQuantityChange}
+            isLoggedIn={!!user}
+          />
         ))}
         
         {user && (
@@ -167,89 +72,15 @@ const ProductTable: React.FC<ProductTableProps> = ({ products }) => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">Image</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead className="w-[200px]">Quantity</TableHead>
-              {user && <TableHead className="text-right">Action</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell>
-                  <img 
-                    src={product.image} 
-                    alt={product.name}
-                    className="w-12 h-12 object-cover rounded-md"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="font-medium">
-                  <Link to={`/products/${product.id}`} className="hover:underline text-primary">
-                    {product.name}
-                  </Link>
-                </TableCell>
-                <TableCell>{product.category || '-'}</TableCell>
-                <TableCell>${product.price.toFixed(2)}</TableCell>
-                <TableCell>{product.stock}</TableCell>
-                <TableCell>
-                  {user ? (
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => handleDecrementQuantity(product.id)}
-                        className="h-8 w-8"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <Input 
-                        type="number"
-                        value={quantities[product.id] || 1}
-                        onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                        min="1"
-                        max={product.stock}
-                        className="h-8 w-16 text-center"
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => handleIncrementQuantity(product.id)}
-                        className="h-8 w-8"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <span>-</span>
-                  )}
-                </TableCell>
-                {user && (
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddToCart(product)}
-                    >
-                      Add
-                    </Button>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DesktopProductTable
+        products={products}
+        quantities={quantities}
+        onAddToCart={handleAddToCart}
+        onIncrementQuantity={handleIncrementQuantity}
+        onDecrementQuantity={handleDecrementQuantity}
+        onQuantityChange={handleQuantityChange}
+        isLoggedIn={!!user}
+      />
       
       {user && (
         <div className="flex justify-end">

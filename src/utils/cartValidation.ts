@@ -1,5 +1,6 @@
 
-import { Product, CartItem } from '@/types/cart';
+import { Product } from '@/types/product';
+import { CartItem } from '@/types/cart';
 import { getCategoryMOQ, getCategoryTotalQuantity } from './categoryMOQ';
 
 export const validateProductMinimum = (product: Product, quantity: number): { isValid: boolean; message?: string } => {
