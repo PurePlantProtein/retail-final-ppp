@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { OrdersTable } from '@/components/admin/orders/OrdersTable';
 import { EditOrderDialog } from '@/components/admin/orders/EditOrderDialog';
 import { DeleteOrderDialog } from '@/components/admin/orders/DeleteOrderDialog';
+import { TrackingInfoDialog } from '@/components/admin/orders/TrackingInfoDialog';
 import { useOrders } from '@/hooks/useOrders';
 import { Order, OrderStatus } from '@/types/product';
 
@@ -29,6 +30,7 @@ const OrdersManagement = () => {
   
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
 
   const openEditDialog = (order: Order) => {
     setSelectedOrder(order);
@@ -38,6 +40,11 @@ const OrdersManagement = () => {
   const openDeleteDialog = (order: Order) => {
     setSelectedOrder(order);
     setShowDeleteDialog(true);
+  };
+
+  const openTrackingDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setShowTrackingDialog(true);
   };
 
   if (isLoading) {
@@ -77,7 +84,7 @@ const OrdersManagement = () => {
         <Card>
           <CardHeader>
             <CardTitle>Orders</CardTitle>
-            <CardDescription>Manage customer orders</CardDescription>
+            <CardDescription>Manage customer orders and tracking information</CardDescription>
           </CardHeader>
           <CardContent>
             {orders.length === 0 ? (
@@ -90,6 +97,7 @@ const OrdersManagement = () => {
                 onStatusChange={handleStatusChange}
                 onEdit={openEditDialog}
                 onDelete={openDeleteDialog}
+                onAddTracking={openTrackingDialog}
               />
             )}
           </CardContent>
@@ -110,6 +118,15 @@ const OrdersManagement = () => {
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
           onConfirm={handleDeleteOrder}
+          isSubmitting={isSubmitting}
+        />
+
+        {/* Tracking Info Dialog */}
+        <TrackingInfoDialog
+          order={selectedOrder}
+          open={showTrackingDialog}
+          onOpenChange={setShowTrackingDialog}
+          onSubmit={handleUpdateOrder}
           isSubmitting={isSubmitting}
         />
       </div>

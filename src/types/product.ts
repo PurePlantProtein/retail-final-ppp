@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -302,6 +303,14 @@ export interface ShippingOption {
   carrier: string;
 }
 
+export interface TrackingInfo {
+  trackingNumber: string;
+  carrier: string;
+  trackingUrl?: string;
+  shippedDate?: string;
+  estimatedDeliveryDate?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -371,6 +380,7 @@ export interface Order {
   invoiceUrl?: string;
   invoiceStatus?: string;
   shippingOption?: ShippingOption;
+  trackingInfo?: TrackingInfo;
   updatedAt: string; // Adding updatedAt as it's used in multiple places
 }
 

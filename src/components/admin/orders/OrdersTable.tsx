@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Truck } from 'lucide-react';
 import { formatDate, formatCurrency } from '@/utils/formatters';
 import { Order, OrderStatus } from '@/types/product';
 
@@ -26,13 +27,15 @@ interface OrdersTableProps {
   onStatusChange: (orderId: string, status: OrderStatus) => void;
   onEdit: (order: Order) => void;
   onDelete: (order: Order) => void;
+  onAddTracking: (order: Order) => void;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({
   orders,
   onStatusChange,
   onEdit,
-  onDelete
+  onDelete,
+  onAddTracking
 }) => {
   const navigate = useNavigate();
 
@@ -68,6 +71,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
             <TableHead>Total</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Payment</TableHead>
+            <TableHead>Tracking</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -100,6 +104,16 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 </Select>
               </TableCell>
               <TableCell>{order.paymentMethod}</TableCell>
+              <TableCell>
+                {order.trackingInfo?.trackingNumber ? (
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    <span className="text-sm">{order.trackingInfo.trackingNumber}</span>
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-sm">No tracking</span>
+                )}
+              </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-2">
                   <Button 
@@ -108,6 +122,14 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                     onClick={() => viewOrderDetails(order.id)}
                   >
                     View
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => onAddTracking(order)}
+                  >
+                    <Truck className="h-4 w-4 mr-1" />
+                    Track
                   </Button>
                   <Button 
                     variant="outline" 

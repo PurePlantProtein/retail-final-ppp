@@ -8,7 +8,8 @@ import {
   Package, 
   CheckCircle, 
   XCircle,
-  Edit
+  Edit,
+  ExternalLink
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { AdminLayout } from '@/components/AdminLayout';
@@ -25,14 +26,16 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { TrackingInfoDialog } from '@/components/admin/orders/TrackingInfoDialog';
 import { formatDate, formatCurrency } from '@/utils/formatters';
 import { useToast } from '@/components/ui/use-toast';
 
 const OrderDetail = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrderById, handleStatusChange, isLoading: isLoadingOrders } = useOrders();
+  const { getOrderById, handleStatusChange, handleUpdateOrder, isLoading: isLoadingOrders } = useOrders();
   const [order, setOrder] = useState<Order | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -101,6 +104,14 @@ const OrderDetail = () => {
         status: status as Order['status']
       });
     }
+  };
+
+  const handleTrackingUpdate = async (updatedOrder: Order) => {
+    const success = await handleUpdateOrder(updatedOrder);
+    if (success) {
+      setOrder(updatedOrder);
+    }
+    return success;
   };
 
   if (isLoading || isLoadingOrders) {
@@ -176,6 +187,13 @@ const OrderDetail = () => {
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline"
+                onClick={() => setShowTrackingDialog(true)}
+              >
+                <Truck className="mr-2 h-4 w-4" />
+                {order.trackingInfo ? 'Update Tracking' : 'Add Tracking'}
+              </Button>
+              <Button 
+                variant="outline"
                 onClick={() => navigate(`/admin/orders/${order.id}/edit`)}
               >
                 <Edit className="mr-2 h-4 w-4" />
@@ -248,6 +266,57 @@ const OrderDetail = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Tracking Information */}
+              {order.trackingInfo && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Truck className="h-5 w-5" />
+                      Tracking Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Tracking Number:</span>
+                        <span>{order.trackingInfo.trackingNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Carrier:</span>
+                        <span>{order.trackingInfo.carrier}</span>
+                      </div>
+                      {order.trackingInfo.shippedDate && (
+                        <div className="flex justify-between">
+                          <span className="font-medium">Shipped Date:</span>
+                          <span>{formatDate(order.trackingInfo.shippedDate)}</span>
+                        </div>
+                      )}
+                      {order.trackingInfo.estimatedDeliveryDate && (
+                        <div className="flex justify-between">
+                          <span className="font-medium">Estimated Delivery:</span>
+                          <span>{formatDate(order.trackingInfo.estimatedDeliveryDate)}</span>
+                        </div>
+                      )}
+                      {order.trackingInfo.trackingUrl && (
+                        <div className="pt-2">
+                          <Button variant="outline" size="sm" asChild>
+                            <a 
+                              href={order.trackingInfo.trackingUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              Track Package
+                            </a>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               
               {/* Order Items */}
               <Card>
@@ -345,6 +414,15 @@ const OrderDetail = () => {
               )}
             </div>
           </div>
+
+          {/* Tracking Info Dialog */}
+          <TrackingInfoDialog
+            order={order}
+            open={showTrackingDialog}
+            onOpenChange={setShowTrackingDialog}
+            onSubmit={handleTrackingUpdate}
+            isSubmitting={false}
+          />
         </div>
       </AdminLayout>
     </Layout>

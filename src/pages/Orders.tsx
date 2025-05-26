@@ -13,6 +13,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Truck, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/hooks/useOrders';
 import { Order } from '@/types/product';
@@ -121,6 +122,60 @@ const Orders = () => {
                         </AccordionContent>
                       </AccordionItem>
                       
+                      {order.trackingInfo && (
+                        <AccordionItem value="tracking">
+                          <AccordionTrigger>
+                            <div className="flex items-center gap-2">
+                              <Truck className="h-4 w-4" />
+                              Tracking Information
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-3 py-2">
+                              <div className="flex justify-between">
+                                <p>Tracking Number:</p>
+                                <p className="font-medium">{order.trackingInfo.trackingNumber}</p>
+                              </div>
+                              <div className="flex justify-between">
+                                <p>Carrier:</p>
+                                <p className="font-medium">{order.trackingInfo.carrier}</p>
+                              </div>
+                              {order.trackingInfo.shippedDate && (
+                                <div className="flex justify-between">
+                                  <p>Shipped Date:</p>
+                                  <p className="font-medium">
+                                    {new Date(order.trackingInfo.shippedDate).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              )}
+                              {order.trackingInfo.estimatedDeliveryDate && (
+                                <div className="flex justify-between">
+                                  <p>Estimated Delivery:</p>
+                                  <p className="font-medium">
+                                    {new Date(order.trackingInfo.estimatedDeliveryDate).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              )}
+                              {order.trackingInfo.trackingUrl && (
+                                <div className="pt-2">
+                                  <Button variant="outline" size="sm" asChild>
+                                    <a 
+                                      href={order.trackingInfo.trackingUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                      Track Package
+                                    </a>
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
+                      
                       <AccordionItem value="payment">
                         <AccordionTrigger>
                           Payment Information
@@ -164,7 +219,24 @@ const Orders = () => {
                     <Separator />
                     
                     <div className="flex flex-wrap gap-4">
-                      <Button variant="outline">Track Order</Button>
+                      {order.trackingInfo?.trackingUrl ? (
+                        <Button variant="outline" asChild>
+                          <a 
+                            href={order.trackingInfo.trackingUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2"
+                          >
+                            <Truck className="h-4 w-4" />
+                            Track Order
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button variant="outline" disabled>
+                          <Truck className="h-4 w-4 mr-2" />
+                          Tracking Pending
+                        </Button>
+                      )}
                       {order.invoiceUrl ? (
                         <Button variant="outline" asChild>
                           <a href={order.invoiceUrl} target="_blank" rel="noopener noreferrer">View Invoice</a>
