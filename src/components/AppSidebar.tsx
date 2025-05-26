@@ -60,7 +60,7 @@ const AppSidebar = () => {
     { icon: Tag, label: 'Categories', path: '/admin/products/categories' },
     { icon: ClipboardList, label: 'Orders', path: '/admin/orders' },
     { icon: Users, label: 'Users', path: '/admin/users' },
-    { icon: FileText, label: 'Marketing Materials', path: '/admin/marketing' },
+    { icon: FileText, label: 'Marketing Materials', path: '/admin/marketing-materials' },
     { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
     { icon: Settings, label: 'Settings', path: '/admin/settings' },
   ];
