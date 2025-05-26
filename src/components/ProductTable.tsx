@@ -77,17 +77,30 @@ const ProductTable: React.FC<ProductTableProps> = ({ products }) => {
           <Card key={product.id}>
             <CardContent className="p-4">
               <div className="space-y-3">
-                <div>
-                  <Link 
-                    to={`/products/${product.id}`} 
-                    className="font-medium text-lg hover:text-primary transition-colors"
-                  >
-                    {product.name}
-                  </Link>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>Category: {product.category || '-'}</p>
-                    <p>Price: ${product.price.toFixed(2)}</p>
-                    <p>Stock: {product.stock}</p>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      className="w-16 h-16 object-cover rounded-md"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Link 
+                      to={`/products/${product.id}`} 
+                      className="font-medium text-lg hover:text-primary transition-colors"
+                    >
+                      {product.name}
+                    </Link>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>Category: {product.category || '-'}</p>
+                      <p>Price: ${product.price.toFixed(2)}</p>
+                      <p>Stock: {product.stock}</p>
+                    </div>
                   </div>
                 </div>
                 
@@ -158,6 +171,7 @@ const ProductTable: React.FC<ProductTableProps> = ({ products }) => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[80px]">Image</TableHead>
               <TableHead>Product</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
@@ -169,6 +183,17 @@ const ProductTable: React.FC<ProductTableProps> = ({ products }) => {
           <TableBody>
             {products.map((product) => (
               <TableRow key={product.id}>
+                <TableCell>
+                  <img 
+                    src={product.image} 
+                    alt={product.name}
+                    className="w-12 h-12 object-cover rounded-md"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+                    }}
+                  />
+                </TableCell>
                 <TableCell className="font-medium">
                   <Link to={`/products/${product.id}`} className="hover:underline text-primary">
                     {product.name}
