@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -34,7 +33,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     },
     { 
       name: 'Marketing Materials', 
-      path: '/admin/marketing', 
+      path: '/admin/marketing-materials', 
       icon: <FileText className="h-5 w-5" /> 
     },
     { 
