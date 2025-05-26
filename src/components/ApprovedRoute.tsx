@@ -13,8 +13,16 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
   const { user, isAdmin } = useAuth();
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
+    if (!isClient) return;
+
     const checkApprovalStatus = async () => {
       if (!user) {
         setIsLoading(false);
@@ -36,7 +44,7 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
           .from('profiles')
           .select('approval_status')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('ApprovedRoute: Error checking approval status:', error);
@@ -54,9 +62,9 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
     };
 
     checkApprovalStatus();
-  }, [user, isAdmin]);
+  }, [user, isAdmin, isClient]);
 
-  if (isLoading) {
+  if (!isClient || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

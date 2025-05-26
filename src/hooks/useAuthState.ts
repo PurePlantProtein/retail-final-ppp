@@ -12,6 +12,7 @@ export const useAuthState = () => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
+  const [isClient, setIsClient] = useState(false);
   
   // Use the custom hook to fetch profile
   const { fetchProfile } = useFetchProfile(user, setProfile);
@@ -52,14 +53,21 @@ export const useAuthState = () => {
     return hasRole('retailer');
   }, [hasRole]);
 
+  // Ensure we're on the client side
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+
     let isMounted = true;
 
     const setupAuth = async () => {
       try {
         // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          (event, session) => {
             if (!isMounted) return;
             
             console.log('Auth state changed:', event, session?.user?.email);
@@ -117,7 +125,7 @@ export const useAuthState = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isClient]);
 
   return {
     user,

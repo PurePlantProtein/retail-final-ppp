@@ -22,11 +22,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
   const [hasCheckedSession, setHasCheckedSession] = useState(false);
   
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Additional session security check
   useEffect(() => {
-    if (!hasCheckedSession && session && user) {
+    if (!isClient || !session || !user) {
+      if (!isLoading && isClient) {
+        setHasCheckedSession(true);
+      }
+      return;
+    }
+
+    if (!hasCheckedSession) {
       console.log('ProtectedRoute: Checking session validity');
       
       // Check for session expiration
@@ -43,47 +56,45 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       }
       
       setHasCheckedSession(true);
-    } else if (!session && !isLoading) {
-      setHasCheckedSession(true);
     }
-  }, [session, navigate, toast, hasCheckedSession, user, isLoading]);
+  }, [session, navigate, toast, hasCheckedSession, user, isLoading, isClient]);
   
   // Check for role requirements
   useEffect(() => {
-    if (user && hasCheckedSession) {
-      console.log('ProtectedRoute: Checking role requirements', { requiresAdmin, requiredRoles, isAdmin });
-      
-      // Check admin requirement
-      if (requiresAdmin && !isAdmin) {
-        console.log('ProtectedRoute: Admin required but user not admin');
+    if (!isClient || !user || !hasCheckedSession) return;
+
+    console.log('ProtectedRoute: Checking role requirements', { requiresAdmin, requiredRoles, isAdmin });
+    
+    // Check admin requirement
+    if (requiresAdmin && !isAdmin) {
+      console.log('ProtectedRoute: Admin required but user not admin');
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access this page.",
+        variant: "destructive",
+      });
+      navigate('/products');
+      return;
+    }
+
+    // Check for specific roles
+    if (requiredRoles.length > 0) {
+      const hasRequiredRole = requiredRoles.some(role => hasRole(role));
+      if (!hasRequiredRole) {
+        console.log('ProtectedRoute: Required role not found');
         toast({
           title: "Access Denied",
-          description: "You don't have permission to access this page.",
+          description: "You don't have the required role to access this page.",
           variant: "destructive",
         });
         navigate('/products');
         return;
       }
-
-      // Check for specific roles
-      if (requiredRoles.length > 0) {
-        const hasRequiredRole = requiredRoles.some(role => hasRole(role));
-        if (!hasRequiredRole) {
-          console.log('ProtectedRoute: Required role not found');
-          toast({
-            title: "Access Denied",
-            description: "You don't have the required role to access this page.",
-            variant: "destructive",
-          });
-          navigate('/products');
-          return;
-        }
-      }
     }
-  }, [user, requiresAdmin, isAdmin, requiredRoles, hasRole, navigate, toast, hasCheckedSession]);
+  }, [user, requiresAdmin, isAdmin, requiredRoles, hasRole, navigate, toast, hasCheckedSession, isClient]);
 
-  // Show loading while checking authentication status
-  if (isLoading || !hasCheckedSession) {
+  // Show loading while checking authentication status or before client is ready
+  if (!isClient || isLoading || !hasCheckedSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
