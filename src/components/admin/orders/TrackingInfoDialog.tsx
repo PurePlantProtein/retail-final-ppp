@@ -22,6 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { Order, TrackingInfo } from '@/types/product';
 import { sendTrackingEmail } from '@/services/trackingEmailService';
+import { autoDetectCarrier, generateTrackingUrl, getEstimatedDeliveryDate } from '@/utils/trackingUtils';
 
 type FormValues = {
   trackingNumber: string;
@@ -49,24 +50,49 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
 }) => {
   const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<FormValues>({
     defaultValues: {
-      sendEmail: true // Default to sending email
+      sendEmail: true,
+      shippedDate: new Date().toISOString().split('T')[0] // Auto-set to today
     }
   });
   const { toast } = useToast();
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const sendEmailValue = watch('sendEmail');
+  const trackingNumber = watch('trackingNumber');
+  const carrier = watch('carrier');
 
   React.useEffect(() => {
     if (order) {
       setValue("trackingNumber", order.trackingInfo?.trackingNumber || "");
       setValue("carrier", order.trackingInfo?.carrier || "");
       setValue("trackingUrl", order.trackingInfo?.trackingUrl || "");
-      setValue("shippedDate", order.trackingInfo?.shippedDate || "");
+      setValue("shippedDate", order.trackingInfo?.shippedDate || new Date().toISOString().split('T')[0]);
       setValue("estimatedDeliveryDate", order.trackingInfo?.estimatedDeliveryDate || "");
       setValue("sendEmail", true);
     }
   }, [order, setValue]);
+
+  // Auto-detect carrier when tracking number changes
+  React.useEffect(() => {
+    if (trackingNumber && trackingNumber.length > 5) {
+      const detectedCarrier = autoDetectCarrier(trackingNumber);
+      if (detectedCarrier && detectedCarrier !== carrier) {
+        setValue("carrier", detectedCarrier);
+        
+        // Auto-generate tracking URL
+        const trackingUrl = generateTrackingUrl(trackingNumber, detectedCarrier);
+        if (trackingUrl) {
+          setValue("trackingUrl", trackingUrl);
+        }
+        
+        // Auto-calculate estimated delivery
+        const estimatedDelivery = getEstimatedDeliveryDate(detectedCarrier);
+        if (estimatedDelivery) {
+          setValue("estimatedDeliveryDate", estimatedDelivery);
+        }
+      }
+    }
+  }, [trackingNumber, carrier, setValue]);
 
   const handleFormSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!order) return;
@@ -127,14 +153,26 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
     }
   };
 
+  const handleQuickFill = () => {
+    // Quick fill with common Australian carriers and today's date
+    const today = new Date().toISOString().split('T')[0];
+    const estimatedDelivery = new Date();
+    estimatedDelivery.setDate(estimatedDelivery.getDate() + 3); // 3 days from today
+    
+    setValue("shippedDate", today);
+    setValue("estimatedDeliveryDate", estimatedDelivery.toISOString().split('T')[0]);
+    setValue("sendEmail", true);
+  };
+
   const carriers = [
+    'Australia Post',
+    'StarTrack',
+    'Toll',
+    'TNT',
+    'DHL',
     'FedEx',
     'UPS',
-    'DHL',
-    'USPS',
-    'Canada Post',
-    'Royal Mail',
-    'Australia Post',
+    'Aramex',
     'Other'
   ];
 
@@ -149,41 +187,60 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
         </DialogHeader>
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid gap-4 py-4">
+            <div className="flex justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={handleQuickFill}>
+                Quick Fill Dates
+              </Button>
+            </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <label htmlFor="trackingNumber" className="text-right">
-                Tracking Number
+                Tracking Number *
               </label>
-              <Input
-                id="trackingNumber"
-                className="col-span-3"
-                {...register("trackingNumber", { required: "Tracking number is required" })}
-              />
-              {errors.trackingNumber && (
-                <p className="col-span-3 col-start-2 text-sm text-red-500">
-                  {errors.trackingNumber.message}
-                </p>
-              )}
+              <div className="col-span-3">
+                <Input
+                  id="trackingNumber"
+                  placeholder="Enter tracking number (carrier auto-detected)"
+                  {...register("trackingNumber", { required: "Tracking number is required" })}
+                />
+                {errors.trackingNumber && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.trackingNumber.message}
+                  </p>
+                )}
+              </div>
             </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <label htmlFor="carrier" className="text-right">
                 Carrier
               </label>
               <Select
-                onValueChange={(value) => setValue("carrier", value)}
-                defaultValue={order?.trackingInfo?.carrier}
+                onValueChange={(value) => {
+                  setValue("carrier", value);
+                  // Auto-generate tracking URL when carrier changes
+                  if (trackingNumber) {
+                    const trackingUrl = generateTrackingUrl(trackingNumber, value);
+                    if (trackingUrl) {
+                      setValue("trackingUrl", trackingUrl);
+                    }
+                  }
+                }}
+                value={carrier}
               >
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select carrier" />
+                  <SelectValue placeholder="Select or auto-detected" />
                 </SelectTrigger>
                 <SelectContent>
-                  {carriers.map((carrier) => (
-                    <SelectItem key={carrier} value={carrier}>
-                      {carrier}
+                  {carriers.map((carrierOption) => (
+                    <SelectItem key={carrierOption} value={carrierOption}>
+                      {carrierOption}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <label htmlFor="trackingUrl" className="text-right">
                 Tracking URL
@@ -191,10 +248,11 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
               <Input
                 id="trackingUrl"
                 className="col-span-3"
-                placeholder="https://..."
+                placeholder="Auto-generated or enter manually"
                 {...register("trackingUrl")}
               />
             </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <label htmlFor="shippedDate" className="text-right">
                 Shipped Date
@@ -206,6 +264,7 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
                 {...register("shippedDate")}
               />
             </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <label htmlFor="estimatedDeliveryDate" className="text-right">
                 Est. Delivery
@@ -217,6 +276,7 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
                 {...register("estimatedDeliveryDate")}
               />
             </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <label className="text-right">
                 Send Email
