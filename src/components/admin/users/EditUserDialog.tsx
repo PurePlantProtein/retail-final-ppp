@@ -51,7 +51,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     phone: '',
     payment_terms: 14,
     role: '',
-    pricing_tier_id: ''
+    pricing_tier_id: 'no-tier' // Use placeholder value instead of empty string
   });
 
   useEffect(() => {
@@ -63,7 +63,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
         phone: user.phone || '',
         payment_terms: user.payment_terms || 14,
         role: user.roles[0] || '',
-        pricing_tier_id: user.pricing_tier_id || ''
+        pricing_tier_id: user.pricing_tier_id || 'no-tier' // Use placeholder value
       });
     }
     loadPricingTiers();
@@ -135,15 +135,16 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
       }
 
       // Update pricing tier if changed
-      if (formData.pricing_tier_id !== user.pricing_tier_id) {
+      const currentTierId = user.pricing_tier_id || 'no-tier';
+      if (formData.pricing_tier_id !== currentTierId) {
         // Delete existing pricing tier assignment
         await supabase
           .from('user_pricing_tiers')
           .delete()
           .eq('user_id', user.id);
 
-        // Insert new pricing tier if one is selected
-        if (formData.pricing_tier_id) {
+        // Insert new pricing tier if one is selected (not the placeholder)
+        if (formData.pricing_tier_id && formData.pricing_tier_id !== 'no-tier') {
           const { error: tierError } = await supabase
             .from('user_pricing_tiers')
             .insert({
@@ -282,7 +283,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                 <SelectValue placeholder="Select pricing tier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No tier assigned</SelectItem>
+                <SelectItem value="no-tier">No tier assigned</SelectItem>
                 {pricingTiers.map((tier) => (
                   <SelectItem key={tier.id} value={tier.id}>
                     {tier.name} - {tier.description}
