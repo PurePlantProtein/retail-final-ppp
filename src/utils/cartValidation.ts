@@ -1,0 +1,71 @@
+
+import { Product, CartItem } from '@/types/cart';
+import { getCategoryMOQ, getCategoryTotalQuantity } from './categoryMOQ';
+
+export const validateProductMinimum = (product: Product, quantity: number): { isValid: boolean; message?: string } => {
+  const minQty = product.min_quantity || 1;
+  
+  if (quantity < minQty) {
+    return {
+      isValid: false,
+      message: `You must order at least ${minQty} units of ${product.name}.`
+    };
+  }
+  
+  return { isValid: true };
+};
+
+export const validateCategoryMOQ = (
+  items: CartItem[], 
+  product: Product
+): { 
+  hasWarning: boolean; 
+  isSuccess: boolean; 
+  message?: string 
+} => {
+  const categoryMOQ = getCategoryMOQ(product.category || '');
+  
+  if (!categoryMOQ) {
+    return { hasWarning: false, isSuccess: false };
+  }
+  
+  const totalCategoryQuantity = getCategoryTotalQuantity(items, product.category || '');
+  
+  if (totalCategoryQuantity < categoryMOQ) {
+    const remainingNeeded = categoryMOQ - totalCategoryQuantity;
+    return {
+      hasWarning: true,
+      isSuccess: false,
+      message: `You need ${remainingNeeded} more units from the ${product.category} category to meet the minimum order of ${categoryMOQ} units. You can mix and match different products from this category.`
+    };
+  }
+  
+  return {
+    hasWarning: false,
+    isSuccess: true,
+    message: `Great! You now have ${totalCategoryQuantity} units from the ${product.category} category, meeting the minimum requirement.`
+  };
+};
+
+export const checkCategoryMOQAfterRemoval = (
+  items: CartItem[], 
+  removedProduct: Product
+): { hasWarning: boolean; message?: string } => {
+  const categoryMOQ = getCategoryMOQ(removedProduct.category || '');
+  
+  if (!categoryMOQ) {
+    return { hasWarning: false };
+  }
+  
+  const totalCategoryQuantity = getCategoryTotalQuantity(items, removedProduct.category || '');
+  
+  if (totalCategoryQuantity > 0 && totalCategoryQuantity < categoryMOQ) {
+    const remainingNeeded = categoryMOQ - totalCategoryQuantity;
+    return {
+      hasWarning: true,
+      message: `You now need ${remainingNeeded} more units from the ${removedProduct.category} category to meet the minimum order of ${categoryMOQ} units.`
+    };
+  }
+  
+  return { hasWarning: false };
+};
