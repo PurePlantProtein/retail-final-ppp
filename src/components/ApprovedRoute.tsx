@@ -13,32 +13,31 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
   const { user, isAdmin } = useAuth();
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isClient, setIsClient] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Ensure we're on the client side
   useEffect(() => {
-    setIsClient(true);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isClient) return;
-
-    const checkApprovalStatus = async () => {
-      if (!user) {
+    if (!mounted || !user) {
+      if (mounted && !user) {
         setIsLoading(false);
-        return;
       }
+      return;
+    }
 
-      console.log('ApprovedRoute: Checking approval status for user', user.id);
+    console.log('ApprovedRoute: Checking approval status for user', user.id);
 
-      // Admins bypass approval
-      if (isAdmin) {
-        console.log('ApprovedRoute: User is admin, bypassing approval check');
-        setApprovalStatus('approved');
-        setIsLoading(false);
-        return;
-      }
+    // Admins bypass approval
+    if (isAdmin) {
+      console.log('ApprovedRoute: User is admin, bypassing approval check');
+      setApprovalStatus('approved');
+      setIsLoading(false);
+      return;
+    }
 
+    const checkApproval = async () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
@@ -61,10 +60,10 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
       }
     };
 
-    checkApprovalStatus();
-  }, [user, isAdmin, isClient]);
+    checkApproval();
+  }, [user, isAdmin, mounted]);
 
-  if (!isClient || isLoading) {
+  if (!mounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

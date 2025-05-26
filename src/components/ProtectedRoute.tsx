@@ -22,50 +22,35 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
-  const [hasCheckedSession, setHasCheckedSession] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
-  // Ensure we're on the client side
   useEffect(() => {
-    setIsClient(true);
+    setMounted(true);
   }, []);
 
-  // Additional session security check
+  // Session security check
   useEffect(() => {
-    if (!isClient || !session || !user) {
-      if (!isLoading && isClient) {
-        setHasCheckedSession(true);
-      }
+    if (!mounted || !session || !user || isLoading) return;
+
+    const lastActivity = parseInt(localStorage.getItem('lastUserActivity') || '0');
+    if (lastActivity > 0 && isSessionExpired(lastActivity)) {
+      console.log('ProtectedRoute: Session expired');
+      toast({
+        title: "Session expired",
+        description: "Your session has expired due to inactivity. Please log in again.",
+        variant: "destructive",
+      });
+      navigate('/login');
       return;
     }
-
-    if (!hasCheckedSession) {
-      console.log('ProtectedRoute: Checking session validity');
-      
-      // Check for session expiration
-      const lastActivity = parseInt(localStorage.getItem('lastUserActivity') || '0');
-      if (lastActivity > 0 && isSessionExpired(lastActivity)) {
-        console.log('ProtectedRoute: Session expired');
-        toast({
-          title: "Session expired",
-          description: "Your session has expired due to inactivity. Please log in again.",
-          variant: "destructive",
-        });
-        navigate('/login');
-        return;
-      }
-      
-      setHasCheckedSession(true);
-    }
-  }, [session, navigate, toast, hasCheckedSession, user, isLoading, isClient]);
+  }, [session, navigate, toast, user, isLoading, mounted]);
   
-  // Check for role requirements
+  // Role requirements check
   useEffect(() => {
-    if (!isClient || !user || !hasCheckedSession) return;
+    if (!mounted || !user || isLoading) return;
 
     console.log('ProtectedRoute: Checking role requirements', { requiresAdmin, requiredRoles, isAdmin });
     
-    // Check admin requirement
     if (requiresAdmin && !isAdmin) {
       console.log('ProtectedRoute: Admin required but user not admin');
       toast({
@@ -77,7 +62,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       return;
     }
 
-    // Check for specific roles
     if (requiredRoles.length > 0) {
       const hasRequiredRole = requiredRoles.some(role => hasRole(role));
       if (!hasRequiredRole) {
@@ -91,10 +75,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return;
       }
     }
-  }, [user, requiresAdmin, isAdmin, requiredRoles, hasRole, navigate, toast, hasCheckedSession, isClient]);
+  }, [user, requiresAdmin, isAdmin, requiredRoles, hasRole, navigate, toast, mounted, isLoading]);
 
-  // Show loading while checking authentication status or before client is ready
-  if (!isClient || isLoading || !hasCheckedSession) {
+  // Show loading while not mounted or auth is loading
+  if (!mounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

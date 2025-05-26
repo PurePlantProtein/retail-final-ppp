@@ -6,36 +6,28 @@ import { useAuth } from '@/contexts/AuthContext';
 const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
-  const [isClient, setIsClient] = useState(false);
-  const [hasNavigated, setHasNavigated] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Ensure we're on the client side before doing anything
   useEffect(() => {
-    setIsClient(true);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
-    // Only proceed if we're on the client and haven't navigated yet
-    if (!isClient || hasNavigated) return;
+    if (!mounted || isLoading) return;
 
-    console.log('Index: Auth state check', { user: !!user, isLoading });
+    console.log('Index: Checking auth state', { user: !!user, isLoading });
 
-    // Wait for auth to finish loading
-    if (!isLoading) {
-      setHasNavigated(true);
-      
-      if (user) {
-        console.log('Index: User authenticated, navigating to products');
-        navigate('/products', { replace: true });
-      } else {
-        console.log('Index: No user, navigating to login');
-        navigate('/login', { replace: true });
-      }
+    if (user) {
+      console.log('Index: User authenticated, navigating to products');
+      navigate('/products', { replace: true });
+    } else {
+      console.log('Index: No user, navigating to login');
+      navigate('/login', { replace: true });
     }
-  }, [navigate, user, isLoading, hasNavigated, isClient]);
+  }, [user, isLoading, navigate, mounted]);
 
-  // Show consistent loading state until client is ready and auth is resolved
-  if (!isClient || isLoading) {
+  // Don't render anything until mounted and auth is resolved
+  if (!mounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -47,7 +39,6 @@ const Index = () => {
     );
   }
 
-  // This should rarely be seen since navigation happens immediately after loading
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
