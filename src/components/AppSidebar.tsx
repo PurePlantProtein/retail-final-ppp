@@ -57,7 +57,7 @@ const AppSidebar = () => {
   const adminItems = [
     { icon: LayoutGrid, label: 'Dashboard', path: '/admin' },
     { icon: Package, label: 'Products', path: '/admin/products' },
-    { icon: Tag, label: 'Categories', path: '/admin/products/categories' },
+    { icon: Tag, label: 'Categories', path: '/admin/categories' },
     { icon: ClipboardList, label: 'Orders', path: '/admin/orders' },
     { icon: Users, label: 'Users', path: '/admin/users' },
     { icon: FileText, label: 'Marketing Materials', path: '/admin/marketing-materials' },
