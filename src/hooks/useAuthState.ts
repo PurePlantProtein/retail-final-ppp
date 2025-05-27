@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile, AppRole } from '@/types/auth';
-import { useFetchProfile } from '@/hooks/useFetchProfile';
 import { fetchUserRoles } from '@/services/userService';
 
 export const useAuthState = () => {
@@ -12,137 +11,144 @@ export const useAuthState = () => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  
-  // Use the custom hook to fetch profile
-  const { fetchProfile } = useFetchProfile(user, setProfile);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Function to load user roles
-  const loadUserRoles = useCallback(async (userId: string) => {
-    try {
-      console.log('Loading user roles for:', userId);
-      const userRoles = await fetchUserRoles(userId);
-      console.log('User roles loaded:', userRoles);
-      setRoles(userRoles);
-    } catch (error) {
-      console.error("Error loading user roles:", error);
-      setRoles([]);
-    }
-  }, []);
-
-  // Add a function to refresh the profile and roles
-  const refreshProfile = useCallback(async () => {
-    if (user) {
-      console.log('Refreshing profile for user:', user.id);
-      await fetchProfile(user.id);
-      await loadUserRoles(user.id);
-    }
-  }, [user, fetchProfile, loadUserRoles]);
-
-  // Role checking functions - stable and consistent
+  // Stable role checking functions
   const hasRole = useCallback((role: AppRole) => {
     return roles.includes(role);
   }, [roles]);
   
-  const isAdmin = useCallback(() => {
-    return hasRole('admin');
-  }, [hasRole]);
-  
-  const isDistributor = useCallback(() => {
-    return hasRole('distributor');
-  }, [hasRole]);
-  
-  const isRetailer = useCallback(() => {
-    return hasRole('retailer');
-  }, [hasRole]);
+  const isAdmin = hasRole('admin');
+  const isDistributor = hasRole('distributor');
+  const isRetailer = hasRole('retailer');
 
-  // Simplified auth initialization
+  // Function to load user profile
+  const loadUserProfile = useCallback(async (userId: string) => {
+    try {
+      console.log('Loading profile for user:', userId);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading profile:', error);
+        return;
+      }
+
+      if (data) {
+        setProfile({
+          id: data.id,
+          business_name: data.business_name || '',
+          business_address: data.business_address || '',
+          phone: data.phone || '',
+          business_type: data.business_type || '',
+          email: data.email || '',
+          payment_terms: data.payment_terms || 14,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  }, []);
+
+  // Function to load user roles
+  const loadUserRoles = useCallback(async (userId: string) => {
+    try {
+      console.log('Loading roles for user:', userId);
+      const userRoles = await fetchUserRoles(userId);
+      setRoles(userRoles);
+    } catch (error) {
+      console.error('Error loading roles:', error);
+      setRoles([]);
+    }
+  }, []);
+
+  // Function to refresh profile and roles
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await loadUserProfile(user.id);
+      await loadUserRoles(user.id);
+    }
+  }, [user, loadUserProfile, loadUserRoles]);
+
+  // Initialize auth state once
   useEffect(() => {
-    console.log('useAuthState: Setting up auth...');
+    if (isInitialized) return;
+
+    console.log('useAuthState: Initializing auth...');
     
     let mounted = true;
-    
-    const initAuth = async () => {
+
+    const initializeAuth = async () => {
       try {
-        // Set up auth state change listener
+        // Get current session first
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('useAuthState: Error getting session:', error);
+        }
+
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // Load user data if session exists
+          if (session?.user) {
+            await loadUserProfile(session.user.id);
+            await loadUserRoles(session.user.id);
+          }
+          
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
+
+        // Set up auth state listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             if (!mounted) return;
             
-            console.log('useAuthState: Auth state changed:', event, session?.user?.email || 'No session');
+            console.log('useAuthState: Auth state changed:', event);
             
             setSession(session);
             setUser(session?.user ?? null);
             
             if (session?.user && event === 'SIGNED_IN') {
-              // Defer profile and roles loading slightly
+              // Load user data after sign in
               setTimeout(async () => {
-                if (!mounted) return;
-                try {
-                  console.log('useAuthState: Loading profile and roles for user:', session.user.id);
-                  await fetchProfile(session.user.id);
+                if (mounted) {
+                  await loadUserProfile(session.user.id);
                   await loadUserRoles(session.user.id);
-                } catch (error) {
-                  console.error('Error loading user data:', error);
                 }
-              }, 50);
+              }, 100);
             } else if (!session) {
-              console.log('useAuthState: No session, clearing profile and roles');
+              // Clear data on sign out
               setProfile(null);
               setRoles([]);
             }
           }
         );
 
-        // Get current session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('useAuthState: Error getting session:', error);
-        } else if (mounted) {
-          console.log('useAuthState: Initial session retrieved:', session?.user?.email || 'No session');
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            // Load profile and roles for existing session
-            setTimeout(async () => {
-              if (!mounted) return;
-              try {
-                console.log('useAuthState: Loading initial profile and roles');
-                await fetchProfile(session.user.id);
-                await loadUserRoles(session.user.id);
-              } catch (error) {
-                console.error('Error loading initial user data:', error);
-              }
-            }, 50);
-          }
-        }
-        
-        if (mounted) {
-          setIsLoading(false);
-          console.log('useAuthState: Auth initialization complete');
-        }
-        
         return () => {
-          console.log('useAuthState: Cleaning up auth subscription');
           subscription.unsubscribe();
         };
-        
-      } catch (err) {
-        console.error('useAuthState: Error initializing auth:', err);
+      } catch (error) {
+        console.error('useAuthState: Error initializing auth:', error);
         if (mounted) {
           setIsLoading(false);
+          setIsInitialized(true);
         }
       }
     };
-    
-    const cleanup = initAuth();
+
+    const cleanup = initializeAuth();
 
     return () => {
       mounted = false;
       cleanup.then(fn => fn && fn());
     };
-  }, []); // Empty dependency array for single initialization
+  }, [isInitialized, loadUserProfile, loadUserRoles]);
 
   return {
     user,
@@ -151,9 +157,10 @@ export const useAuthState = () => {
     isLoading,
     session,
     hasRole,
-    isAdmin: isAdmin(),
-    isDistributor: isDistributor(),
-    isRetailer: isRetailer(),
-    refreshProfile
+    isAdmin,
+    isDistributor,
+    isRetailer,
+    refreshProfile,
+    isInitialized
   };
 };

@@ -1,9 +1,13 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
-// Disabled admin account creation to prevent repeated signup attempts
-// This was causing 422 errors and React render issues
+// Admin account creation is permanently disabled to prevent startup errors
+// This was causing 422 errors and React render issues during app initialization
 export const useAdminAccountCreation = () => {
-  // Hook is disabled but kept for compatibility
-  console.log('Admin account creation hook is disabled to prevent startup errors');
+  useEffect(() => {
+    console.log('Admin account creation hook is disabled to prevent startup errors');
+  }, []);
+  
+  // Return empty object for compatibility
+  return {};
 };

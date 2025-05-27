@@ -1,35 +1,15 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    console.log('Index: Component mounting');
-    setMounted(true);
-    return () => {
-      console.log('Index: Component unmounting');
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) {
-      console.log('Index: Component not mounted yet');
-      return;
-    }
-
-    // Wait for auth to finish loading
-    if (isLoading) {
-      console.log('Index: Auth still loading, waiting...');
-      return;
-    }
-
-    // Delay to ensure auth state is stable
-    const timer = setTimeout(() => {
+    // Wait for auth to finish loading before redirecting
+    if (!isLoading) {
       if (user) {
         console.log('Index: User authenticated, navigating to products');
         navigate('/products', { replace: true });
@@ -37,10 +17,8 @@ const Index = () => {
         console.log('Index: No user, navigating to login');
         navigate('/login', { replace: true });
       }
-    }, 200); // Slightly longer delay for stability
-
-    return () => clearTimeout(timer);
-  }, [user, isLoading, navigate, mounted]);
+    }
+  }, [user, isLoading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

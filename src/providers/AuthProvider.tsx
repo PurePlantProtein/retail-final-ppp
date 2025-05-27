@@ -5,11 +5,9 @@ import { useAuthState } from '@/hooks/useAuthState';
 import { useAuthMethods } from '@/hooks/useAuthMethods';
 import { useAuthSessionMonitor } from '@/hooks/useAuthSessionMonitor';
 
-// Create the context with undefined as initial value
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Use our custom hooks to organize the logic
   const { 
     user, 
     profile, 
@@ -20,19 +18,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAdmin,
     isDistributor,
     isRetailer,
-    refreshProfile
+    refreshProfile,
+    isInitialized
   } = useAuthState();
   
-  // Get session monitoring and activity tracking
-  const { updateActivity } = useAuthSessionMonitor(session, async () => await authMethods.logout());
+  const authMethods = useAuthMethods(() => {
+    // Update activity callback - simplified
+    localStorage.setItem('lastUserActivity', Date.now().toString());
+  });
   
-  // Get authentication methods
-  const authMethods = useAuthMethods(updateActivity);
+  useAuthSessionMonitor(session, async () => await authMethods.logout());
+
+  // Don't render children until auth is initialized
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-600">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   const value: AuthContextType = {
     user,
     profile,
-    isLoading: isLoading || authMethods.authLoading,
+    isLoading,
     login: authMethods.login,
     signup: authMethods.signup,
     logout: authMethods.logout,
