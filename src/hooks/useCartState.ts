@@ -51,6 +51,7 @@ export function useCartState() {
     setItems(prevItems => {
       const existingItem = prevItems.find(item => item.product.id === product.id);
       let newItems: CartItem[];
+      let actualQuantityAdded = quantity;
       
       if (existingItem) {
         // Update quantity if product already in cart
@@ -65,11 +66,11 @@ export function useCartState() {
       }
       
       // Check category MOQ after adding the product
-      const categoryValidation = validateCategoryMOQ(newItems, product);
+      const categoryValidation = validateCategoryMOQ(newItems, product, 0); // 0 because we already added to newItems
       
       if (categoryValidation.hasWarning) {
         toast({
-          title: "Category minimum not yet met",
+          title: "Category minimum info",
           description: categoryValidation.message,
           variant: "default"
         });
@@ -132,13 +133,13 @@ export function useCartState() {
       // Check category MOQ after updating quantity
       const updatedItem = newItems.find(item => item.product.id === productId);
       if (updatedItem) {
-        const categoryValidation = validateCategoryMOQ(newItems, updatedItem.product);
+        const categoryValidation = validateCategoryMOQ(newItems, updatedItem.product, 0);
         
         if (categoryValidation.hasWarning) {
           toast({
-            title: "Category minimum not met",
+            title: "Category minimum info",
             description: categoryValidation.message,
-            variant: "destructive"
+            variant: "default"
           });
         }
       }

@@ -18,7 +18,8 @@ export const validateProductMinimum = (product: Product, quantity: number): { is
 
 export const validateCategoryMOQ = (
   items: CartItem[], 
-  product: Product
+  product: Product,
+  addingQuantity: number = 0
 ): { 
   hasWarning: boolean; 
   isSuccess: boolean; 
@@ -30,7 +31,9 @@ export const validateCategoryMOQ = (
     return { hasWarning: false, isSuccess: false };
   }
   
-  const totalCategoryQuantity = getCategoryTotalQuantity(items, product.category || '');
+  // Calculate total quantity including the item being added
+  const currentCategoryQuantity = getCategoryTotalQuantity(items, product.category || '');
+  const totalCategoryQuantity = currentCategoryQuantity + addingQuantity;
   
   if (totalCategoryQuantity < categoryMOQ) {
     const remainingNeeded = categoryMOQ - totalCategoryQuantity;
@@ -69,4 +72,29 @@ export const checkCategoryMOQAfterRemoval = (
   }
   
   return { hasWarning: false };
+};
+
+// New function to check if we should show MOQ warnings in UI
+export const shouldShowCategoryMOQWarning = (
+  items: CartItem[],
+  product: Product
+): { shouldShow: boolean; message?: string } => {
+  const categoryMOQ = getCategoryMOQ(product.category || '');
+  
+  if (!categoryMOQ) {
+    return { shouldShow: false };
+  }
+  
+  // Only show warning if user already has items in cart for this category
+  const currentCategoryQuantity = getCategoryTotalQuantity(items, product.category || '');
+  
+  if (currentCategoryQuantity > 0 && currentCategoryQuantity < categoryMOQ) {
+    const remainingNeeded = categoryMOQ - currentCategoryQuantity;
+    return {
+      shouldShow: true,
+      message: `You currently have ${currentCategoryQuantity} units from ${product.category}. You need ${remainingNeeded} more to meet the minimum of ${categoryMOQ} units.`
+    };
+  }
+  
+  return { shouldShow: false };
 };
