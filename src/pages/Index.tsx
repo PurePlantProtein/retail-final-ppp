@@ -1,15 +1,18 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   useEffect(() => {
-    // Wait for auth to finish loading before redirecting
-    if (!isLoading) {
+    // Wait for auth to finish loading and prevent duplicate navigation
+    if (!isLoading && !hasNavigated) {
+      setHasNavigated(true);
+      
       if (user) {
         console.log('Index: User authenticated, navigating to products');
         navigate('/products', { replace: true });
@@ -18,7 +21,7 @@ const Index = () => {
         navigate('/login', { replace: true });
       }
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, hasNavigated]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
