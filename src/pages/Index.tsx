@@ -18,6 +18,7 @@ const Index = () => {
 
   useEffect(() => {
     if (!mounted) {
+      console.log('Index: Component not mounted yet');
       return;
     }
 
@@ -27,7 +28,7 @@ const Index = () => {
       return;
     }
 
-    // Small delay to ensure auth state is stable
+    // Delay to ensure auth state is stable
     const timer = setTimeout(() => {
       if (user) {
         console.log('Index: User authenticated, navigating to products');
@@ -36,7 +37,7 @@ const Index = () => {
         console.log('Index: No user, navigating to login');
         navigate('/login', { replace: true });
       }
-    }, 100);
+    }, 200); // Slightly longer delay for stability
 
     return () => clearTimeout(timer);
   }, [user, isLoading, navigate, mounted]);
@@ -46,7 +47,7 @@ const Index = () => {
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">Pure Plant Protein Wholesale</h1>
         <p className="text-xl text-gray-600 mb-4">
-          {isLoading ? 'Initializing...' : 'Redirecting...'}
+          {isLoading ? 'Initializing authentication...' : 'Redirecting...'}
         </p>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
       </div>

@@ -12,7 +12,6 @@ export const useAuthState = () => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  const [initialized, setInitialized] = useState(false);
   
   // Use the custom hook to fetch profile
   const { fetchProfile } = useFetchProfile(user, setProfile);
@@ -39,7 +38,7 @@ export const useAuthState = () => {
     }
   }, [user, fetchProfile, loadUserRoles]);
 
-  // Role checking functions - now always called in the same order
+  // Role checking functions - stable and consistent
   const hasRole = useCallback((role: AppRole) => {
     return roles.includes(role);
   }, [roles]);
@@ -56,25 +55,28 @@ export const useAuthState = () => {
     return hasRole('retailer');
   }, [hasRole]);
 
-  // Initialize auth once
+  // Simplified auth initialization
   useEffect(() => {
-    console.log('useAuthState: Initializing auth...');
+    console.log('useAuthState: Setting up auth...');
     
-    let cleanup: (() => void) | undefined;
+    let mounted = true;
     
     const initAuth = async () => {
       try {
-        // Set up auth listener first
+        // Set up auth state change listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
+            if (!mounted) return;
+            
             console.log('useAuthState: Auth state changed:', event, session?.user?.email || 'No session');
             
             setSession(session);
             setUser(session?.user ?? null);
             
             if (session?.user && event === 'SIGNED_IN') {
-              // Defer profile and roles loading to prevent blocking
+              // Defer profile and roles loading slightly
               setTimeout(async () => {
+                if (!mounted) return;
                 try {
                   console.log('useAuthState: Loading profile and roles for user:', session.user.id);
                   await fetchProfile(session.user.id);
@@ -82,7 +84,7 @@ export const useAuthState = () => {
                 } catch (error) {
                   console.error('Error loading user data:', error);
                 }
-              }, 100);
+              }, 50);
             } else if (!session) {
               console.log('useAuthState: No session, clearing profile and roles');
               setProfile(null);
@@ -91,17 +93,12 @@ export const useAuthState = () => {
           }
         );
 
-        cleanup = () => {
-          console.log('useAuthState: Cleaning up auth subscription');
-          subscription.unsubscribe();
-        };
-
         // Get current session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('useAuthState: Error getting session:', error);
-        } else {
+        } else if (mounted) {
           console.log('useAuthState: Initial session retrieved:', session?.user?.email || 'No session');
           setSession(session);
           setUser(session?.user ?? null);
@@ -109,6 +106,7 @@ export const useAuthState = () => {
           if (session?.user) {
             // Load profile and roles for existing session
             setTimeout(async () => {
+              if (!mounted) return;
               try {
                 console.log('useAuthState: Loading initial profile and roles');
                 await fetchProfile(session.user.id);
@@ -116,29 +114,35 @@ export const useAuthState = () => {
               } catch (error) {
                 console.error('Error loading initial user data:', error);
               }
-            }, 100);
+            }, 50);
           }
         }
         
-        setIsLoading(false);
-        setInitialized(true);
-        console.log('useAuthState: Auth initialization complete');
+        if (mounted) {
+          setIsLoading(false);
+          console.log('useAuthState: Auth initialization complete');
+        }
+        
+        return () => {
+          console.log('useAuthState: Cleaning up auth subscription');
+          subscription.unsubscribe();
+        };
         
       } catch (err) {
         console.error('useAuthState: Error initializing auth:', err);
-        setIsLoading(false);
-        setInitialized(true);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
     
-    initAuth();
+    const cleanup = initAuth();
 
     return () => {
-      if (cleanup) {
-        cleanup();
-      }
+      mounted = false;
+      cleanup.then(fn => fn && fn());
     };
-  }, [fetchProfile, loadUserRoles]);
+  }, []); // Empty dependency array for single initialization
 
   return {
     user,

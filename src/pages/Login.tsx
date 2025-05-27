@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cleanupAuthState } from '@/utils/authUtils';
-import { useAdminAccountCreation } from '@/hooks/useAdminAccountCreation';
 import LoginHeader from '@/components/auth/LoginHeader';
 import LoginForm from '@/components/auth/LoginForm';
 import LoginErrorMessage from '@/components/auth/LoginErrorMessage';
@@ -19,9 +18,6 @@ const Login = () => {
   
   // Get the redirect path from location state or default to /products
   const from = (location.state as { from?: string })?.from || '/products';
-  
-  // Use the admin account creation hook
-  useAdminAccountCreation();
   
   // Set mounted state and handle initial cleanup
   useEffect(() => {
@@ -45,9 +41,12 @@ const Login = () => {
     };
   }, [navigate]);
   
-  // Redirect if already logged in
+  // Redirect if already logged in - wait for auth to be ready
   useEffect(() => {
-    if (!mounted || authLoading) return;
+    if (!mounted || authLoading) {
+      console.log('Login: Waiting for auth to be ready...');
+      return;
+    }
     
     if (user) {
       console.log('Login: User already logged in, redirecting to:', from);
@@ -78,7 +77,7 @@ const Login = () => {
     }
   };
 
-  // Show loading state until mounted and auth is ready
+  // Show loading state until auth is fully ready
   if (!mounted || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
