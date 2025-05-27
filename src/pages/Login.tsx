@@ -13,7 +13,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const { login, user } = useAuth();
+  const { login, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -47,13 +47,13 @@ const Login = () => {
   
   // Redirect if already logged in
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || authLoading) return;
     
     if (user) {
       console.log('Login: User already logged in, redirecting to:', from);
       navigate(from, { replace: true });
     }
-  }, [user, navigate, from, mounted]);
+  }, [user, navigate, from, mounted, authLoading]);
 
   const handleSubmit = async (email: string, password: string) => {
     console.log('Login: Form submitted');
@@ -78,8 +78,8 @@ const Login = () => {
     }
   };
 
-  // Show loading state until mounted
-  if (!mounted) {
+  // Show loading state until mounted and auth is ready
+  if (!mounted || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

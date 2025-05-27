@@ -39,7 +39,7 @@ export const useAuthState = () => {
     }
   }, [user, fetchProfile, loadUserRoles]);
 
-  // Role checking functions
+  // Role checking functions - now always called in the same order
   const hasRole = useCallback((role: AppRole) => {
     return roles.includes(role);
   }, [roles]);
@@ -56,9 +56,8 @@ export const useAuthState = () => {
     return hasRole('retailer');
   }, [hasRole]);
 
+  // Initialize auth once
   useEffect(() => {
-    if (initialized) return;
-    
     console.log('useAuthState: Initializing auth...');
     
     let cleanup: (() => void) | undefined;
@@ -139,7 +138,7 @@ export const useAuthState = () => {
         cleanup();
       }
     };
-  }, [initialized, fetchProfile, loadUserRoles]);
+  }, [fetchProfile, loadUserRoles]);
 
   return {
     user,

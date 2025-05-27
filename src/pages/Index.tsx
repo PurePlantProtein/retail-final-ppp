@@ -7,7 +7,6 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     console.log('Index: Component mounting');
@@ -18,7 +17,7 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    if (!mounted || redirecting) {
+    if (!mounted) {
       return;
     }
 
@@ -28,8 +27,6 @@ const Index = () => {
       return;
     }
 
-    setRedirecting(true);
-    
     // Small delay to ensure auth state is stable
     const timer = setTimeout(() => {
       if (user) {
@@ -42,7 +39,7 @@ const Index = () => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [user, isLoading, navigate, mounted, redirecting]);
+  }, [user, isLoading, navigate, mounted]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

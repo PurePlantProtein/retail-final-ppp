@@ -52,7 +52,7 @@ export const useAdminAccountCreation = () => {
   const [hasAttempted, setHasAttempted] = useState(false);
 
   useEffect(() => {
-    // Only run once per session
+    // Only run once per session and avoid running during auth operations
     if (hasAttempted) return;
     
     const checkAndCreateAdmin = async () => {
@@ -61,7 +61,7 @@ export const useAdminAccountCreation = () => {
     };
     
     // Delay the check to avoid interfering with auth initialization
-    const timer = setTimeout(checkAndCreateAdmin, 2000);
+    const timer = setTimeout(checkAndCreateAdmin, 3000); // Increased delay
     
     return () => clearTimeout(timer);
   }, [hasAttempted]);
