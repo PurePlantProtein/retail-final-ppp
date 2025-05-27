@@ -9,12 +9,11 @@ export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const isMountedRef = useRef(true);
-  const hasLoadedRef = useRef(false);
+  const initializationPromiseRef = useRef<Promise<void> | null>(null);
 
   const hasRole = useCallback((role: AppRole) => {
     return roles.includes(role);
@@ -23,12 +22,6 @@ export const useAuthState = () => {
   const isAdmin = hasRole('admin');
   const isDistributor = hasRole('distributor');
   const isRetailer = hasRole('retailer');
-
-  const safeSetState = useCallback((updateFn: () => void) => {
-    if (isMountedRef.current) {
-      updateFn();
-    }
-  }, []);
 
   const loadUserProfile = useCallback(async (userId: string) => {
     if (!isMountedRef.current) return;
@@ -47,22 +40,20 @@ export const useAuthState = () => {
       }
 
       if (data && isMountedRef.current) {
-        safeSetState(() => {
-          setProfile({
-            id: data.id,
-            business_name: data.business_name || '',
-            business_address: data.business_address || '',
-            phone: data.phone || '',
-            business_type: data.business_type || '',
-            email: data.email || '',
-            payment_terms: data.payment_terms || 14,
-          });
+        setProfile({
+          id: data.id,
+          business_name: data.business_name || '',
+          business_address: data.business_address || '',
+          phone: data.phone || '',
+          business_type: data.business_type || '',
+          email: data.email || '',
+          payment_terms: data.payment_terms || 14,
         });
       }
     } catch (error) {
       console.error('Error loading profile:', error);
     }
-  }, [safeSetState]);
+  }, []);
 
   const loadUserRoles = useCallback(async (userId: string) => {
     if (!isMountedRef.current) return;
@@ -71,106 +62,119 @@ export const useAuthState = () => {
       console.log('Loading roles for user:', userId);
       const userRoles = await fetchUserRoles(userId);
       if (isMountedRef.current) {
-        safeSetState(() => setRoles(userRoles));
+        setRoles(userRoles);
       }
     } catch (error) {
       console.error('Error loading roles:', error);
       if (isMountedRef.current) {
-        safeSetState(() => setRoles([]));
+        setRoles([]);
       }
     }
-  }, [safeSetState]);
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     if (user && isMountedRef.current) {
-      await loadUserProfile(user.id);
-      await loadUserRoles(user.id);
+      await Promise.all([
+        loadUserProfile(user.id),
+        loadUserRoles(user.id)
+      ]);
     }
   }, [user, loadUserProfile, loadUserRoles]);
 
   useEffect(() => {
-    let mounted = true;
-    let authSubscription: any = null;
-
+    isMountedRef.current = true;
+    
     const initializeAuth = async () => {
-      try {
-        console.log('useAuthState: Initializing auth...');
-        
-        const { data: authData } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            if (!mounted || !isMountedRef.current) return;
+      if (initializationPromiseRef.current) {
+        return initializationPromiseRef.current;
+      }
+
+      initializationPromiseRef.current = (async () => {
+        try {
+          console.log('useAuthState: Starting initialization...');
+          
+          // Get current session first
+          const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('useAuthState: Error getting session:', error);
+            throw error;
+          }
+
+          console.log('useAuthState: Initial session:', !!initialSession);
+          
+          if (isMountedRef.current) {
+            setSession(initialSession);
+            setUser(initialSession?.user ?? null);
             
-            console.log('useAuthState: Auth state changed:', event, !!session);
-            
-            setSession(session);
-            setUser(session?.user ?? null);
-            
-            if (event === 'SIGNED_IN' && session?.user && !hasLoadedRef.current) {
-              hasLoadedRef.current = true;
-              setTimeout(async () => {
-                if (mounted && isMountedRef.current) {
-                  await loadUserProfile(session.user.id);
-                  await loadUserRoles(session.user.id);
-                }
-              }, 100);
-            } else if (event === 'SIGNED_OUT' || !session) {
-              hasLoadedRef.current = false;
-              if (mounted && isMountedRef.current) {
-                setProfile(null);
-                setRoles([]);
-              }
+            if (initialSession?.user) {
+              await Promise.all([
+                loadUserProfile(initialSession.user.id),
+                loadUserRoles(initialSession.user.id)
+              ]);
             }
           }
-        );
-        
-        authSubscription = authData.subscription;
 
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('useAuthState: Error getting session:', error);
-        }
+          // Set up auth state listener
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+              if (!isMountedRef.current) return;
+              
+              console.log('useAuthState: Auth state changed:', event, !!session);
+              
+              setSession(session);
+              setUser(session?.user ?? null);
+              
+              if (event === 'SIGNED_IN' && session?.user) {
+                // Use setTimeout to prevent potential deadlocks
+                setTimeout(async () => {
+                  if (isMountedRef.current) {
+                    await Promise.all([
+                      loadUserProfile(session.user.id),
+                      loadUserRoles(session.user.id)
+                    ]);
+                  }
+                }, 0);
+              } else if (event === 'SIGNED_OUT' || !session) {
+                if (isMountedRef.current) {
+                  setProfile(null);
+                  setRoles([]);
+                }
+              }
+            }
+          );
 
-        if (mounted && isMountedRef.current) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user && !hasLoadedRef.current) {
-            hasLoadedRef.current = true;
-            await loadUserProfile(session.user.id);
-            await loadUserRoles(session.user.id);
+          // Cleanup function
+          const cleanup = () => {
+            subscription.unsubscribe();
+            isMountedRef.current = false;
+          };
+
+          // Store cleanup function for later use
+          (window as any).__authCleanup = cleanup;
+
+        } catch (error) {
+          console.error('useAuthState: Initialization error:', error);
+        } finally {
+          if (isMountedRef.current) {
+            setIsLoading(false);
           }
-          
-          setIsLoading(false);
-          setIsInitialized(true);
         }
+      })();
 
-      } catch (error) {
-        console.error('useAuthState: Error initializing auth:', error);
-        if (mounted && isMountedRef.current) {
-          setIsLoading(false);
-          setIsInitialized(true);
-        }
-      }
+      return initializationPromiseRef.current;
     };
 
     initializeAuth();
 
     return () => {
-      mounted = false;
       isMountedRef.current = false;
-      hasLoadedRef.current = false;
-      if (authSubscription) {
-        authSubscription.unsubscribe();
+      if ((window as any).__authCleanup) {
+        (window as any).__authCleanup();
+        delete (window as any).__authCleanup;
       }
     };
   }, [loadUserProfile, loadUserRoles]);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   return {
     user,
@@ -183,6 +187,6 @@ export const useAuthState = () => {
     isDistributor,
     isRetailer,
     refreshProfile,
-    isInitialized
+    isInitialized: !isLoading
   };
 };

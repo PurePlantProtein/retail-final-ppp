@@ -12,26 +12,31 @@ export const useAuthMethods = (updateActivity: () => void) => {
     setIsLoading(true);
     
     try {
-      // Clean up existing state
+      console.log('useAuthMethods: Starting login process');
+      
+      // Clean up existing state first
       cleanupAuthState();
       
-      // Attempt global sign out
+      // Attempt global sign out to clear any existing sessions
       try {
         await supabase.auth.signOut({ scope: 'global' });
+        console.log('useAuthMethods: Global signout completed');
       } catch (err) {
-        // Continue even if this fails
+        console.log('useAuthMethods: Global signout failed, continuing...');
       }
       
-      // Implement rate limiting for login attempts
-      const clientId = localStorage.getItem('device_id') || 
-                      (localStorage.setItem('device_id', crypto.randomUUID()), localStorage.getItem('device_id')!);
-      
+      console.log('useAuthMethods: Attempting sign in');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('useAuthMethods: Sign in error:', error);
+        throw error;
+      }
+      
+      console.log('useAuthMethods: Sign in successful');
       
       // Reset the last activity timestamp
       updateActivity();
@@ -40,7 +45,9 @@ export const useAuthMethods = (updateActivity: () => void) => {
         title: "Login successful",
         description: "Welcome back!",
       });
+      
     } catch (error: any) {
+      console.error('useAuthMethods: Login failed:', error);
       toast({
         title: "Login failed",
         description: error.message || "Something went wrong",
@@ -85,7 +92,7 @@ export const useAuthMethods = (updateActivity: () => void) => {
           body: {
             type: 'signup',
             userEmail: email,
-            userName: businessName, // Using business name as user name
+            userName: businessName,
             businessName: businessName,
             businessType: businessType
           }
@@ -93,7 +100,6 @@ export const useAuthMethods = (updateActivity: () => void) => {
         console.log("Sales notification sent successfully");
       } catch (notificationError) {
         console.error("Failed to send sales notification:", notificationError);
-        // Don't fail the signup if notification fails
       }
       
       // Reset the last activity timestamp
@@ -118,7 +124,9 @@ export const useAuthMethods = (updateActivity: () => void) => {
 
   const logout = async () => {
     try {
-      // Clean up auth state
+      console.log('useAuthMethods: Starting logout process');
+      
+      // Clean up auth state first
       cleanupAuthState();
       localStorage.removeItem('lastUserActivity');
       
@@ -130,9 +138,12 @@ export const useAuthMethods = (updateActivity: () => void) => {
         description: "You have been successfully logged out.",
       });
       
+      console.log('useAuthMethods: Logout completed, redirecting...');
+      
       // Force page reload for a clean state
       window.location.href = '/login';
     } catch (error: any) {
+      console.error('useAuthMethods: Logout error:', error);
       toast({
         title: "Error",
         description: error.message || "Something went wrong",

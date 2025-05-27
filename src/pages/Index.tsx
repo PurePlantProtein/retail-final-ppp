@@ -1,18 +1,15 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading, isAdmin } = useAuth();
-  const [hasNavigated, setHasNavigated] = useState(false);
 
   useEffect(() => {
-    // Only navigate once auth is fully loaded and we haven't navigated yet
-    if (!isLoading && !hasNavigated) {
-      console.log('Index: Auth loaded, user:', !!user, 'isAdmin:', isAdmin);
-      setHasNavigated(true);
+    if (!isLoading) {
+      console.log('Index: Auth loaded, user exists:', !!user, 'isAdmin:', isAdmin);
       
       if (user) {
         const redirectPath = isAdmin ? '/admin' : '/products';
@@ -23,7 +20,7 @@ const Index = () => {
         navigate('/login', { replace: true });
       }
     }
-  }, [user, isLoading, navigate, hasNavigated, isAdmin]);
+  }, [user, isLoading, navigate, isAdmin]);
 
   // Show loading while determining where to navigate
   return (

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginHeader from '@/components/auth/LoginHeader';
 import LoginForm from '@/components/auth/LoginForm';
@@ -12,7 +12,6 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { login, user, isLoading: authLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -47,7 +46,6 @@ const Login = () => {
       console.log('Login: Attempting login for:', email);
       await login(email, password);
       console.log('Login: Login successful');
-      // Navigation will be handled by the useEffect above
     } catch (error: any) {
       console.error("Login error:", error);
       setErrorMessage(error.message || "Invalid login credentials");
@@ -81,9 +79,9 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Login Form */}
-      <div className="w-full lg:w-1/2 p-6 lg:p-12 flex items-center justify-center bg-white">
+      <div className="w-full lg:w-1/2 p-6 lg:p-12 flex items-center justify-center bg-white min-h-screen lg:min-h-auto">
         <div className="w-full max-w-md">
           <LoginHeader />
 
@@ -102,7 +100,7 @@ const Login = () => {
       </div>
       
       {/* Right side - Background */}
-      <div className="hidden lg:block lg:w-1/2">
+      <div className="hidden lg:block lg:w-1/2 lg:min-h-screen">
         <LoginBackground />
       </div>
     </div>
