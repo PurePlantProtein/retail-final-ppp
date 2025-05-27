@@ -7,6 +7,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     console.log('Index: Component mounting');
@@ -17,45 +18,40 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    if (!mounted) {
-      console.log('Index: Not mounted yet, skipping navigation');
+    if (!mounted || redirecting) {
       return;
     }
 
+    // Wait for auth to finish loading
+    if (isLoading) {
+      console.log('Index: Auth still loading, waiting...');
+      return;
+    }
+
+    setRedirecting(true);
+    
+    // Small delay to ensure auth state is stable
     const timer = setTimeout(() => {
-      if (!isLoading) {
-        if (user) {
-          console.log('Index: User authenticated, navigating to products');
-          navigate('/products', { replace: true });
-        } else {
-          console.log('Index: No user, navigating to login');
-          navigate('/login', { replace: true });
-        }
+      if (user) {
+        console.log('Index: User authenticated, navigating to products');
+        navigate('/products', { replace: true });
       } else {
-        console.log('Index: Still loading, waiting...');
+        console.log('Index: No user, navigating to login');
+        navigate('/login', { replace: true });
       }
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [user, isLoading, navigate, mounted]);
-
-  if (!mounted || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Pure Plant Protein Wholesale</h1>
-          <p className="text-xl text-gray-600">Loading...</p>
-          <div className="mt-4 animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
+  }, [user, isLoading, navigate, mounted, redirecting]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">Pure Plant Protein Wholesale</h1>
-        <p className="text-xl text-gray-600">Redirecting...</p>
+        <p className="text-xl text-gray-600 mb-4">
+          {isLoading ? 'Initializing...' : 'Redirecting...'}
+        </p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
       </div>
     </div>
   );

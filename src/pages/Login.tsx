@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { cleanupAuthState } from '@/utils/authUtils';
 import { useAdminAccountCreation } from '@/hooks/useAdminAccountCreation';
@@ -15,7 +14,6 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const { login, user } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -25,21 +23,12 @@ const Login = () => {
   // Use the admin account creation hook
   useAdminAccountCreation();
   
-  // Set mounted state
+  // Set mounted state and handle initial cleanup
   useEffect(() => {
     console.log('Login: Component mounting');
     setMounted(true);
-    return () => {
-      console.log('Login: Component unmounting');
-    };
-  }, []);
-  
-  // Clean up any existing session data on login page mount
-  useEffect(() => {
-    if (!mounted) return;
     
-    console.log('Login: Cleaning up auth state');
-    // Clean up existing auth state when landing on login page
+    // Clean up auth state on mount
     cleanupAuthState();
     localStorage.removeItem('lastUserActivity');
     
@@ -50,7 +39,11 @@ const Login = () => {
       // Clear the flag from the URL
       navigate('/login', { replace: true });
     }
-  }, [mounted, navigate]);
+    
+    return () => {
+      console.log('Login: Component unmounting');
+    };
+  }, [navigate]);
   
   // Redirect if already logged in
   useEffect(() => {
@@ -85,10 +78,10 @@ const Login = () => {
     }
   };
 
-  // Don't render until mounted to prevent hydration issues
+  // Show loading state until mounted
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2 text-sm text-gray-600">Loading...</p>
@@ -99,7 +92,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* White login section - full width on mobile/tablet, 45% on large screens */}
+      {/* White login section */}
       <div className="w-full lg:w-[45%] p-6 lg:p-12 flex items-center justify-center bg-white order-2 lg:order-1">
         <div className="w-full max-w-md">
           <LoginHeader />
@@ -112,7 +105,7 @@ const Login = () => {
         </div>
       </div>
       
-      {/* Image section - visible on mobile/tablet as well, 55% on large screens */}
+      {/* Image section */}
       <LoginBackground />
     </div>
   );
