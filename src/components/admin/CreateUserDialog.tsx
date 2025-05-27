@@ -82,14 +82,14 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Check if user already exists
-      const { data: existingUsers, error: checkError } = await supabase
+      // Check if user already exists in profiles table
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('email')
         .eq('email', values.email)
         .maybeSingle();
       
-      if (existingUsers) {
+      if (existingProfile) {
         toast({
           title: "User already exists",
           description: `A user with the email ${values.email} already exists.`,
@@ -99,14 +99,38 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         return;
       }
       
-      // Generate a UUID for the new user
-      const userId = crypto.randomUUID();
+      // Create the auth user first using admin API
+      console.log('Creating auth user...');
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: values.email,
+        password: values.password,
+        email_confirm: true,
+        user_metadata: {
+          business_name: values.businessName,
+          business_type: values.businessType,
+          role: values.role,
+          contact_name: values.contactName,
+          phone: values.phone,
+          address: `${values.street}, ${values.city}, ${values.state} ${values.postalCode}`
+        }
+      });
       
-      // Create the profile with all details including shipping address
-      const { data: profileData, error: profileError } = await supabase
+      if (authError) {
+        console.error('Error creating auth user:', authError);
+        throw new Error(`Failed to create user account: ${authError.message}`);
+      }
+      
+      if (!authData.user) {
+        throw new Error('No user data returned from auth creation');
+      }
+      
+      console.log('Auth user created successfully:', authData.user.id);
+      
+      // Now create/update the profile with the actual auth user ID
+      const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          id: userId,
+        .upsert({
+          id: authData.user.id, // Use the actual auth user ID
           email: values.email,
           business_name: values.businessName,
           business_type: values.businessType,
@@ -115,48 +139,27 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
           approval_status: 'approved', // Auto-approve admin-created users
           approved_at: new Date().toISOString(),
           approved_by: currentUser?.id,
-        })
-        .select();
+        }, {
+          onConflict: 'id'
+        });
       
       if (profileError) {
-        console.error('Error creating profile:', profileError);
-        throw profileError;
+        console.error('Error creating/updating profile:', profileError);
+        throw new Error(`Failed to create user profile: ${profileError.message}`);
       }
       
       // Add user role
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
-          user_id: userId,
+          user_id: authData.user.id,
           role: values.role
         });
       
       if (roleError) {
         console.error('Error adding role:', roleError);
-        throw roleError;
-      }
-      
-      // Try to create the auth user
-      try {
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: values.email,
-          password: values.password,
-          email_confirm: true,
-          user_metadata: {
-            business_name: values.businessName,
-            business_type: values.businessType,
-            role: values.role,
-            contact_name: values.contactName,
-            phone: values.phone,
-            address: `${values.street}, ${values.city}, ${values.state} ${values.postalCode}`
-          }
-        });
-        
-        if (authError) {
-          console.warn('Could not create auth user, but profile was created:', authError);
-        }
-      } catch (authCreateError) {
-        console.warn('Failed to create auth user, but profile was created:', authCreateError);
+        // Don't throw here as the user is created, just log the warning
+        console.warn('User created but role assignment failed:', roleError.message);
       }
       
       toast({
@@ -166,6 +169,8 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       
       form.reset();
       onUserCreated();
+      onClose();
+      
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast({
@@ -175,7 +180,6 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       });
     } finally {
       setIsSubmitting(false);
-      onClose();
     }
   };
 
