@@ -20,6 +20,7 @@ interface BulkOrderEmailRequest {
     price: number;
     image?: string;
   }>;
+  scheduleRecurring?: boolean;
   // For order submission
   retailerId?: string;
   orderItems?: Array<{
@@ -40,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
   );
 
   try {
-    const { type, subject, message, products, retailerId, orderItems, notes }: BulkOrderEmailRequest = await req.json();
+    const { type, subject, message, products, scheduleRecurring, retailerId, orderItems, notes }: BulkOrderEmailRequest = await req.json();
 
     if (type === 'send_bulk') {
       // Get all approved retailers
@@ -51,6 +52,30 @@ const handler = async (req: Request): Promise<Response> => {
         .not('email', 'is', null);
 
       if (retailersError) throw retailersError;
+
+      // If scheduling is enabled, set up the recurring job
+      if (scheduleRecurring) {
+        console.log('Setting up 30-day recurring email schedule...');
+        
+        // Create a cron job for 30-day recurring emails
+        // This would run every 30 days at midnight
+        const { error: cronError } = await supabase.rpc('create_bulk_email_schedule', {
+          schedule_name: 'bulk_order_emails_30_day',
+          cron_expression: '0 0 */30 * *', // Every 30 days at midnight
+          email_config: {
+            subject,
+            message,
+            products
+          }
+        });
+
+        if (cronError) {
+          console.error('Failed to create recurring schedule:', cronError);
+          // Continue with sending the current email even if scheduling fails
+        } else {
+          console.log('Successfully created 30-day recurring email schedule');
+        }
+      }
 
       const emailPromises = retailers.map(async (retailer) => {
         const orderFormHtml = `
@@ -123,6 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #777;">
               <p>&copy; ${new Date().getFullYear()} PP Protein. All rights reserved.</p>
+              ${scheduleRecurring ? '<p style="margin-top: 5px;">This is part of our monthly product update series.</p>' : ''}
             </div>
           </div>
         `;
@@ -144,7 +170,8 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({ 
         success: true, 
         sent: successful, 
-        failed: failed 
+        failed: failed,
+        schedulingEnabled: scheduleRecurring
       }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },

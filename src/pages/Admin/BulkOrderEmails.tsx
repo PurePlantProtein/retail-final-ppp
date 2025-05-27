@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -12,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Mail, Package } from 'lucide-react';
+import { BulkEmailScheduler } from '@/components/admin/BulkEmailScheduler';
 
 interface Product {
   id: string;
@@ -30,6 +30,7 @@ const BulkOrderEmails = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [subject, setSubject] = useState('New Products Available for Order');
   const [message, setMessage] = useState('We have exciting new products available for order. Please review the items below and submit your quantities directly through this email.');
+  const [isScheduleEnabled, setIsScheduleEnabled] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -102,7 +103,8 @@ const BulkOrderEmails = () => {
           type: 'send_bulk',
           subject,
           message,
-          products: selectedProductData
+          products: selectedProductData,
+          scheduleRecurring: isScheduleEnabled
         }
       });
 
@@ -110,7 +112,7 @@ const BulkOrderEmails = () => {
 
       toast({
         title: "Emails Sent Successfully",
-        description: `Bulk order emails sent to ${data.sent} retailers.`,
+        description: `Bulk order emails sent to ${data.sent} retailers.${isScheduleEnabled ? ' Auto-schedule is now active.' : ''}`,
       });
 
       // Reset form
@@ -178,6 +180,9 @@ const BulkOrderEmails = () => {
               </CardContent>
             </Card>
 
+            {/* Auto-Schedule */}
+            <BulkEmailScheduler onScheduleChange={setIsScheduleEnabled} />
+
             {/* Product Selection */}
             <Card>
               <CardHeader>
@@ -236,6 +241,7 @@ const BulkOrderEmails = () => {
                     <h3 className="font-medium">Ready to Send</h3>
                     <p className="text-sm text-muted-foreground">
                       This will send the order form to all approved retailers
+                      {isScheduleEnabled && " and enable 30-day auto-scheduling"}
                     </p>
                   </div>
                   <Button
@@ -251,7 +257,7 @@ const BulkOrderEmails = () => {
                     ) : (
                       <>
                         <Mail className="mr-2 h-4 w-4" />
-                        Send to All Retailers
+                        {isScheduleEnabled ? 'Send & Schedule' : 'Send to All Retailers'}
                       </>
                     )}
                   </Button>

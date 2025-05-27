@@ -17,16 +17,16 @@ import {
   Users,
 } from "lucide-react"
 
+export interface SubMenuItem {
+  title: string
+  url: string
+}
+
 export interface MenuItem {
   title: string
   url: string
   icon: React.ComponentType
   items?: SubMenuItem[]
-}
-
-export interface SubMenuItem {
-  title: string
-  url: string
 }
 
 // Menu items for customers/retailers
