@@ -4,6 +4,16 @@ import { CartItem } from '@/types/cart';
 import { getCategoryMOQ, getCategoryTotalQuantity } from './categoryMOQ';
 
 export const validateProductMinimum = (product: Product, quantity: number): { isValid: boolean; message?: string } => {
+  // Check if this product has a category MOQ requirement
+  const categoryMOQ = getCategoryMOQ(product.category || '');
+  
+  if (categoryMOQ) {
+    // For products with category MOQ, we don't enforce individual minimums
+    // The category MOQ validation will handle the minimum requirements
+    return { isValid: true };
+  }
+  
+  // For products without category MOQ, check individual minimum
   const minQty = product.min_quantity || 1;
   
   if (quantity < minQty) {
