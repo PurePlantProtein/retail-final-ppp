@@ -132,16 +132,16 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* White login section - full width on mobile, 45% on desktop */}
-      <div className="w-full md:w-[45%] p-6 md:p-12 flex items-center justify-center bg-white">
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* White login section - full width on mobile/tablet, 45% on large screens */}
+      <div className="w-full lg:w-[45%] p-6 lg:p-12 flex items-center justify-center bg-white order-2 lg:order-1">
         <div className="w-full max-w-md">
           <div className="mb-10">
             <img 
               src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=200" 
               alt="PP Protein" 
               className="h-10 mb-8" 
-            />
+            /> 
             <h1 className="text-3xl font-bold mb-2">Sign in to your account</h1>
             <p className="text-gray-600">Enter your details below to access your wholesale account</p>
           </div>
@@ -206,11 +206,14 @@ const Login = () => {
         </div>
       </div>
       
-      {/* Image section - hidden on mobile, 55% on desktop */}
+      {/* Image section - visible on mobile/tablet as well, 55% on large screens */}
       <div 
-        className="hidden md:block md:w-[55%] bg-cover bg-center bg-no-repeat" 
+        className="h-64 lg:h-auto w-full lg:w-[55%] bg-cover bg-center bg-no-repeat order-1 lg:order-2" 
         style={{
-          backgroundImage: `url('/lovable-uploads/e8d0fa9a-8140-44aa-8386-93b48950ecc1.png')`
+          backgroundImage: `url('/lovable-uploads/e8d0fa9a-8140-44aa-8386-93b48950ecc1.png')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          minHeight: '256px'
         }}
       ></div>
     </div>
