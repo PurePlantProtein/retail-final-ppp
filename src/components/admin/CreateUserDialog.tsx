@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -30,7 +31,6 @@ import {
 // Form schema for user creation with shipping details
 const userCreateSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
   businessName: z.string().min(1, "Business name is required"),
   businessType: z.string().min(1, "Business type is required"),
   role: z.enum(["admin", "retailer"]),
@@ -42,6 +42,8 @@ const userCreateSchema = z.object({
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 digits"),
+  // Email options
+  emailCredentials: z.boolean().default(false),
 });
 
 interface CreateUserDialogProps {
@@ -50,6 +52,17 @@ interface CreateUserDialogProps {
   onUserCreated: () => void;
   session: any;
 }
+
+// Generate a random temporary password
+const generateTempPassword = () => {
+  const length = 12;
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return password;
+};
 
 const CreateUserDialog: React.FC<CreateUserDialogProps> = ({ 
   isOpen, 
@@ -65,7 +78,6 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     resolver: zodResolver(userCreateSchema),
     defaultValues: {
       email: "",
-      password: "",
       businessName: "",
       businessType: "",
       role: "retailer",
@@ -75,8 +87,31 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       city: "",
       state: "",
       postalCode: "",
+      emailCredentials: false,
     },
   });
+
+  const sendCredentialsEmail = async (email: string, tempPassword: string, businessName: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('send-user-credentials', {
+        body: {
+          email,
+          tempPassword,
+          businessName,
+        }
+      });
+      
+      if (error) {
+        console.error('Error sending credentials email:', error);
+        throw error;
+      }
+      
+      console.log('Credentials email sent successfully');
+    } catch (error) {
+      console.error('Failed to send credentials email:', error);
+      throw error;
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof userCreateSchema>) => {
     setIsSubmitting(true);
@@ -99,38 +134,18 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
         return;
       }
       
-      // Create the auth user first using admin API
-      console.log('Creating auth user...');
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: values.email,
-        password: values.password,
-        email_confirm: true,
-        user_metadata: {
-          business_name: values.businessName,
-          business_type: values.businessType,
-          role: values.role,
-          contact_name: values.contactName,
-          phone: values.phone,
-          address: `${values.street}, ${values.city}, ${values.state} ${values.postalCode}`
-        }
-      });
+      // Generate temporary password if emailing credentials
+      const tempPassword = values.emailCredentials ? generateTempPassword() : 'TempPass123!';
       
-      if (authError) {
-        console.error('Error creating auth user:', authError);
-        throw new Error(`Failed to create user account: ${authError.message}`);
-      }
+      console.log('Creating profile and role...');
       
-      if (!authData.user) {
-        throw new Error('No user data returned from auth creation');
-      }
+      // Create profile first with a generated UUID
+      const userId = crypto.randomUUID();
       
-      console.log('Auth user created successfully:', authData.user.id);
-      
-      // Now create/update the profile with the actual auth user ID
       const { error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          id: authData.user.id, // Use the actual auth user ID
+        .insert({
+          id: userId,
           email: values.email,
           business_name: values.businessName,
           business_type: values.businessType,
@@ -139,12 +154,10 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
           approval_status: 'approved', // Auto-approve admin-created users
           approved_at: new Date().toISOString(),
           approved_by: currentUser?.id,
-        }, {
-          onConflict: 'id'
         });
       
       if (profileError) {
-        console.error('Error creating/updating profile:', profileError);
+        console.error('Error creating profile:', profileError);
         throw new Error(`Failed to create user profile: ${profileError.message}`);
       }
       
@@ -152,20 +165,36 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
-          user_id: authData.user.id,
+          user_id: userId,
           role: values.role
         });
       
       if (roleError) {
         console.error('Error adding role:', roleError);
-        // Don't throw here as the user is created, just log the warning
-        console.warn('User created but role assignment failed:', roleError.message);
+        console.warn('User profile created but role assignment failed:', roleError.message);
       }
       
-      toast({
-        title: "User created successfully",
-        description: `${values.businessName} (${values.email}) has been added and approved.`,
-      });
+      // Send credentials email if requested
+      if (values.emailCredentials) {
+        try {
+          await sendCredentialsEmail(values.email, tempPassword, values.businessName);
+          toast({
+            title: "User created successfully",
+            description: `${values.businessName} has been added and login credentials have been emailed to ${values.email}.`,
+          });
+        } catch (emailError) {
+          toast({
+            title: "User created with warning",
+            description: `${values.businessName} has been added but failed to send credentials email. Please provide login details manually.`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "User created successfully",
+          description: `${values.businessName} (${values.email}) has been added and approved.`,
+        });
+      }
       
       form.reset();
       onUserCreated();
@@ -270,36 +299,43 @@ const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
             </div>
 
             {/* Login Credentials */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="business@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormDescription>Must be at least 8 characters.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="business@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Email Credentials Option */}
+            <FormField
+              control={form.control}
+              name="emailCredentials"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Email temporary password to retailer
+                    </FormLabel>
+                    <FormDescription>
+                      Send login credentials with a temporary password. The retailer can reset their password after first login.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
 
             {/* Shipping Address */}
             <FormField

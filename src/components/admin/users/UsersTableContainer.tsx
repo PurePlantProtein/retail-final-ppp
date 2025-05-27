@@ -1,18 +1,15 @@
 
 import React from 'react';
+import { User } from '@/types/user';
+import { AppRole } from '@/types/auth';
+import UserTableRow from './UserTableRow';
 import {
   Table,
   TableBody,
-  TableCaption,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import UserTableRow from '@/components/admin/users/UserTableRow';
-import LoadingState from '@/components/admin/users/LoadingState';
-import EmptyState from '@/components/admin/users/EmptyState';
-import { User } from '@/types/user';
-import { AppRole } from '@/types/auth';
 
 interface UsersTableContainerProps {
   users: User[];
@@ -24,23 +21,22 @@ interface UsersTableContainerProps {
   onDeleteClick: (user: User) => void;
 }
 
-const UsersTableContainer: React.FC<UsersTableContainerProps> = ({ 
-  users, 
+const UsersTableContainer: React.FC<UsersTableContainerProps> = ({
+  users,
   updateUserRole,
   removeUserRole,
-  toggleUserStatus, 
+  toggleUserStatus,
   currentUser,
   onEditClick,
   onDeleteClick,
 }) => {
   return (
     <Table>
-      <TableCaption>List of users in the system.</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead>Business Name</TableHead>
+          <TableHead>Business</TableHead>
+          <TableHead>Contact</TableHead>
           <TableHead>Email</TableHead>
-          <TableHead>Business Type</TableHead>
           <TableHead>Roles</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Payment Terms</TableHead>
@@ -52,10 +48,10 @@ const UsersTableContainer: React.FC<UsersTableContainerProps> = ({
           <UserTableRow
             key={user.id}
             user={user}
-            currentUser={currentUser}
             updateUserRole={updateUserRole}
             removeUserRole={removeUserRole}
             toggleUserStatus={toggleUserStatus}
+            currentUser={currentUser}
             onEditClick={onEditClick}
             onDeleteClick={onDeleteClick}
           />
