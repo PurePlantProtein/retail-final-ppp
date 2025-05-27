@@ -8,6 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 interface OrderEmailRequest {
@@ -17,13 +18,69 @@ interface OrderEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log('Function called with method:', req.method);
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    console.log('Handling CORS preflight');
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    });
+  }
+
+  // Only allow POST requests
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      {
+        status: 405,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
   }
 
   try {
-    const { orderDetails, emailType, recipientEmail }: OrderEmailRequest = await req.json();
+    console.log('Processing POST request');
+    
+    // Check if RESEND_API_KEY exists
+    if (!Deno.env.get("RESEND_API_KEY")) {
+      console.error('RESEND_API_KEY not found in environment');
+      return new Response(
+        JSON.stringify({ error: "Email service not configured" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const requestBody = await req.text();
+    console.log('Request body received:', requestBody);
+    
+    if (!requestBody) {
+      return new Response(
+        JSON.stringify({ error: "Request body is required" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const { orderDetails, emailType, recipientEmail }: OrderEmailRequest = JSON.parse(requestBody);
+
+    console.log('Parsed request:', { emailType, recipientEmail, orderId: orderDetails?.id });
+
+    if (!orderDetails || !emailType || !recipientEmail) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: orderDetails, emailType, recipientEmail" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
     const fromEmail = "orders@retail.ppprotein.com.au";
     let subject = "";
@@ -122,6 +179,8 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
+    console.log('Attempting to send email via Resend');
+    
     const emailResponse = await resend.emails.send({
       from: `PP Protein <${fromEmail}>`,
       to: [recipientEmail],
@@ -131,7 +190,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`${emailType} email sent successfully to ${recipientEmail}:`, emailResponse);
 
-    return new Response(JSON.stringify(emailResponse), {
+    return new Response(JSON.stringify({
+      success: true,
+      message: `${emailType} email sent successfully`,
+      data: emailResponse
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -141,7 +204,11 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-order-email function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false,
+        error: error.message || "Internal server error",
+        details: error.toString()
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

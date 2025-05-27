@@ -14,8 +14,6 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const from = (location.state as { from?: string })?.from || (isAdmin ? '/admin' : '/products');
-  
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('session_expired') === 'true') {
@@ -25,9 +23,11 @@ const Login = () => {
   }, []);
   
   useEffect(() => {
+    // Only redirect if auth is fully loaded and user exists
     if (!authLoading && user) {
-      console.log('Login: User already logged in, redirecting to:', from);
+      console.log('Login: User already logged in, isAdmin:', isAdmin);
       const redirectPath = isAdmin ? '/admin' : '/products';
+      console.log('Login: Redirecting to:', redirectPath);
       navigate(redirectPath, { replace: true });
     }
   }, [user, navigate, authLoading, isAdmin]);
@@ -46,7 +46,8 @@ const Login = () => {
     try {
       console.log('Login: Attempting login for:', email);
       await login(email, password);
-      console.log('Login: Login successful, will redirect via useEffect');
+      console.log('Login: Login successful');
+      // Navigation will be handled by the useEffect above
     } catch (error: any) {
       console.error("Login error:", error);
       setErrorMessage(error.message || "Invalid login credentials");
@@ -55,6 +56,7 @@ const Login = () => {
     }
   };
 
+  // Show loading while auth is initializing
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -66,6 +68,7 @@ const Login = () => {
     );
   }
 
+  // Show loading while user exists (redirecting)
   if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

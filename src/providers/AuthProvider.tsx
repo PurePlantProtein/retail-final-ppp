@@ -29,7 +29,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   useAuthSessionMonitor(session, async () => await authMethods.logout());
 
-  // Don't render children until auth is initialized
+  console.log('AuthProvider render:', { isLoading, isInitialized, user: !!user });
+
+  // Show loading state only while not initialized
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
