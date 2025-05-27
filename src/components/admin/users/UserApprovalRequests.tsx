@@ -52,12 +52,33 @@ const UserApprovalRequests: React.FC = () => {
   const handleApprove = async (userId: string) => {
     if (!user) return;
     
+    const userToApprove = pendingUsers.find(u => u.id === userId);
+    if (!userToApprove) return;
+    
     setProcessingUsers(prev => new Set(prev).add(userId));
     try {
       await approveUser(userId, user.id);
+      
+      // Send approval notification to the user
+      try {
+        await supabase.functions.invoke('send-user-notification', {
+          body: {
+            type: 'approval',
+            userEmail: userToApprove.email,
+            userName: userToApprove.business_name,
+            businessName: userToApprove.business_name,
+            businessType: userToApprove.business_type
+          }
+        });
+        console.log("Approval notification sent to user");
+      } catch (notificationError) {
+        console.error("Failed to send approval notification:", notificationError);
+        // Don't fail the approval if notification fails
+      }
+      
       toast({
         title: "User Approved",
-        description: "User has been approved and can now access the dashboard.",
+        description: "User has been approved and notified via email.",
       });
       await fetchPendingUsers();
     } catch (error) {

@@ -79,6 +79,23 @@ export const useAuthMethods = (updateActivity: () => void) => {
       
       console.log("Signup success:", data);
       
+      // Send notification to sales team about new signup
+      try {
+        await supabase.functions.invoke('send-user-notification', {
+          body: {
+            type: 'signup',
+            userEmail: email,
+            userName: businessName, // Using business name as user name
+            businessName: businessName,
+            businessType: businessType
+          }
+        });
+        console.log("Sales notification sent successfully");
+      } catch (notificationError) {
+        console.error("Failed to send sales notification:", notificationError);
+        // Don't fail the signup if notification fails
+      }
+      
       // Reset the last activity timestamp
       updateActivity();
       
