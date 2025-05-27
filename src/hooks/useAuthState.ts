@@ -20,7 +20,9 @@ export const useAuthState = () => {
   // Function to load user roles
   const loadUserRoles = async (userId: string) => {
     try {
+      console.log('Loading user roles for:', userId);
       const userRoles = await fetchUserRoles(userId);
+      console.log('User roles loaded:', userRoles);
       setRoles(userRoles);
     } catch (error) {
       console.error("Error loading user roles:", error);
@@ -31,6 +33,7 @@ export const useAuthState = () => {
   // Add a function to refresh the profile and roles
   const refreshProfile = async () => {
     if (user) {
+      console.log('Refreshing profile for user:', user.id);
       await fetchProfile(user.id);
       await loadUserRoles(user.id);
     }
@@ -54,23 +57,35 @@ export const useAuthState = () => {
   }, [hasRole]);
 
   useEffect(() => {
+    console.log('useAuthState: Component mounting');
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted) {
+      console.log('useAuthState: Not mounted yet, skipping');
+      return;
+    }
 
     let isMounted = true;
 
     const initAuth = async () => {
       try {
-        console.log('Initializing auth...');
+        console.log('useAuthState: Initializing auth...');
         
         // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!isMounted) return;
+        if (error) {
+          console.error('useAuthState: Error getting session:', error);
+        }
         
+        if (!isMounted) {
+          console.log('useAuthState: Component unmounted during session fetch');
+          return;
+        }
+        
+        console.log('useAuthState: Session retrieved:', session?.user?.email || 'No session');
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -78,6 +93,7 @@ export const useAuthState = () => {
           // Use setTimeout to defer these calls and prevent hydration issues
           setTimeout(async () => {
             if (isMounted) {
+              console.log('useAuthState: Fetching profile and roles for user:', session.user.id);
               await fetchProfile(session.user.id);
               await loadUserRoles(session.user.id);
             }
@@ -87,20 +103,25 @@ export const useAuthState = () => {
         // Set up auth listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, session) => {
-            if (!isMounted) return;
+            if (!isMounted) {
+              console.log('useAuthState: Component unmounted, ignoring auth change');
+              return;
+            }
             
-            console.log('Auth state changed:', event, session?.user?.email);
+            console.log('useAuthState: Auth state changed:', event, session?.user?.email || 'No session');
             setUser(session?.user ?? null);
             setSession(session);
             
             if (session?.user) {
               setTimeout(async () => {
                 if (isMounted) {
+                  console.log('useAuthState: Auth change - fetching profile and roles');
                   await fetchProfile(session.user.id);
                   await loadUserRoles(session.user.id);
                 }
               }, 0);
             } else {
+              console.log('useAuthState: No session, clearing profile and roles');
               setProfile(null);
               setRoles([]);
             }
@@ -108,12 +129,14 @@ export const useAuthState = () => {
         );
 
         setIsLoading(false);
+        console.log('useAuthState: Auth initialization complete');
 
         return () => {
+          console.log('useAuthState: Cleaning up auth subscription');
           subscription.unsubscribe();
         };
       } catch (err) {
-        console.error('Error initializing auth:', err);
+        console.error('useAuthState: Error initializing auth:', err);
         if (isMounted) {
           setIsLoading(false);
         }
@@ -123,9 +146,10 @@ export const useAuthState = () => {
     initAuth();
 
     return () => {
+      console.log('useAuthState: Component unmounting');
       isMounted = false;
     };
-  }, [mounted]);
+  }, [mounted, fetchProfile]);
 
   return {
     user,

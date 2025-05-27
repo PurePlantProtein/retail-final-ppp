@@ -9,11 +9,18 @@ const Index = () => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    console.log('Index: Component mounting');
     setMounted(true);
+    return () => {
+      console.log('Index: Component unmounting');
+    };
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted) {
+      console.log('Index: Not mounted yet, skipping navigation');
+      return;
+    }
 
     const timer = setTimeout(() => {
       if (!isLoading) {
@@ -24,6 +31,8 @@ const Index = () => {
           console.log('Index: No user, navigating to login');
           navigate('/login', { replace: true });
         }
+      } else {
+        console.log('Index: Still loading, waiting...');
       }
     }, 100);
 
