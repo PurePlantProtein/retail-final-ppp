@@ -81,8 +81,9 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      <div className="w-full lg:w-[45%] p-6 lg:p-12 flex items-center justify-center bg-white order-2 lg:order-1">
+    <div className="min-h-screen flex">
+      {/* Left side - Login Form */}
+      <div className="w-full lg:w-1/2 p-6 lg:p-12 flex items-center justify-center bg-white">
         <div className="w-full max-w-md">
           <LoginHeader />
 
@@ -91,10 +92,19 @@ const Login = () => {
           )}
 
           <LoginForm onSubmit={handleSubmit} isLoading={isLoading} />
+          
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Need access? Contact your administrator for account setup.
+            </p>
+          </div>
         </div>
       </div>
       
-      <LoginBackground />
+      {/* Right side - Background */}
+      <div className="hidden lg:block lg:w-1/2">
+        <LoginBackground />
+      </div>
     </div>
   );
 };

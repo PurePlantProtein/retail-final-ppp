@@ -32,11 +32,6 @@ export interface MenuItem {
 // Menu items for customers/retailers
 export const customerItems: MenuItem[] = [
   {
-    title: "Home",
-    url: "/",
-    icon: Home,
-  },
-  {
     title: "Products",
     url: "/products",
     icon: Package,
@@ -86,8 +81,8 @@ export const adminItems: MenuItem[] = [
     icon: Search,
   },
   {
-    title: "Marketing",
-    url: "/admin/marketing",
+    title: "Google Drive",
+    url: "https://drive.google.com/drive/folders/your-folder-id",
     icon: Building2,
   },
   {

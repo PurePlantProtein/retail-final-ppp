@@ -15,21 +15,35 @@ import { AppSidebarFooter } from "./sidebar/SidebarFooter"
 
 export function AppSidebar() {
   const { isAdmin } = useAuth()
-  const menuItems = isAdmin ? adminItems : customerItems
 
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarContent>
+        {/* Customer Menu Items */}
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>Customer</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {customerItems.map((item) => (
                 <AppSidebarMenuItem key={item.title} item={item} />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        
+        {/* Admin Menu Items - Only show if user is admin */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <AppSidebarMenuItem key={item.title} item={item} />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <AppSidebarFooter />
     </Sidebar>
