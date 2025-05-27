@@ -57,8 +57,8 @@ const SignupSuccess = () => {
         <div className="mt-6 text-xs text-gray-500">
           <p>
             Questions? Contact us at{' '}
-            <a href="mailto:support@ppprotein.com.au" className="text-[#25a18e] hover:underline">
-              support@ppprotein.com.au
+            <a href="mailto:sales@ppprotein.com.au" className="text-[#25a18e] hover:underline">
+              sales@ppprotein.com.au
             </a>
           </p>
         </div>
