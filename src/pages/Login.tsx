@@ -10,34 +10,27 @@ import LoginBackground from '@/components/auth/LoginBackground';
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [hasCheckedSession, setHasCheckedSession] = useState(false);
-  const { login, user, isLoading: authLoading } = useAuth();
+  const { login, user, isLoading: authLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
-  const from = (location.state as { from?: string })?.from || '/products';
+  const from = (location.state as { from?: string })?.from || (isAdmin ? '/admin' : '/products');
   
-  // Check for session expired flag only once
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('session_expired') === 'true') {
       setErrorMessage("Your session has expired. Please log in again.");
-      // Clean up URL without causing navigation loops
       window.history.replaceState({}, '', '/login');
     }
   }, []);
   
-  // Handle redirect when user is authenticated
   useEffect(() => {
-    if (!authLoading && !hasCheckedSession) {
-      setHasCheckedSession(true);
-      
-      if (user) {
-        console.log('Login: User already logged in, redirecting to:', from);
-        navigate(from, { replace: true });
-      }
+    if (!authLoading && user) {
+      console.log('Login: User already logged in, redirecting to:', from);
+      const redirectPath = isAdmin ? '/admin' : '/products';
+      navigate(redirectPath, { replace: true });
     }
-  }, [user, navigate, from, authLoading, hasCheckedSession]);
+  }, [user, navigate, authLoading, isAdmin]);
 
   const handleSubmit = async (email: string, password: string) => {
     console.log('Login: Form submitted');
@@ -53,7 +46,7 @@ const Login = () => {
     try {
       console.log('Login: Attempting login for:', email);
       await login(email, password);
-      console.log('Login: Login successful');
+      console.log('Login: Login successful, will redirect via useEffect');
     } catch (error: any) {
       console.error("Login error:", error);
       setErrorMessage(error.message || "Invalid login credentials");
@@ -62,8 +55,7 @@ const Login = () => {
     }
   };
 
-  // Show loading state while auth is loading
-  if (authLoading || !hasCheckedSession) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -74,7 +66,6 @@ const Login = () => {
     );
   }
 
-  // Don't render login form if user is already authenticated
   if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
