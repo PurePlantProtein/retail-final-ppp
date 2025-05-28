@@ -102,6 +102,51 @@ const sendCredentialsEmail = async (email: string, tempPassword: string, busines
   }
 };
 
+// Clean up orphaned profiles (profiles without corresponding auth users)
+const cleanupOrphanedProfiles = async (email: string) => {
+  try {
+    console.log('Checking for orphaned profiles for email:', email);
+    
+    // Get profiles for this email
+    const { data: profiles, error: profilesError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email')
+      .eq('email', email);
+    
+    if (profilesError) {
+      console.error('Error checking profiles:', profilesError);
+      return;
+    }
+    
+    if (!profiles || profiles.length === 0) {
+      console.log('No profiles found for email:', email);
+      return;
+    }
+    
+    // Check which profiles have corresponding auth users
+    for (const profile of profiles) {
+      console.log('Checking profile:', profile.id);
+      
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+      
+      if (authError || !authUser.user) {
+        console.log('Found orphaned profile, deleting:', profile.id);
+        
+        // Delete orphaned profile and its roles
+        await supabaseAdmin.from('user_roles').delete().eq('user_id', profile.id);
+        await supabaseAdmin.from('profiles').delete().eq('id', profile.id);
+        
+        console.log('Cleaned up orphaned profile:', profile.id);
+      } else {
+        console.log('Profile has corresponding auth user:', profile.id);
+      }
+    }
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+    // Don't throw - cleanup failure shouldn't block user creation
+  }
+};
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -127,22 +172,43 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Starting user creation process for:', email);
 
-    // Check if user already exists in profiles table
+    // Clean up any orphaned profiles first
+    await cleanupOrphanedProfiles(email);
+
+    // Check if auth user already exists
+    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+    const userExists = existingAuthUser.users.some(user => user.email === email);
+    
+    if (userExists) {
+      console.log('Auth user already exists for email:', email);
+      return new Response(
+        JSON.stringify({ 
+          error: `A user with the email ${email} already exists.` 
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Check if profile already exists (additional safety check)
     const { data: existingProfile, error: checkError } = await supabaseAdmin
       .from('profiles')
-      .select('email')
+      .select('id, email')
       .eq('email', email)
       .maybeSingle();
     
     if (checkError) {
-      console.error('Error checking existing user:', checkError);
+      console.error('Error checking existing profile:', checkError);
       throw new Error(`Failed to check existing user: ${checkError.message}`);
     }
     
     if (existingProfile) {
+      console.log('Profile already exists for email:', email);
       return new Response(
         JSON.stringify({ 
-          error: `A user with the email ${email} already exists.` 
+          error: `A profile with the email ${email} already exists.` 
         }),
         {
           status: 400,
@@ -155,6 +221,7 @@ const handler = async (req: Request): Promise<Response> => {
     const tempPassword = emailCredentials ? generateTempPassword() : 'TempPass123!';
     
     // Step 1: Create auth user using admin API
+    console.log('Creating auth user...');
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: tempPassword,
@@ -171,6 +238,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       // Step 2: Create profile using the auth user's ID
+      console.log('Creating profile for user:', createdUserId);
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .insert({
@@ -193,6 +261,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Profile created successfully for user:', authUser.user.id);
 
       // Step 3: Assign user role with proper type casting
+      console.log('Assigning role:', role);
       const { error: roleError } = await supabaseAdmin
         .from('user_roles')
         .insert({
@@ -239,12 +308,42 @@ const handler = async (req: Request): Promise<Response> => {
     } catch (error: any) {
       console.error('Error in user creation process:', error);
       
-      // Cleanup: Delete the auth user if profile/role creation failed
+      // Comprehensive cleanup: Delete the auth user and any created records
       try {
-        await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-        await supabaseAdmin.from('profiles').delete().eq('id', createdUserId);
-        await supabaseAdmin.from('user_roles').delete().eq('user_id', createdUserId);
-        console.log('Cleaned up user after error:', createdUserId);
+        console.log('Starting cleanup for user:', createdUserId);
+        
+        // Delete in reverse order: roles, profile, then auth user
+        const { error: roleCleanupError } = await supabaseAdmin
+          .from('user_roles')
+          .delete()
+          .eq('user_id', createdUserId);
+        
+        if (roleCleanupError) {
+          console.error('Error cleaning up roles:', roleCleanupError);
+        } else {
+          console.log('Roles cleaned up successfully');
+        }
+        
+        const { error: profileCleanupError } = await supabaseAdmin
+          .from('profiles')
+          .delete()
+          .eq('id', createdUserId);
+        
+        if (profileCleanupError) {
+          console.error('Error cleaning up profile:', profileCleanupError);
+        } else {
+          console.log('Profile cleaned up successfully');
+        }
+        
+        const { error: authCleanupError } = await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+        
+        if (authCleanupError) {
+          console.error('Error cleaning up auth user:', authCleanupError);
+        } else {
+          console.log('Auth user cleaned up successfully');
+        }
+        
+        console.log('Cleanup completed for user:', createdUserId);
       } catch (cleanupError) {
         console.error('Error during cleanup:', cleanupError);
       }
