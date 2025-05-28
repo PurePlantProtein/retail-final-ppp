@@ -30,8 +30,101 @@ export const useCreateUser = (onUserCreated: () => void, onClose: () => void) =>
     },
   });
 
+  const createAuthUser = async (email: string, tempPassword: string) => {
+    try {
+      // Use the admin auth API to create a user
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: email,
+        password: tempPassword,
+        email_confirm: true, // Auto-confirm email for admin-created users
+      });
+
+      if (error) {
+        console.error('Error creating auth user:', error);
+        throw new Error(`Failed to create auth user: ${error.message}`);
+      }
+
+      if (!data.user) {
+        throw new Error('No user returned from auth creation');
+      }
+
+      console.log('Auth user created successfully:', data.user.id);
+      return data.user;
+    } catch (error) {
+      console.error('Error in createAuthUser:', error);
+      throw error;
+    }
+  };
+
+  const createUserProfile = async (userId: string, values: UserCreateFormData) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: values.email,
+          business_name: values.businessName,
+          business_type: values.businessType,
+          phone: values.phone,
+          business_address: `${values.street}, ${values.city}, ${values.state} ${values.postalCode}`,
+          approval_status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: currentUser?.id,
+        });
+
+      if (error) {
+        console.error('Error creating profile:', error);
+        throw new Error(`Failed to create user profile: ${error.message}`);
+      }
+
+      console.log('Profile created successfully for user:', userId);
+    } catch (error) {
+      console.error('Error in createUserProfile:', error);
+      throw error;
+    }
+  };
+
+  const assignUserRole = async (userId: string, role: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: role
+        });
+
+      if (error) {
+        console.error('Error adding role:', error);
+        // Don't throw here - role assignment failure shouldn't break the whole process
+        console.warn('User created but role assignment failed:', error.message);
+      } else {
+        console.log('Role assigned successfully:', role);
+      }
+    } catch (error) {
+      console.error('Error in assignUserRole:', error);
+      // Don't throw - role assignment failure shouldn't break the whole process
+    }
+  };
+
+  const cleanupOnError = async (userId?: string) => {
+    if (userId) {
+      try {
+        // Clean up profile if it was created
+        await supabase.from('profiles').delete().eq('id', userId);
+        // Clean up user roles if they were created
+        await supabase.from('user_roles').delete().eq('user_id', userId);
+        // Delete the auth user
+        await supabase.auth.admin.deleteUser(userId);
+        console.log('Cleaned up user after error:', userId);
+      } catch (cleanupError) {
+        console.error('Error during cleanup:', cleanupError);
+      }
+    }
+  };
+
   const onSubmit = async (values: UserCreateFormData) => {
     setIsSubmitting(true);
+    let createdUserId: string | undefined;
     
     try {
       // Check if user already exists in profiles table
@@ -47,51 +140,25 @@ export const useCreateUser = (onUserCreated: () => void, onClose: () => void) =>
           description: `A user with the email ${values.email} already exists.`,
           variant: "destructive",
         });
-        setIsSubmitting(false);
         return;
       }
       
-      // Generate temporary password if emailing credentials
+      // Generate temporary password
       const tempPassword = values.emailCredentials ? generateTempPassword() : 'TempPass123!';
       
-      console.log('Creating profile and role...');
+      console.log('Starting user creation process...');
       
-      // Create profile first with a generated UUID
-      const userId = crypto.randomUUID();
+      // Step 1: Create auth user
+      const authUser = await createAuthUser(values.email, tempPassword);
+      createdUserId = authUser.id;
       
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          email: values.email,
-          business_name: values.businessName,
-          business_type: values.businessType,
-          phone: values.phone,
-          business_address: `${values.street}, ${values.city}, ${values.state} ${values.postalCode}`,
-          approval_status: 'approved', // Auto-approve admin-created users
-          approved_at: new Date().toISOString(),
-          approved_by: currentUser?.id,
-        });
+      // Step 2: Create profile using the auth user's ID
+      await createUserProfile(authUser.id, values);
       
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-        throw new Error(`Failed to create user profile: ${profileError.message}`);
-      }
+      // Step 3: Assign user role
+      await assignUserRole(authUser.id, values.role);
       
-      // Add user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: values.role
-        });
-      
-      if (roleError) {
-        console.error('Error adding role:', roleError);
-        console.warn('User profile created but role assignment failed:', roleError.message);
-      }
-      
-      // Send credentials email if requested
+      // Step 4: Send credentials email if requested
       if (values.emailCredentials) {
         try {
           await sendCredentialsEmail(values.email, tempPassword, values.businessName);
@@ -119,6 +186,10 @@ export const useCreateUser = (onUserCreated: () => void, onClose: () => void) =>
       
     } catch (error: any) {
       console.error('Error creating user:', error);
+      
+      // Cleanup on error
+      await cleanupOnError(createdUserId);
+      
       toast({
         title: "Failed to create user",
         description: error.message || "An unexpected error occurred.",
