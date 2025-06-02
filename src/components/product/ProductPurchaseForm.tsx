@@ -123,11 +123,11 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
             </div>
           </div>
           
-          {effectiveMinQuantity > 1 && (
+          {/* {effectiveMinQuantity > 1 && (
             <div className="mb-4 text-sm text-amber-600 font-medium bg-amber-50 p-3 rounded-md">
               * Minimum order: {effectiveMinQuantity} units for this product
             </div>
-          )}
+          )} */}
           
           {category === 'Protein Powder' && (
             <div className="mb-4 text-sm text-blue-600 font-medium bg-blue-50 p-3 rounded-md">

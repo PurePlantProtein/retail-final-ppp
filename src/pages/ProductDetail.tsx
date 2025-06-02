@@ -127,9 +127,9 @@ const ProductDetail = () => {
                 <p className="text-xl sm:text-2xl text-gray-700 font-semibold">
                   ${product.price.toFixed(2)}
                 </p>
-                <Button variant="outline" size="icon" className="self-start sm:self-auto">
+                {/* <Button variant="outline" size="icon" className="self-start sm:self-auto">
                   <Heart className="h-4 w-4" />
-                </Button>
+                </Button> */}
               </div>
               <div className="text-sm text-gray-600 mb-4">
                 <p>Stock: {product.stock} units available</p>
@@ -153,17 +153,17 @@ const ProductDetail = () => {
               minQuantity={product.min_quantity}
               categoryMOQ={undefined}
             />
+            
+            {/* Product Specifications */}
+            <div className="mt-6 sm:mt-8">
+              <ProductSpecifications
+                stock={product.stock}
+                servingSize={product.serving_size}
+                numberOfServings={product.number_of_servings}
+                bagSize={product.bag_size}
+              />
+            </div>
           </div>
-        </div>
-        
-        {/* Product Specifications */}
-        <div className="mt-6 sm:mt-8">
-          <ProductSpecifications
-            stock={product.stock}
-            servingSize={product.serving_size}
-            numberOfServings={product.number_of_servings}
-            bagSize={product.bag_size}
-          />
         </div>
         
         <div className="mt-6 sm:mt-8 lg:mt-12">

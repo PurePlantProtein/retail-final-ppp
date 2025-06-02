@@ -45,7 +45,7 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <AppSidebarFooter />
+      {/* <AppSidebarFooter /> */}
     </Sidebar>
   )
 }
