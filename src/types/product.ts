@@ -354,6 +354,7 @@ export interface OrderItem {
 }
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'cancelled';
 
 export interface ShippingAddress {
   name: string;
@@ -378,7 +379,7 @@ export interface Order {
   shippingAddress?: ShippingAddress;
   notes?: string;
   invoiceUrl?: string;
-  invoiceStatus?: string;
+  invoiceStatus?: InvoiceStatus;
   shippingOption?: ShippingOption;
   trackingInfo?: TrackingInfo;
   updatedAt: string; // Adding updatedAt as it's used in multiple places

@@ -21,7 +21,7 @@ import { Order } from '@/types/product';
 const Orders = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { orders, isLoading, fetchOrders } = useOrders();
+  const { orders, isLoading } = useOrders();
 
   useEffect(() => {
     if (!user) {
@@ -30,8 +30,10 @@ const Orders = () => {
     }
     
     // Force a refresh of orders when component mounts
-    fetchOrders();
-  }, [user, navigate, fetchOrders]);
+    // fetchOrders();
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
@@ -184,7 +186,7 @@ const Orders = () => {
                           <div className="space-y-2 py-2">
                             <div className="flex justify-between">
                               <p>Payment Method:</p>
-                              <p className="capitalize">{order.paymentMethod.replace('-', ' ')}</p>
+                              <p className="capitalize">{order.paymentMethod}</p>
                             </div>
                             <div className="flex justify-between">
                               <p>Invoice Status:</p>

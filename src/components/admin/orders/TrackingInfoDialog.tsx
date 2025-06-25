@@ -35,14 +35,16 @@ type FormValues = {
 
 interface TrackingInfoDialogProps {
   order: Order | null;
+  trackingInfo?: TrackingInfo;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (order: Order) => Promise<boolean>;
+  onSubmit: (orderId: string, trackingInfo: TrackingInfo) => Promise<boolean>;
   isSubmitting: boolean;
 }
 
 export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
   order,
+  trackingInfo,
   open,
   onOpenChange,
   onSubmit,
@@ -61,16 +63,24 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
   const trackingNumber = watch('trackingNumber');
   const carrier = watch('carrier');
 
-  React.useEffect(() => {
-    if (order) {
-      setValue("trackingNumber", order.trackingInfo?.trackingNumber || "");
-      setValue("carrier", order.trackingInfo?.carrier || "");
-      setValue("trackingUrl", order.trackingInfo?.trackingUrl || "");
-      setValue("shippedDate", order.trackingInfo?.shippedDate || new Date().toISOString().split('T')[0]);
-      setValue("estimatedDeliveryDate", order.trackingInfo?.estimatedDeliveryDate || "");
-      setValue("sendEmail", true);
-    }
-  }, [order, setValue]);
+React.useEffect(() => {
+  if (trackingInfo) {
+    setValue("trackingNumber", trackingInfo.trackingNumber || "");
+    setValue("carrier", trackingInfo.carrier || "");
+    setValue("trackingUrl", trackingInfo.trackingUrl || "");
+    setValue("shippedDate", trackingInfo.shippedDate || new Date().toISOString().split('T')[0]);
+    setValue("estimatedDeliveryDate", trackingInfo.estimatedDeliveryDate || "");
+  } else {
+    // Defaults
+    setValue("trackingNumber", "");
+    setValue("carrier", "");
+    setValue("trackingUrl", "");
+    setValue("shippedDate", new Date().toISOString().split('T')[0]);
+    setValue("estimatedDeliveryDate", "");
+  }
+
+  setValue("sendEmail", true);
+}, [trackingInfo, setValue]);
 
   // Auto-detect carrier when tracking number changes
   React.useEffect(() => {
@@ -96,7 +106,7 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
 
   const handleFormSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!order) return;
-    
+
     const trackingInfo: TrackingInfo = {
       trackingNumber: data.trackingNumber,
       carrier: data.carrier,
@@ -104,15 +114,11 @@ export const TrackingInfoDialog: React.FC<TrackingInfoDialogProps> = ({
       shippedDate: data.shippedDate,
       estimatedDeliveryDate: data.estimatedDeliveryDate,
     };
+
+    console.log('Button Clicked - Form Data:', trackingInfo);
     
-    const updatedOrder = {
-      ...order,
-      trackingInfo,
-      status: order.status === 'processing' ? 'shipped' as const : order.status,
-    };
-    
-    // First save the tracking info
-    const success = await onSubmit(updatedOrder);
+    const success = await onSubmit(order.id, trackingInfo);
+
     if (success) {
       // If saving was successful and user wants to send email
       if (data.sendEmail) {

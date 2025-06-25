@@ -281,6 +281,103 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          id: string
+          user_id: string
+          user_name: string
+          email: string
+          items: Record<string, any>[] // Adjust the shape based on your item schema
+          total: number
+          status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+          created_at: string
+          updated_at: string
+          payment_method: string
+          shipping_address: Record<string, any> // Adjust with strict types if desired
+          invoice_status: 'draft' | 'issued' | 'paid' | 'cancelled'
+          shipping_option: Record<string, any> // or define ShippingOption type
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          user_name?: string
+          email?: string
+          items: Record<string, any>[] // Required field
+          total: number
+          status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+          created_at?: string
+          updated_at?: string
+          payment_method?: string
+          shipping_address?: Record<string, any>
+          invoice_status?: 'draft' | 'issued' | 'paid' | 'cancelled'
+          shipping_option?: Record<string, any>
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          user_name?: string
+          email?: string
+          items?: Record<string, any>[]
+          total?: number
+          status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+          created_at?: string
+          updated_at?: string
+          payment_method?: string
+          shipping_address?: Record<string, any>
+          invoice_status?: 'draft' | 'issued' | 'paid' | 'cancelled'
+          shipping_option?: Record<string, any>
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users" // or your auth.users if linked
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      tracking_info: {
+        Row: {
+          id: string;
+          order_id: string;
+          tracking_number: string;
+          carrier: string;
+          tracking_url: string;
+          shipped_date: string;
+          estimated_delivery_date: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          tracking_number: string;
+          carrier: string;
+          tracking_url: string;
+          shipped_date: string;
+          estimated_delivery_date: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          tracking_number?: string;
+          carrier?: string;
+          tracking_url?: string;
+          shipped_date?: string;
+          estimated_delivery_date?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tracking_info_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: true;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          }
+        ];
+      }
     }
     Views: {
       [_ in never]: never

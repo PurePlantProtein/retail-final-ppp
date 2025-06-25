@@ -14,6 +14,7 @@ import {
 } from '@/services/emailService';
 import { normalizeOrder } from '@/utils/orderUtils';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useCartCheckout = () => {
   const { 
@@ -165,35 +166,36 @@ export const useCartCheckout = () => {
     // Create the order object with direct properties
     const orderData = {
       id: orderId,
-      userId: user?.id || 'guest',
-      userName: user?.email || shippingAddress.name || 'guest',
+      user_id: user?.id || 'guest',
+      user_name: user?.email || shippingAddress.name || 'guest',
       email: user?.email || 'guest@example.com', // Add a default email for guest users
       items: items.slice(), // Create a copy of the items array
       total: subtotal + shippingCost,
       status: 'pending' as const,
-      createdAt: new Date().toISOString(),
-      paymentMethod: 'bank-transfer',
-      shippingAddress: {...shippingAddress}, // Create a copy
-      invoiceStatus: 'draft',
-      shippingOption: selectedOption,
-      updatedAt: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      payment_method: 'bank-transfer',
+      shipping_address: {...shippingAddress}, // Create a copy
+      invoice_status: 'draft' as const,
+      shipping_option: selectedOption,
+      updated_at: new Date().toISOString()
     };
+
+    // Insert into Supabase
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([orderData]);
+
+    if (error) {
+      console.error('Error saving order to Supabase:', error);
+      throw new Error('Failed to create order');
+    }
+
+    console.log('Order saved to Supabase:', data);
     
     // Normalize the order to ensure all fields are correct
     const normalizedOrder = normalizeOrder(orderData);
     
     console.log("Creating order:", normalizedOrder);
-    
-    // Get existing orders from localStorage or initialize empty array
-    const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-    
-    // Add new order
-    existingOrders.push(normalizedOrder);
-    
-    // Store the orders in local storage
-    localStorage.setItem('orders', JSON.stringify(existingOrders));
-    
-    console.log("Orders saved:", existingOrders);
 
     // Send email confirmation
     const emailResults = await sendOrderConfirmationEmails(normalizedOrder);

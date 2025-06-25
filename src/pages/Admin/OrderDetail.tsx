@@ -14,7 +14,7 @@ import {
 import Layout from '@/components/Layout';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useOrders } from '@/hooks/useOrders';
-import { Order } from '@/types/product';
+import { Order, TrackingInfo } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,36 +31,54 @@ import { formatDate, formatCurrency } from '@/utils/formatters';
 import { useToast } from '@/components/ui/use-toast';
 
 const OrderDetail = () => {
-  const { orderId } = useParams<{ orderId: string }>();
-  const { getOrderById, handleStatusChange, handleUpdateOrder, isLoading: isLoadingOrders } = useOrders();
+  const { id: orderId } = useParams<{ id: string }>();
+  const { getOrderById, handleStatusChange, handleUpdateOrder, fetchTrackingInfo, handleTrackingSubmit, isLoading: isLoadingOrders } = useOrders();
   const [order, setOrder] = useState<Order | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const loadOrder = () => {
-      if (orderId) {
-        const foundOrder = getOrderById(orderId);
-        if (foundOrder) {
-          setOrder(foundOrder);
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Order Not Found",
-            description: "The requested order could not be found."
-          });
-          navigate('/admin/orders');
-        }
+    const loadOrder = async () => {
+      if (!orderId) return;
+
+      const foundOrder = await getOrderById(orderId);
+
+      if (foundOrder) {
+        setOrder(foundOrder);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Order Not Found",
+          description: "The requested order could not be found.",
+        });
+        navigate("/admin/orders");
       }
       setIsLoading(false);
     };
 
-    if (!isLoadingOrders) {
-      loadOrder();
-    }
-  }, [orderId, getOrderById, isLoadingOrders, navigate, toast]);
+    const fetchTracking = async () => {
+      if (orderId) {
+        const trackingData = await fetchTrackingInfo(orderId);
+        if (trackingData) {
+          setTrackingInfo({
+            trackingNumber: trackingData.tracking_number,
+            carrier: trackingData.carrier,
+            trackingUrl: trackingData.tracking_url,
+            shippedDate: trackingData.shipped_date,
+            estimatedDeliveryDate: trackingData.estimated_delivery_date,
+          });
+        } else {
+          setTrackingInfo(null);
+        }
+      }
+    };
+
+    fetchTracking();
+    loadOrder();
+  }, [orderId]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -106,11 +124,9 @@ const OrderDetail = () => {
     }
   };
 
-  const handleTrackingUpdate = async (updatedOrder: Order) => {
-    const success = await handleUpdateOrder(updatedOrder);
-    if (success) {
-      setOrder(updatedOrder);
-    }
+  const handleTrackingUpdate = async (trackingInfo: TrackingInfo) => {
+    if (!order) return false;
+    const success = await handleTrackingSubmit(order.id, trackingInfo);
     return success;
   };
 
@@ -250,7 +266,7 @@ const OrderDetail = () => {
                     
                     <div>
                       <h3 className="text-lg font-medium">Payment Information</h3>
-                      <p>Method: {order.paymentMethod}</p>
+                      <p>Method: {order.paymentMethod.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
                       <p>Status: {order.invoiceStatus || "Pending"}</p>
                     </div>
                     
@@ -418,9 +434,10 @@ const OrderDetail = () => {
           {/* Tracking Info Dialog */}
           <TrackingInfoDialog
             order={order}
+            trackingInfo={trackingInfo}
             open={showTrackingDialog}
             onOpenChange={setShowTrackingDialog}
-            onSubmit={handleTrackingUpdate}
+            onSubmit={(orderId, trackingInfo) => handleTrackingUpdate(trackingInfo)}
             isSubmitting={false}
           />
         </div>

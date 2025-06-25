@@ -103,7 +103,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                   </SelectContent>
                 </Select>
               </TableCell>
-              <TableCell>{order.paymentMethod}</TableCell>
+              <TableCell>{order.paymentMethod.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</TableCell>
               <TableCell>
                 {order.trackingInfo?.trackingNumber ? (
                   <div className="flex items-center gap-2">

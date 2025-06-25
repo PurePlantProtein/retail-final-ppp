@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { Order, OrderStatus } from '@/types/product';
-import { getOrders, updateOrderStatus, deleteOrder } from '@/services/mockData';
+import { Order, OrderStatus, TrackingInfo } from '@/types/product';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeOrder } from '@/utils/orderUtils';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -21,31 +20,15 @@ export const useOrders = () => {
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      
-      // Get orders from localStorage
-      const storedOrders = localStorage.getItem('orders');
-      if (storedOrders) {
-        const parsedOrders = JSON.parse(storedOrders) as Order[];
-        
-        // If viewing as a regular user, filter for their orders only
-        // If admin or no user (admin pages), show all orders
-        let filteredOrders = parsedOrders;
-        if (user && !user.email?.includes('admin') && !user.email?.includes('sparkflare')) {
-          filteredOrders = parsedOrders.filter(order => 
-            order.userId === user.id || order.email === user.email
-          );
-        }
-        
-        console.log('Fetched orders:', filteredOrders);
-        setOrders(filteredOrders);
-      } else {
-        // Fallback to mock data service
-        const data = await getOrders();
-        console.log('Fetched orders from mock service:', data);
-        setOrders(data);
-      }
+
+      const { data: rawOrders, error } = await supabase.from("orders").select("*");
+      const fetchedOrders = rawOrders?.map(normalizeOrder);
+
+      if (error) throw error;
+
+      setOrders(fetchedOrders || []);
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error("Error fetching orders from Supabase:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -58,23 +41,18 @@ export const useOrders = () => {
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     try {
-      await updateOrderStatus(orderId, newStatus);
-      setOrders(currentOrders => 
-        currentOrders.map(order => 
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      setOrders(current =>
+        current.map(order =>
           order.id === orderId ? { ...order, status: newStatus } : order
         )
       );
-      
-      // Update the order in localStorage too
-      const storedOrders = localStorage.getItem('orders');
-      if (storedOrders) {
-        const parsedOrders = JSON.parse(storedOrders) as Order[];
-        const updatedOrders = parsedOrders.map(order => 
-          order.id === orderId ? { ...order, status: newStatus } : order
-        );
-        localStorage.setItem('orders', JSON.stringify(updatedOrders));
-      }
-      
       toast({
         title: "Status Updated",
         description: `Order #${orderId} status changed to ${newStatus}.`,
@@ -92,24 +70,20 @@ export const useOrders = () => {
   const handleUpdateOrder = async (updatedOrder: Order) => {
     try {
       setIsSubmitting(true);
-      
-      // Update the order in local state
-      setOrders(currentOrders => 
-        currentOrders.map(order => 
+
+      const { error } = await supabase
+        .from("orders")
+        .update(updatedOrder)
+        .eq("id", updatedOrder.id);
+
+      if (error) throw error;
+
+      setOrders(current =>
+        current.map(order =>
           order.id === updatedOrder.id ? updatedOrder : order
         )
       );
-      
-      // Update the order in localStorage too
-      const storedOrders = localStorage.getItem('orders');
-      if (storedOrders) {
-        const parsedOrders = JSON.parse(storedOrders) as Order[];
-        const updatedOrders = parsedOrders.map(order => 
-          order.id === updatedOrder.id ? updatedOrder : order
-        );
-        localStorage.setItem('orders', JSON.stringify(updatedOrders));
-      }
-      
+
       toast({
         title: "Order Updated",
         description: `Order #${updatedOrder.id} has been updated successfully.`,
@@ -131,19 +105,16 @@ export const useOrders = () => {
   const handleDeleteOrder = async (orderId: string) => {
     try {
       setIsSubmitting(true);
-      await deleteOrder(orderId);
-      
-      // Remove from local state
-      setOrders(currentOrders => currentOrders.filter(order => order.id !== orderId));
-      
-      // Remove from localStorage too
-      const storedOrders = localStorage.getItem('orders');
-      if (storedOrders) {
-        const parsedOrders = JSON.parse(storedOrders) as Order[];
-        const updatedOrders = parsedOrders.filter(order => order.id !== orderId);
-        localStorage.setItem('orders', JSON.stringify(updatedOrders));
-      }
-      
+
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      setOrders(current => current.filter(order => order.id !== orderId));
+
       toast({
         title: "Order Deleted",
         description: `Order #${orderId} has been deleted.`,
@@ -162,19 +133,121 @@ export const useOrders = () => {
     }
   };
 
-  // Add a function to get a specific order by ID
-  const getOrderById = (orderId: string): Order | undefined => {
-    return orders.find(order => order.id === orderId);
+  const getOrderById = async (orderId: string): Promise<Order | null> => {
+    const cachedOrder = orders.find(order => order.id === orderId);
+    if (cachedOrder) {
+      return cachedOrder;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("id", orderId)
+        .single();
+
+      if (error || !data) {
+        console.error("Order fetch error:", error);
+        return null;
+      }
+
+      return normalizeOrder(data);
+    } catch (err) {
+      console.error("Unexpected error fetching order:", err);
+      return null;
+    }
   };
 
-  // Add a function to clear all orders (for testing/analytics)
-  const clearAllOrders = () => {
-    localStorage.removeItem('orders');
+  const clearAllOrders = async () => {
     setOrders([]);
     toast({
       title: "Orders Cleared",
-      description: "All orders have been cleared from the system.",
+      description: "All orders have been cleared from local state.",
     });
+  };
+
+  const fetchTrackingInfo = async (orderId: string) => {
+    console.log("Fetching tracking info for order:", orderId);
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from("tracking_info")
+        .select("*")
+        .eq("order_id", orderId)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      return existing;
+    } catch (error) {
+      console.error("Error fetching tracking info:", error);
+      toast({
+        variant: "destructive",
+        title: "Tracking Fetch Failed",
+        description: "Unable to fetch tracking info. Please try again.",
+      });
+      return null;
+    }
+  }
+
+  const handleTrackingSubmit = async (orderId: string, trackingInfo: TrackingInfo) => {
+    try {
+      // Check if tracking info exists for this order
+      const existing = await fetchTrackingInfo(orderId);
+
+      const payload = {
+        tracking_number: trackingInfo.trackingNumber,
+        carrier: trackingInfo.carrier,
+        tracking_url: trackingInfo.trackingUrl,
+        shipped_date: trackingInfo.shippedDate,
+        estimated_delivery_date: trackingInfo.estimatedDeliveryDate,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log("Saving tracking info:", payload);
+
+      // Insert or update the tracking info
+      const { error } = existing
+        ? await supabase.from("tracking_info").update({
+            ...payload,
+            updated_at: new Date().toISOString(),
+          }).eq("order_id", orderId)
+        : await supabase.from("tracking_info").insert({
+            ...payload,
+            order_id: orderId,
+          });
+
+      if (error) throw error;
+
+      toast({
+        title: "Tracking Info Saved",
+        description: `Tracking info for order #${orderId} was successfully saved.`,
+      });
+
+      // Optionally update local order state
+      setOrders(current =>
+        current.map(order =>
+          order.id === orderId ? { ...order, trackingInfo } : order
+        )
+      );
+
+      // Auto-update the order status to shipped
+      await supabase
+        .from("orders")
+        .update({ status: 'shipped', updated_at: new Date().toISOString() })
+        .eq("id", orderId);
+
+      return true;
+    } catch (error: any) {
+      console.error("Error saving tracking info:", error.message || error);
+      toast({
+        variant: "destructive",
+        title: "Tracking Save Failed",
+        description: error.message || "Unable to save tracking info. Please try again.",
+      });
+      return false;
+    }
   };
 
   return {
@@ -183,11 +256,12 @@ export const useOrders = () => {
     selectedOrder,
     setSelectedOrder,
     isSubmitting,
-    fetchOrders,
     handleStatusChange,
     handleUpdateOrder,
     handleDeleteOrder,
     getOrderById,
+    fetchTrackingInfo,
+    handleTrackingSubmit,
     clearAllOrders
   };
 };
