@@ -57,6 +57,54 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          invoice_status: string | null
+          items: Json | null
+          payment_method: string | null
+          shipping_address: Json | null
+          shipping_option: Json | null
+          status: string | null
+          total: number | null
+          updated_at: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at: string
+          email?: string | null
+          id: string
+          invoice_status?: string | null
+          items?: Json | null
+          payment_method?: string | null
+          shipping_address?: Json | null
+          shipping_option?: Json | null
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          invoice_status?: string | null
+          items?: Json | null
+          payment_method?: string | null
+          shipping_address?: Json | null
+          shipping_option?: Json | null
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       pricing_tiers: {
         Row: {
           created_at: string
@@ -228,6 +276,47 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_info: {
+        Row: {
+          carrier: string | null
+          estimated_delivery_date: string | null
+          id: string
+          order_id: string | null
+          shipped_date: string | null
+          tracking_number: string | null
+          tracking_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          carrier?: string | null
+          estimated_delivery_date?: string | null
+          id?: string
+          order_id?: string | null
+          shipped_date?: string | null
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          carrier?: string | null
+          estimated_delivery_date?: string | null
+          id?: string
+          order_id?: string | null
+          shipped_date?: string | null
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_info_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_pricing_tiers: {
         Row: {
           created_at: string
@@ -280,103 +369,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      orders: {
-        Row: {
-          id: string
-          user_id: string
-          user_name: string
-          email: string
-          items: Record<string, any>[] // Adjust the shape based on your item schema
-          total: number
-          status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-          created_at: string
-          updated_at: string
-          payment_method: string
-          shipping_address: Record<string, any> // Adjust with strict types if desired
-          invoice_status: 'draft' | 'issued' | 'paid' | 'cancelled'
-          shipping_option: Record<string, any> // or define ShippingOption type
-        }
-        Insert: {
-          id?: string
-          user_id?: string
-          user_name?: string
-          email?: string
-          items: Record<string, any>[] // Required field
-          total: number
-          status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-          created_at?: string
-          updated_at?: string
-          payment_method?: string
-          shipping_address?: Record<string, any>
-          invoice_status?: 'draft' | 'issued' | 'paid' | 'cancelled'
-          shipping_option?: Record<string, any>
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          user_name?: string
-          email?: string
-          items?: Record<string, any>[]
-          total?: number
-          status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-          created_at?: string
-          updated_at?: string
-          payment_method?: string
-          shipping_address?: Record<string, any>
-          invoice_status?: 'draft' | 'issued' | 'paid' | 'cancelled'
-          shipping_option?: Record<string, any>
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users" // or your auth.users if linked
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      tracking_info: {
-        Row: {
-          id: string;
-          order_id: string;
-          tracking_number: string;
-          carrier: string;
-          tracking_url: string;
-          shipped_date: string;
-          estimated_delivery_date: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          order_id: string;
-          tracking_number: string;
-          carrier: string;
-          tracking_url: string;
-          shipped_date: string;
-          estimated_delivery_date: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          order_id?: string;
-          tracking_number?: string;
-          carrier?: string;
-          tracking_url?: string;
-          shipped_date?: string;
-          estimated_delivery_date?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "tracking_info_order_id_fkey";
-            columns: ["order_id"];
-            isOneToOne: true;
-            referencedRelation: "orders";
-            referencedColumns: ["id"];
-          }
-        ];
       }
     }
     Views: {

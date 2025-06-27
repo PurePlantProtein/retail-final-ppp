@@ -47,6 +47,11 @@ export const customerItems: MenuItem[] = [
     icon: FileText,
   },
   {
+    title: "Marketing Materials",
+    url: "https://drive.google.com/drive/folders/your-folder-id",
+    icon: Building2,
+  },
+  {
     title: "Profile",
     url: "/profile",
     icon: User2,
@@ -79,11 +84,6 @@ export const adminItems: MenuItem[] = [
     title: "Analytics",
     url: "/admin/analytics",
     icon: Search,
-  },
-  {
-    title: "Google Drive",
-    url: "https://drive.google.com/drive/folders/your-folder-id",
-    icon: Building2,
   },
   {
     title: "Email Marketing",
