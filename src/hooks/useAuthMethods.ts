@@ -1,121 +1,78 @@
 
 import { useState } from 'react';
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { cleanupAuthState } from '@/utils/authUtils';
+import { supabase } from '@/integrations/supabase/client';
 
-export const useAuthMethods = (updateActivity: () => void) => {
+export const useAuthMethods = (onActivityUpdate: () => void) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
-  const login = async (email: string, password: string) => {
+  const signup = async (
+    email: string, 
+    password: string, 
+    businessName: string, 
+    businessType: string,
+    additionalData?: {
+      phone?: string;
+      business_address?: string;
+      contact_name?: string;
+    }
+  ) => {
     setIsLoading(true);
-    
     try {
-      console.log('useAuthMethods: Starting login process');
+      console.log('Starting signup process for:', email);
       
-      // Clean up existing state first
-      cleanupAuthState();
+      const redirectUrl = `${window.location.origin}/`;
       
-      // Attempt global sign out to clear any existing sessions
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-        console.log('useAuthMethods: Global signout completed');
-      } catch (err) {
-        console.log('useAuthMethods: Global signout failed, continuing...');
-      }
-      
-      console.log('useAuthMethods: Attempting sign in');
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            business_name: businessName,
+            business_type: businessType,
+            phone: additionalData?.phone || '',
+            business_address: additionalData?.business_address || '',
+            contact_name: additionalData?.contact_name || '',
+            email: email // Include email in metadata for the trigger
+          }
+        }
       });
-      
+
       if (error) {
-        console.error('useAuthMethods: Sign in error:', error);
+        console.error('Signup error:', error);
         throw error;
       }
-      
-      console.log('useAuthMethods: Sign in successful');
-      
-      // Reset the last activity timestamp
-      updateActivity();
-      
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-      
-    } catch (error: any) {
-      console.error('useAuthMethods: Login failed:', error);
-      toast({
-        title: "Login failed",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
+
+      console.log('Signup successful:', data);
+      onActivityUpdate();
+      return data;
+    } catch (error) {
+      console.error('Error in signup:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, businessName: string, businessType?: string) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
-    
     try {
-      // Clean up existing state
-      cleanupAuthState();
-      
-      console.log("Signing up with:", { email, businessName, businessType });
-      
-      const { data, error } = await supabase.auth.signUp({
+      console.log('Attempting login for:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: {
-          data: {
-            business_name: businessName,
-            business_type: businessType || ''
-          }
-        }
+        password
       });
-      
+
       if (error) {
-        console.error("Signup error:", error);
+        console.error('Login error:', error);
         throw error;
       }
-      
-      console.log("Signup success:", data);
-      
-      // Send notification to sales team about new signup
-      try {
-        await supabase.functions.invoke('send-user-notification', {
-          body: {
-            type: 'signup',
-            userEmail: email,
-            userName: businessName,
-            businessName: businessName,
-            businessType: businessType
-          }
-        });
-        console.log("Sales notification sent successfully");
-      } catch (notificationError) {
-        console.error("Failed to send sales notification:", notificationError);
-      }
-      
-      // Reset the last activity timestamp
-      updateActivity();
-      
-      toast({
-        title: "Account created",
-        description: "Welcome to PP Protein Wholesale!",
-      });
-    } catch (error: any) {
-      console.error("Signup error caught:", error);
-      toast({
-        title: "Sign up failed",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
+
+      console.log('Login successful for:', email);
+      onActivityUpdate();
+      return data;
+    } catch (error) {
+      console.error('Error in login:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -123,39 +80,29 @@ export const useAuthMethods = (updateActivity: () => void) => {
   };
 
   const logout = async () => {
+    setIsLoading(true);
     try {
-      console.log('useAuthMethods: Starting logout process');
+      console.log('Logging out user');
+      const { error } = await supabase.auth.signOut();
       
-      // Clean up auth state first
-      cleanupAuthState();
-      localStorage.removeItem('lastUserActivity');
+      if (error) {
+        console.error('Logout error:', error);
+        throw error;
+      }
       
-      // Attempt global sign out
-      await supabase.auth.signOut({ scope: 'global' });
-      
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-      
-      console.log('useAuthMethods: Logout completed, redirecting...');
-      
-      // Force page reload for a clean state
-      window.location.href = '/login';
-    } catch (error: any) {
-      console.error('useAuthMethods: Logout error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
+      console.log('Logout successful');
+    } catch (error) {
+      console.error('Error in logout:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return {
-    login,
     signup,
+    login,
     logout,
-    authLoading: isLoading
+    isLoading
   };
 };
