@@ -33,7 +33,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     },
     { 
       name: 'Marketing Materials', 
-      path: '/admin/marketing-materials', 
+      path: '/admin/marketing', 
       icon: <FileText className="h-5 w-5" /> 
     },
     { 
@@ -48,7 +48,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     },
     { 
       name: 'Shipping Settings', 
-      path: '/admin/shipping-settings', 
+      path: '/admin/shipping', 
       icon: <Truck className="h-5 w-5" /> 
     }
   ];
