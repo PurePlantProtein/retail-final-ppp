@@ -44,6 +44,26 @@ export const useAuthMethods = (onActivityUpdate: () => void) => {
       }
 
       console.log('Signup successful:', data);
+      
+      // Send notification to sales team about new signup
+      if (data.user) {
+        try {
+          await supabase.functions.invoke('send-user-notification', {
+            body: {
+              type: 'signup',
+              userEmail: email,
+              userName: additionalData?.contact_name || 'Unknown',
+              businessName: businessName,
+              businessType: businessType
+            }
+          });
+          console.log('Sales team notification sent successfully');
+        } catch (notificationError) {
+          console.error('Failed to send sales team notification:', notificationError);
+          // Don't throw here - user signup was successful, notification failure shouldn't block them
+        }
+      }
+      
       onActivityUpdate();
       return data;
     } catch (error) {

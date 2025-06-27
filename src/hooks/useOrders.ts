@@ -1,267 +1,187 @@
+
 import { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
-import { Order, OrderStatus, TrackingInfo } from '@/types/product';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { normalizeOrder } from '@/utils/orderUtils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { Order, TrackingInfo } from '@/types/product';
+import { transformDatabaseOrder } from '@/utils/orderUtils';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
-  const { user } = useAuth();
-
-  useEffect(() => {
-    fetchOrders();
-  }, [user]);
 
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
+      
+      let query = supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      const { data: rawOrders, error } = await supabase.from("orders").select("*");
-      const fetchedOrders = rawOrders?.map(normalizeOrder);
+      // If not admin, only show user's orders
+      if (!isAdmin && user) {
+        query = query.eq('user_id', user.id);
+      }
 
-      if (error) throw error;
+      const { data, error } = await query;
 
-      setOrders(fetchedOrders || []);
-    } catch (error) {
-      console.error("Error fetching orders from Supabase:", error);
+      if (error) {
+        console.error('Error fetching orders:', error);
+        throw error;
+      }
+
+      const transformedOrders = data?.map(transformDatabaseOrder) || [];
+      setOrders(transformedOrders);
+    } catch (error: any) {
+      console.error('Error in fetchOrders:', error);
       toast({
+        title: "Error loading orders",
+        description: error.message || "Failed to load orders",
         variant: "destructive",
-        title: "Error",
-        description: "Failed to load orders. Please try again.",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from("orders")
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq("id", orderId);
+        .from('orders')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
 
       if (error) throw error;
 
-      setOrders(current =>
-        current.map(order =>
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
-      );
-      toast({
-        title: "Status Updated",
-        description: `Order #${orderId} status changed to ${newStatus}.`,
-      });
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast({
-        variant: "destructive",
-        title: "Update Failed",
-        description: "There was a problem updating the order status.",
-      });
-    }
-  };
-
-  const handleUpdateOrder = async (updatedOrder: Order) => {
-    try {
-      setIsSubmitting(true);
-
-      const { error } = await supabase
-        .from("orders")
-        .update(updatedOrder)
-        .eq("id", updatedOrder.id);
-
-      if (error) throw error;
-
-      setOrders(current =>
-        current.map(order =>
-          order.id === updatedOrder.id ? updatedOrder : order
-        )
-      );
+      // Update local state
+      setOrders(prev => prev.map(order => 
+        order.id === orderId 
+          ? { ...order, status: newStatus as any, updatedAt: new Date().toISOString() }
+          : order
+      ));
 
       toast({
-        title: "Order Updated",
-        description: `Order #${updatedOrder.id} has been updated successfully.`,
+        title: "Order updated",
+        description: `Order status changed to ${newStatus}`,
       });
-      return true;
-    } catch (error) {
-      console.error("Error updating order:", error);
-      toast({
-        variant: "destructive",
-        title: "Update Failed",
-        description: "There was a problem updating the order.",
-      });
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteOrder = async (orderId: string) => {
-    try {
-      setIsSubmitting(true);
-
-      const { error } = await supabase
-        .from("orders")
-        .delete()
-        .eq("id", orderId);
-
-      if (error) throw error;
-
-      setOrders(current => current.filter(order => order.id !== orderId));
-
-      toast({
-        title: "Order Deleted",
-        description: `Order #${orderId} has been deleted.`,
-      });
-      return true;
-    } catch (error) {
-      console.error("Error deleting order:", error);
-      toast({
-        variant: "destructive",
-        title: "Delete Failed",
-        description: "There was a problem deleting the order.",
-      });
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const getOrderById = async (orderId: string): Promise<Order | null> => {
-    const cachedOrder = orders.find(order => order.id === orderId);
-    if (cachedOrder) {
-      return cachedOrder;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", orderId)
-        .single();
-
-      if (error || !data) {
-        console.error("Order fetch error:", error);
-        return null;
-      }
-
-      return normalizeOrder(data);
-    } catch (err) {
-      console.error("Unexpected error fetching order:", err);
-      return null;
-    }
-  };
-
-  const clearAllOrders = async () => {
-    setOrders([]);
-    toast({
-      title: "Orders Cleared",
-      description: "All orders have been cleared from local state.",
-    });
-  };
-
-  const fetchTrackingInfo = async (orderId: string) => {
-    console.log("Fetching tracking info for order:", orderId);
-    try {
-      const { data: existing, error: fetchError } = await supabase
-        .from("tracking_info")
-        .select("*")
-        .eq("order_id", orderId)
-        .single();
-
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      return existing;
-    } catch (error) {
-      console.error("Error fetching tracking info:", error);
-      toast({
-        variant: "destructive",
-        title: "Tracking Fetch Failed",
-        description: "Unable to fetch tracking info. Please try again.",
-      });
-      return null;
-    }
-  }
-
-  const handleTrackingSubmit = async (orderId: string, trackingInfo: TrackingInfo) => {
-    try {
-      // Check if tracking info exists for this order
-      const existing = await fetchTrackingInfo(orderId);
-
-      const payload = {
-        tracking_number: trackingInfo.trackingNumber,
-        carrier: trackingInfo.carrier,
-        tracking_url: trackingInfo.trackingUrl,
-        shipped_date: trackingInfo.shippedDate,
-        estimated_delivery_date: trackingInfo.estimatedDeliveryDate,
-        updated_at: new Date().toISOString()
-      };
-
-      console.log("Saving tracking info:", payload);
-
-      // Insert or update the tracking info
-      const { error } = existing
-        ? await supabase.from("tracking_info").update({
-            ...payload,
-            updated_at: new Date().toISOString(),
-          }).eq("order_id", orderId)
-        : await supabase.from("tracking_info").insert({
-            ...payload,
-            order_id: orderId,
-          });
-
-      if (error) throw error;
-
-      toast({
-        title: "Tracking Info Saved",
-        description: `Tracking info for order #${orderId} was successfully saved.`,
-      });
-
-      // Optionally update local order state
-      setOrders(current =>
-        current.map(order =>
-          order.id === orderId ? { ...order, trackingInfo } : order
-        )
-      );
-
-      // Auto-update the order status to shipped
-      await supabase
-        .from("orders")
-        .update({ status: 'shipped', updated_at: new Date().toISOString() })
-        .eq("id", orderId);
 
       return true;
     } catch (error: any) {
-      console.error("Error saving tracking info:", error.message || error);
+      console.error('Error updating order status:', error);
       toast({
+        title: "Error updating order",
+        description: error.message || "Failed to update order status",
         variant: "destructive",
-        title: "Tracking Save Failed",
-        description: error.message || "Unable to save tracking info. Please try again.",
       });
       return false;
     }
   };
+
+  const updateOrder = async (updatedOrder: Order) => {
+    try {
+      // Transform the order data to match database format
+      const dbOrderData = {
+        id: updatedOrder.id,
+        user_id: updatedOrder.userId,
+        user_name: updatedOrder.userName,
+        email: updatedOrder.email,
+        items: updatedOrder.items as any, // Cast to Json type
+        total: updatedOrder.total,
+        status: updatedOrder.status,
+        payment_method: updatedOrder.paymentMethod,
+        shipping_address: updatedOrder.shippingAddress as any, // Cast to Json type
+        invoice_status: updatedOrder.invoiceStatus,
+        invoice_url: updatedOrder.invoiceUrl,
+        shipping_option: updatedOrder.shippingOption as any, // Cast to Json type
+        notes: updatedOrder.notes,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('orders')
+        .update(dbOrderData)
+        .eq('id', updatedOrder.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setOrders(prev => prev.map(order => 
+        order.id === updatedOrder.id ? updatedOrder : order
+      ));
+
+      toast({
+        title: "Order updated",
+        description: "Order has been successfully updated",
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Error updating order:', error);
+      toast({
+        title: "Error updating order",
+        description: error.message || "Failed to update order",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const addTrackingInfo = async (orderId: string, trackingInfo: TrackingInfo) => {
+    try {
+      // First, insert tracking info
+      const { error: trackingError } = await supabase
+        .from('tracking_info')
+        .insert({
+          order_id: orderId,
+          tracking_number: trackingInfo.trackingNumber,
+          carrier: trackingInfo.carrier,
+          tracking_url: trackingInfo.trackingUrl,
+          shipped_date: trackingInfo.shippedDate,
+          estimated_delivery_date: trackingInfo.estimatedDeliveryDate
+        });
+
+      if (trackingError) throw trackingError;
+
+      // Then update order status to shipped
+      const success = await updateOrderStatus(orderId, 'shipped');
+      
+      if (success) {
+        toast({
+          title: "Tracking added",
+          description: "Tracking information has been added and order marked as shipped",
+        });
+      }
+
+      return success;
+    } catch (error: any) {
+      console.error('Error adding tracking info:', error);
+      toast({
+        title: "Error adding tracking",
+        description: error.message || "Failed to add tracking information",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user, isAdmin]);
 
   return {
     orders,
     isLoading,
-    selectedOrder,
-    setSelectedOrder,
-    isSubmitting,
-    handleStatusChange,
-    handleUpdateOrder,
-    handleDeleteOrder,
-    getOrderById,
-    fetchTrackingInfo,
-    handleTrackingSubmit,
-    clearAllOrders
+    fetchOrders,
+    updateOrderStatus,
+    updateOrder,
+    addTrackingInfo,
   };
 };
