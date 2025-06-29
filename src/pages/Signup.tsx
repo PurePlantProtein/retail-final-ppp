@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -165,15 +166,8 @@ const Signup = () => {
         phone
       };
       
-      // Create the business address string
-      const businessAddress = `${street}, ${city}, ${state} ${postalCode}, Australia`;
-      
-      // Sign up the user with all metadata
-      await signup(email, password, businessName, businessType, {
-        phone,
-        business_address: businessAddress,
-        contact_name: name
-      });
+      // Sign up the user
+      await signup(email, password, businessName, businessType);
       console.log("Signup completed successfully");
       
       // Save shipping address

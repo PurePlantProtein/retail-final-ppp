@@ -1,174 +1,273 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 import { useCart } from '@/contexts/CartContext';
 import { useShipping } from '@/contexts/ShippingContext';
-import { useToast } from '@/components/ui/use-toast';
+import { Order, ShippingOption, ShippingAddress } from '@/types/product';
+import { calculateShippingOptions } from '@/services/shippingService';
+import { 
+  sendOrderConfirmationEmail, 
+  sendAdminOrderNotification, 
+  sendDispatchOrderNotification, 
+  sendAccountsOrderNotification 
+} from '@/services/emailService';
+import { normalizeOrder } from '@/utils/orderUtils';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { ShippingOption, Order } from '@/types/product';
-import { sendOrderConfirmationEmail, sendAdminOrderNotification } from '@/services/emailService';
-import { loadEmailSettings } from '@/utils/emailSettings';
 
 export const useCartCheckout = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [selectedShippingOption, setSelectedShippingOption] = useState<ShippingOption | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'bank-transfer' | 'card'>('bank-transfer');
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const { 
+    items, 
+    subtotal, 
+    clearCart, 
+    emailSettings 
+  } = useCart();
   
-  const { user, profile } = useAuth();
-  const { items, total, clearCart } = useCart();
-  const { shippingAddress } = useShipping();
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const { shippingAddress: savedShippingAddress, setShippingAddress } = useShipping();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleShippingSubmit = (shippingOption: ShippingOption) => {
-    setSelectedShippingOption(shippingOption);
-    setCurrentStep(2);
+  const [bankDetails] = useState({
+    accountName: 'JMP Foods Pty Ltd',
+    accountNumber: '611680986',
+    reference: `ORDER-${Date.now()}`
+  });
+  
+  // Shipping-related state
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [selectedShippingOption, setSelectedShippingOption] = useState<string | undefined>();
+  const [isLoadingShippingOptions, setIsLoadingShippingOptions] = useState(false);
+  const [shippingAddress, setShippingAddressState] = useState<ShippingAddress | null>(null);
+  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'payment'>('cart');
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
+
+  // Use saved shipping address if available
+  useEffect(() => {
+    if (savedShippingAddress && !shippingAddress) {
+      setShippingAddressState(savedShippingAddress);
+    }
+  }, [savedShippingAddress, shippingAddress]);
+
+  // Calculate total weight for shipping
+  const totalWeight = items.reduce((weight, item) => {
+    return weight + (item.product.weight || 0.5) * item.quantity;
+  }, 0);
+
+  // Load shipping options when address is set
+  useEffect(() => {
+    if (shippingAddress && items.length > 0) {
+      setIsLoadingShippingOptions(true);
+      calculateShippingOptions(
+        totalWeight,
+        {
+          postalCode: shippingAddress.postalCode,
+          state: shippingAddress.state
+        },
+        items // Pass the cart items to check for free shipping eligibility
+      ).then(options => {
+        setShippingOptions(options);
+        // Always select the first option (free shipping) by default
+        if (options.length > 0) {
+          setSelectedShippingOption(options[0].id);
+        }
+        setIsLoadingShippingOptions(false);
+      }).catch(error => {
+        console.error("Error calculating shipping:", error);
+        setIsLoadingShippingOptions(false);
+        toast({
+          title: "Shipping Error",
+          description: "Failed to calculate shipping options",
+          variant: "destructive",
+        });
+      });
+    }
+  }, [shippingAddress, items, totalWeight, toast]);
+
+  const handleShippingFormSubmit = (data: ShippingAddress) => {
+    setShippingAddressState(data);
+    // Save to context (will also save to localStorage)
+    setShippingAddress(data);
+    setCheckoutStep('payment');
+    
+    toast({
+      title: "Shipping Address Saved",
+      description: "Your shipping details have been saved.",
+    });
   };
 
-  const handlePaymentSubmit = async () => {
-    if (!user || !profile || !shippingAddress || !selectedShippingOption) {
-      toast({
-        title: "Error",
-        description: "Missing required information for checkout",
-        variant: "destructive",
-      });
-      return;
+  // Helper function to send order confirmation emails
+  const sendOrderConfirmationEmails = async (order: Order) => {
+    let emailResults = {
+      customerEmailSent: false,
+      adminEmailSent: false,
+      dispatchEmailSent: false,
+      accountsEmailSent: false
+    };
+    
+    // Send customer email
+    if (emailSettings.notifyCustomer && order.email) {
+      try {
+        const customerResult = await sendOrderConfirmationEmail(order, order.email, 'customer');
+        emailResults.customerEmailSent = customerResult.success;
+        console.log('Customer email result:', customerResult);
+      } catch (error) {
+        console.error("Error sending customer email:", error);
+      }
+    }
+    
+    // Send admin (sales) email
+    if (emailSettings.notifyAdmin && emailSettings.adminEmail) {
+      try {
+        const adminResult = await sendAdminOrderNotification(order, emailSettings.adminEmail);
+        emailResults.adminEmailSent = adminResult.success;
+        console.log('Admin email result:', adminResult);
+      } catch (error) {
+        console.error("Error sending admin email:", error);
+      }
+    }
+    
+    // Send dispatch email
+    if (emailSettings.notifyDispatch && emailSettings.dispatchEmail) {
+      try {
+        const dispatchResult = await sendDispatchOrderNotification(order, emailSettings.dispatchEmail);
+        emailResults.dispatchEmailSent = dispatchResult.success;
+        console.log('Dispatch email result:', dispatchResult);
+      } catch (error) {
+        console.error("Error sending dispatch email:", error);
+      }
+    }
+    
+    // Send accounts email
+    if (emailSettings.notifyAccounts && emailSettings.accountsEmail) {
+      try {
+        const accountsResult = await sendAccountsOrderNotification(order, emailSettings.accountsEmail);
+        emailResults.accountsEmailSent = accountsResult.success;
+        console.log('Accounts email result:', accountsResult);
+      } catch (error) {
+        console.error("Error sending accounts email:", error);
+      }
+    }
+    
+    return emailResults;
+  };
+
+  // Create and save order function
+  const createOrder = async () => {
+    if (!selectedShippingOption || !shippingAddress) {
+      throw new Error("Missing shipping information");
+    }
+    
+    const selectedOption = shippingOptions.find(option => option.id === selectedShippingOption);
+    const shippingCost = selectedOption ? selectedOption.price : 0;
+    const orderId = bankDetails.reference;
+    
+    // Create the order object with direct properties
+    const orderData = {
+      id: orderId,
+      user_id: user?.id || 'guest',
+      user_name: user?.email || shippingAddress.name || 'guest',
+      email: user?.email || 'guest@example.com', // Add a default email for guest users
+      items: items.slice(), // Create a copy of the items array
+      total: subtotal + shippingCost,
+      status: 'pending' as const,
+      created_at: new Date().toISOString(),
+      payment_method: 'bank-transfer',
+      shipping_address: {...shippingAddress}, // Create a copy
+      invoice_status: 'draft' as const,
+      shipping_option: selectedOption,
+      updated_at: new Date().toISOString()
+    };
+
+    // Insert into Supabase
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([orderData]);
+
+    if (error) {
+      console.error('Error saving order to Supabase:', error);
+      throw new Error('Failed to create order');
     }
 
-    setIsCheckingOut(true);
+    console.log('Order saved to Supabase:', data);
+    
+    // Normalize the order to ensure all fields are correct
+    const normalizedOrder = normalizeOrder(orderData);
+    
+    console.log("Creating order:", normalizedOrder);
+
+    // Send email confirmation
+    const emailResults = await sendOrderConfirmationEmails(normalizedOrder);
+    console.log("Email sending results:", emailResults);
+    
+    return normalizedOrder;
+  };
+
+  const handleBankTransferCheckout = async () => {
+    if (isProcessingOrder) return;
+    
+    setIsProcessingOrder(true);
     
     try {
-      const orderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const now = new Date().toISOString();
-      
-      // Transform cart items to match database format
-      const transformedItems = items.map(item => ({
-        product: {
-          id: item.product.id,
-          name: item.product.name,
-          price: item.product.price,
-          description: item.product.description,
-          image: item.product.image,
-          category: item.product.category,
-          min_quantity: item.product.min_quantity,
-          stock: item.product.stock,
-          weight: item.product.weight,
-          bag_size: item.product.bag_size,
-          number_of_servings: item.product.number_of_servings,
-          serving_size: item.product.serving_size,
-          ingredients: item.product.ingredients,
-          amino_acid_profile: item.product.amino_acid_profile,
-          nutritional_info: item.product.nutritional_info,
-          created_at: item.product.created_at,
-          updated_at: item.product.updated_at
-        },
-        quantity: item.quantity
-      }));
-
-      // Create order object
-      const orderData = {
-        id: orderId,
-        user_id: user.id,
-        user_name: profile.business_name,
-        email: user.email,
-        items: transformedItems as any, // Cast to any to satisfy Json type
-        total: total + selectedShippingOption.price,
-        status: 'pending',
-        created_at: now,
-        payment_method: paymentMethod,
-        shipping_address: shippingAddress as any, // Cast to any to satisfy Json type
-        invoice_status: 'draft',
-        shipping_option: selectedShippingOption as any, // Cast to any to satisfy Json type
-        updated_at: now
-      };
-
-      console.log('Creating order with data:', orderData);
-      
-      // Insert order into database
-      const { data: insertedOrder, error: insertError } = await supabase
-        .from('orders')
-        .insert([orderData])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Database insert error:', insertError);
-        throw insertError;
+      if (!selectedShippingOption || !shippingAddress) {
+        toast({
+          title: "Missing Information",
+          description: "Please provide shipping details before completing your order.",
+          variant: "destructive",
+        });
+        setIsProcessingOrder(false);
+        return;
       }
-
-      console.log('Order created successfully:', insertedOrder);
-
-      // Create order object for email service
-      const order: Order = {
-        id: orderId,
-        userId: user.id,
-        userName: profile.business_name,
-        email: user.email || '',
-        items: items,
-        total: total + selectedShippingOption.price,
-        status: 'pending',
-        createdAt: now,
-        paymentMethod: paymentMethod,
-        invoiceStatus: 'draft',
-        invoiceUrl: '', // Will be set later
-        shippingAddress: shippingAddress,
-        shippingOption: selectedShippingOption,
-        updatedAt: now
-      };
-
-      // Send emails based on settings
-      const emailSettings = loadEmailSettings();
       
-      try {
-        if (emailSettings.notifyCustomer) {
-          await sendOrderConfirmationEmail(order, user.email || '', 'customer');
-        }
-        
-        if (emailSettings.notifyAdmin && emailSettings.adminEmail) {
-          await sendAdminOrderNotification(order, emailSettings.adminEmail);
-        }
-      } catch (emailError) {
-        console.error('Email sending failed:', emailError);
-        // Don't block the order process for email failures
-      }
-
-      // Clear cart and redirect
+      // Process the bank transfer order
+      const order = await createOrder();
+      
+      // Clear the cart first to avoid race conditions
       clearCart();
-      navigate('/order-success', { 
-        state: { 
-          orderId: orderId,
-          paymentMethod: paymentMethod,
-          total: total + selectedShippingOption.price
-        } 
-      });
-
+      
+      // Show success message
       toast({
-        title: "Order placed successfully!",
-        description: `Your order ${orderId} has been submitted.`,
+        title: "Order Placed Successfully",
+        description: "Your order has been placed. Please complete your bank transfer.",
       });
-
-    } catch (error: any) {
-      console.error('Checkout error:', error);
+      
+      // Navigate to the success page with order details
+      navigate('/order-success', { state: { orderDetails: order } });
+      
+    } catch (error) {
+      console.error("Error processing bank transfer order:", error);
       toast({
-        title: "Checkout failed",
-        description: error.message || "An error occurred during checkout",
+        title: "Order Error",
+        description: "There was a problem placing your order. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsCheckingOut(false);
+      setIsProcessingOrder(false);
     }
   };
 
+  // Calculate the selected shipping cost
+  const selectedOption = shippingOptions.find(option => option.id === selectedShippingOption);
+  const shippingCost = selectedOption ? selectedOption.price : 0;
+  const totalWithShipping = subtotal + shippingCost;
+
   return {
-    currentStep,
-    setCurrentStep,
+    items,
+    subtotal,
+    totalWeight,
+    totalWithShipping,
+    bankDetails,
+    shippingOptions,
     selectedShippingOption,
-    paymentMethod,
-    setPaymentMethod,
-    isCheckingOut,
-    handleShippingSubmit,
-    handlePaymentSubmit,
+    selectedOption,
+    shippingCost,
+    shippingAddress,
+    isProcessingOrder,
+    isLoadingShippingOptions,
+    checkoutStep,
+    setCheckoutStep,
+    setSelectedShippingOption,
+    handleShippingFormSubmit,
+    handleBankTransferCheckout,
   };
 };

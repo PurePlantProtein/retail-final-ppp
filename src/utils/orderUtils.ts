@@ -1,42 +1,55 @@
 
-import { Order, OrderItem, ShippingAddress, ShippingOption, OrderStatus, InvoiceStatus } from '@/types/product';
+import { Order, OrderItem, ShippingOption } from '@/types/product';
+import { mapProductForClient } from './productUtils';
+import { Database } from '@/integrations/supabase/types';
 
-export const transformDatabaseOrder = (dbOrder: any): Order => {
-  return {
-    id: dbOrder.id,
-    userId: dbOrder.user_id,
-    userName: dbOrder.user_name || '',
-    email: dbOrder.email || '',
-    items: Array.isArray(dbOrder.items) ? dbOrder.items.map((item: any): OrderItem => ({
-      product: item.product,
-      quantity: item.quantity
-    })) : [],
-    total: dbOrder.total || 0,
-    status: (dbOrder.status as OrderStatus) || 'pending',
-    createdAt: dbOrder.created_at,
-    updatedAt: dbOrder.updated_at,
-    shippingAddress: (typeof dbOrder.shipping_address === 'object' && dbOrder.shipping_address !== null) 
-      ? dbOrder.shipping_address as ShippingAddress 
-      : {
-          name: '',
-          street: '',
-          city: '',
-          state: '',
-          postalCode: '',
-          country: 'Australia',
-          phone: ''
-        },
-    invoiceStatus: (dbOrder.invoice_status as InvoiceStatus) || 'draft',
-    invoiceUrl: dbOrder.invoice_url,
-    paymentMethod: dbOrder.payment_method || 'bank-transfer',
-    shippingOption: (typeof dbOrder.shipping_option === 'object' && dbOrder.shipping_option !== null) 
-      ? dbOrder.shipping_option as ShippingOption 
-      : {
-          id: 'standard',
-          name: 'Standard Shipping',
-          price: 0,
-          description: 'Standard shipping'
-        },
-    notes: dbOrder.notes
-  };
-};
+/**
+ * Ensures an order object has all required properties formatted correctly
+ */
+export const normalizeOrder = (
+  row: Database["public"]["Tables"]["orders"]["Row"]
+): Order => ({
+  id: row.id,
+  userId: row.user_id,
+  userName: row.user_name,
+  email: row.email,
+  items: (row.items as Record<string, any>[]).map((item) => ({
+    product: mapProductForClient(item.product),
+    quantity: item.quantity,
+    // add other OrderItem fields here if needed
+    ...item,
+  })),
+  total: row.total,
+  status: row.status,
+  createdAt: row.created_at,
+  paymentMethod: row.payment_method,
+  shippingAddress: row.shipping_address,
+  invoiceStatus: row.invoice_status,
+  shippingOption: row.shipping_option,
+  updatedAt: row.updated_at,
+});
+// export const normalizeOrder = (order: Partial<Order>): Order => {
+//   // Map any snake_case properties to camelCase and ensure all fields are present
+//   const normalizedOrder: Order = {
+//     id: order.id || '',
+//     userId: order.userId || '',
+//     userName: order.userName || '',
+//     email: order.email || '',
+//     items: (order.items || []).map((item: OrderItem) => ({
+//       ...item,
+//       product: mapProductForClient(item.product)
+//     })),
+//     total: order.total || 0,
+//     status: order.status || 'pending',
+//     createdAt: order.createdAt || new Date().toISOString(),
+//     paymentMethod: order.paymentMethod || '',
+//     invoiceStatus: order.invoiceStatus,
+//     invoiceUrl: order.invoiceUrl,
+//     shippingAddress: order.shippingAddress,
+//     notes: order.notes,
+//     shippingOption: order.shippingOption || undefined,
+//     updatedAt: order.updatedAt || order.createdAt || new Date().toISOString(),
+//   };
+
+//   return normalizedOrder;
+// };
