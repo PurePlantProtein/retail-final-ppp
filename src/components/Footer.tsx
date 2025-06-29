@@ -95,7 +95,7 @@ const Footer = () => {
         </div>
         
         <div className="border-t border-gray-200 mt-8 pt-6 text-sm text-center text-gray-500">
-          &copy; {new Date().getFullYear()} PP Protein Wholesale. All rights reserved.
+          &copy; {new Date().getFullYear()} PPP Retailers. All rights reserved.
         </div>
       </div>
     </footer>
