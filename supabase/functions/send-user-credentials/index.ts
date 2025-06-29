@@ -25,11 +25,11 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, tempPassword, businessName }: CredentialsEmailRequest = await req.json();
 
     const emailResponse = await resend.emails.send({
-      from: "PP Protein Wholesale <noreply@ppprotein.com.au>",
+      from: "PPP Retailers <noreply@ppprotein.com.au>",
       to: [email],
-      subject: "Your PP Protein Wholesale Account - Login Credentials",
+      subject: "Your PPP Retailers Account - Login Credentials",
       html: `
-        <h1>Welcome to PP Protein Wholesale!</h1>
+        <h1>Welcome to PPP Retailers!</h1>
         <p>Your wholesale account has been created for <strong>${businessName}</strong>.</p>
         
         <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
@@ -60,7 +60,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         <p>If you have any questions, please don't hesitate to contact us at sales@ppprotein.com.au</p>
         
-        <p>Welcome aboard!<br>The PP Protein Team</p>
+        <p>Welcome aboard!<br>The PPP Retailers Team</p>
       `,
     });
 

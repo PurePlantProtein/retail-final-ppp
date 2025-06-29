@@ -250,6 +250,31 @@ export const useOrders = () => {
     }
   };
 
+  const updateOrder = async (order: Order): Promise<Order> => {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({
+        status: order.status,
+        invoice_status: order.invoiceStatus,
+        invoice_url: order.invoiceUrl,
+        notes: order.notes,
+        items: JSON.stringify(order.items),
+        shipping_address: JSON.stringify(order.shippingAddress),
+        shipping_option: order.shippingOption ? JSON.stringify(order.shippingOption) : null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', order.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating order:', error);
+      throw new Error(`Failed to update order: ${error.message}`);
+    }
+
+    return normalizeOrder(data);
+  };
+
   return {
     orders,
     isLoading,
@@ -262,6 +287,7 @@ export const useOrders = () => {
     getOrderById,
     fetchTrackingInfo,
     handleTrackingSubmit,
-    clearAllOrders
+    clearAllOrders,
+    updateOrder
   };
 };

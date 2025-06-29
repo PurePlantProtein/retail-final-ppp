@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
@@ -154,54 +153,42 @@ export const useCartCheckout = () => {
   };
 
   // Create and save order function
-  const createOrder = async () => {
-    if (!selectedShippingOption || !shippingAddress) {
-      throw new Error("Missing shipping information");
-    }
+  const createOrderInDatabase = async (orderData: any) => {
+    console.log('Creating order with data:', orderData);
     
-    const selectedOption = shippingOptions.find(option => option.id === selectedShippingOption);
-    const shippingCost = selectedOption ? selectedOption.price : 0;
-    const orderId = bankDetails.reference;
-    
-    // Create the order object with direct properties
-    const orderData = {
-      id: orderId,
-      user_id: user?.id || 'guest',
-      user_name: user?.email || shippingAddress.name || 'guest',
-      email: user?.email || 'guest@example.com', // Add a default email for guest users
-      items: items.slice(), // Create a copy of the items array
-      total: subtotal + shippingCost,
-      status: 'pending' as const,
-      created_at: new Date().toISOString(),
-      payment_method: 'bank-transfer',
-      shipping_address: {...shippingAddress}, // Create a copy
-      invoice_status: 'draft' as const,
-      shipping_option: selectedOption,
-      updated_at: new Date().toISOString()
+    // Convert items to JSON-compatible format for database
+    const dbOrderData = {
+      ...orderData,
+      items: JSON.stringify(orderData.items),
+      shipping_address: JSON.stringify(orderData.shipping_address),
+      shipping_option: JSON.stringify(orderData.shipping_option)
     };
-
-    // Insert into Supabase
+    
     const { data, error } = await supabase
       .from('orders')
-      .insert([orderData]);
+      .insert([dbOrderData])
+      .select()
+      .single();
 
     if (error) {
-      console.error('Error saving order to Supabase:', error);
-      throw new Error('Failed to create order');
+      console.error('Error creating order:', error);
+      throw new Error(`Failed to create order: ${error.message}`);
     }
 
-    console.log('Order saved to Supabase:', data);
+    console.log('Order created successfully:', data);
     
-    // Normalize the order to ensure all fields are correct
-    const normalizedOrder = normalizeOrder(orderData);
-    
-    console.log("Creating order:", normalizedOrder);
+    // Send order confirmation email
+    try {
+      await supabase.functions.invoke('send-order-email', {
+        body: normalizeOrder(data)
+      });
+      console.log('Order confirmation email sent');
+    } catch (emailError) {
+      console.error('Error sending order confirmation email:', emailError);
+      // Don't throw here - order was created successfully
+    }
 
-    // Send email confirmation
-    const emailResults = await sendOrderConfirmationEmails(normalizedOrder);
-    console.log("Email sending results:", emailResults);
-    
-    return normalizedOrder;
+    return normalizeOrder(data);
   };
 
   const handleBankTransferCheckout = async () => {
@@ -221,7 +208,21 @@ export const useCartCheckout = () => {
       }
       
       // Process the bank transfer order
-      const order = await createOrder();
+      const order = await createOrderInDatabase({
+        id: bankDetails.reference,
+        user_id: user?.id || 'guest',
+        user_name: user?.email || shippingAddress.name || 'guest',
+        email: user?.email || 'guest@example.com', // Add a default email for guest users
+        items: items.slice(), // Create a copy of the items array
+        total: subtotal + shippingCost,
+        status: 'pending' as const,
+        created_at: new Date().toISOString(),
+        payment_method: 'bank-transfer',
+        shipping_address: {...shippingAddress}, // Create a copy
+        invoice_status: 'draft' as const,
+        shipping_option: selectedOption,
+        updated_at: new Date().toISOString()
+      });
       
       // Clear the cart first to avoid race conditions
       clearCart();

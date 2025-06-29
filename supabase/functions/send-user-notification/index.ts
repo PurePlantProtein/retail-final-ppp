@@ -29,7 +29,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (type === 'signup') {
       // Send notification to sales team about new signup
       const salesEmailResponse = await resend.emails.send({
-        from: "PP Protein Wholesale <noreply@ppprotein.com.au>",
+        from: "PPP Retailers <noreply@ppprotein.com.au>",
         to: ["sales@ppprotein.com.au"],
         subject: "New User Registration - Requires Approval",
         html: `
@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           <p>Please log into the admin panel to review and approve this user's account.</p>
           
-          <p>Best regards,<br>PP Protein Wholesale System</p>
+          <p>Best regards,<br>PPP Retailers System</p>
         `,
       });
 
@@ -54,11 +54,11 @@ const handler = async (req: Request): Promise<Response> => {
     } else if (type === 'approval') {
       // Send approval notification to the user
       const userEmailResponse = await resend.emails.send({
-        from: "PP Protein Wholesale <sales@ppprotein.com.au>",
+        from: "PPP Retailers <sales@ppprotein.com.au>",
         to: [userEmail],
-        subject: "Account Approved - Welcome to PP Protein Wholesale!",
+        subject: "Account Approved - Welcome to PPP Retailers!",
         html: `
-          <h1>Welcome to PP Protein Wholesale!</h1>
+          <h1>Welcome to PPP Retailers!</h1>
           <p>Great news! Your account has been approved and you now have access to our wholesale platform.</p>
           
           <div style="background-color: #e8f5e8; padding: 15px; border-radius: 5px; margin: 20px 0;">
@@ -75,7 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           <p>If you have any questions, please don't hesitate to contact us at sales@ppprotein.com.au</p>
           
-          <p>Welcome aboard!<br>The PP Protein Team</p>
+          <p>Welcome aboard!<br>The PPP Retailers Team</p>
         `,
       });
 

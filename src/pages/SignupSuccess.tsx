@@ -16,7 +16,7 @@ const SignupSuccess = () => {
             Account Created Successfully!
           </h1>
           <p className="text-gray-600">
-            Thank you for registering with PP Protein Wholesale
+            Thank you for registering with PPP Retailers
           </p>
         </div>
 
