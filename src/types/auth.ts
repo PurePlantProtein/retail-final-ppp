@@ -22,7 +22,7 @@ export type AuthContextType = {
   profile: UserProfile | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, businessName: string, businessType?: string) => Promise<void>;
+  signup: (email: string, password: string, businessName: string, businessType?: string, phone?:string, businessAddress?:string) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: boolean;
   isDistributor: boolean;

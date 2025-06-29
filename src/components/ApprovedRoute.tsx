@@ -89,7 +89,7 @@ const ApprovedRoute: React.FC<ApprovedRouteProps> = ({ children }) => {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-gray-600">
-              Thank you for registering with PP Protein Wholesale. Your account is currently being reviewed by our team.
+              Thank you for registering with PPP Retailers. Your account is currently being reviewed by our team.
             </p>
             <p className="text-sm text-gray-500">
               You'll receive an email notification once your account has been approved and you can access the dashboard.

@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { ShippingAddress } from '@/types/product';

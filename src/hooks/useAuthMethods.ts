@@ -59,15 +59,13 @@ export const useAuthMethods = (updateActivity: () => void) => {
     }
   };
 
-  const signup = async (email: string, password: string, businessName: string, businessType?: string) => {
+  const signup = async (email: string, password: string, businessName: string, businessType?: string, phone?:string, businessAddress?:string) => {
     setIsLoading(true);
     
     try {
       // Clean up existing state
       cleanupAuthState();
-      
-      console.log("Signing up with:", { email, businessName, businessType });
-      
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -78,6 +76,17 @@ export const useAuthMethods = (updateActivity: () => void) => {
           }
         }
       });
+
+      if (data.user) {
+        await supabase
+          .from("profiles")
+          .update({
+            email: email,
+            phone: phone,
+            business_address: businessAddress
+          })
+          .eq("id", data.user.id);
+      }
       
       if (error) {
         console.error("Signup error:", error);
@@ -107,7 +116,7 @@ export const useAuthMethods = (updateActivity: () => void) => {
       
       toast({
         title: "Account created",
-        description: "Welcome to PP Protein Wholesale!",
+        description: "Welcome to PPP Retailers!",
       });
     } catch (error: any) {
       console.error("Signup error caught:", error);

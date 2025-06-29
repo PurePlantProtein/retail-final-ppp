@@ -165,10 +165,11 @@ const Signup = () => {
         country: 'Australia',
         phone
       };
+
+      const businessAddress = `${street}, ${city}, ${state} ${postalCode}, Australia`;
       
       // Sign up the user
-      await signup(email, password, businessName, businessType);
-      console.log("Signup completed successfully");
+      await signup(email, password, businessName, businessType, phone, businessAddress);
       
       // Save shipping address
       setShippingAddress(shippingData);
