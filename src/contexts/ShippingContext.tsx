@@ -1,10 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { ShippingAddress } from '@/types/product';
+import { supabase } from "@/integrations/supabase/client";
 
 type ShippingContextType = {
   shippingAddress: ShippingAddress | null;
-  setShippingAddress: (address: ShippingAddress) => void;
+  setShippingAddress: (address: ShippingAddress, userId: string) => Promise<void>;
   clearShippingAddress: () => void;
   isLoading: boolean;
 };
@@ -16,41 +17,96 @@ export const ShippingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   
-  // Load shipping address from localStorage when component mounts
+  // Load shipping address from Supabase
   useEffect(() => {
-    if (user) {
+    const fetchShipping = async () => {
+      if (!user) return;
+
       try {
-        const savedAddress = localStorage.getItem(`shipping_address_${user.id}`);
-        if (savedAddress) {
-          setShippingAddressState(JSON.parse(savedAddress));
+        const cached = localStorage.getItem(`shipping_address_${user.id}`);
+        if (cached) {
+          setShippingAddressState(JSON.parse(cached));
+        } else {
+          const { data, error } = await supabase
+            .from("shipping_addresses")
+            .select("*")
+            .eq("user_id", user.id)
+            .single(); // or .maybeSingle() if not always guaranteed
+
+          if (error && error.code !== 'PGRST116') {
+            console.error("Error fetching shipping from Supabase:", error);
+          }
+
+          if (data) {
+            const address: ShippingAddress = {
+              name: data.name,
+              street: data.street,
+              city: data.city,
+              state: data.state,
+              postalCode: data.postal_code,
+              country: data.country,
+              phone: data.phone,
+            };
+
+            setShippingAddressState(address);
+            localStorage.setItem(`shipping_address_${user.id}`, JSON.stringify(address));
+          }
         }
       } catch (error) {
-        console.error('Failed to load shipping address from localStorage', error);
+        console.error("Shipping load error:", error);
       } finally {
         setIsLoading(false);
       }
-    } else {
-      setIsLoading(false);
-    }
+    };
+
+    fetchShipping();
   }, [user]);
 
   // Function to update shipping address
-  const setShippingAddress = (address: ShippingAddress) => {
+  const setShippingAddress = async (address: ShippingAddress, userId: string) => {
     setShippingAddressState(address);
-    
-    // Save to localStorage if user is logged in
-    if (user) {
-      localStorage.setItem(`shipping_address_${user.id}`, JSON.stringify(address));
+
+    if (!userId) return;
+
+    try {
+      const { error } = await supabase
+        .from("shipping_addresses")
+        .upsert([{
+          user_id: userId,
+          name: address.name,
+          street: address.street,
+          city: address.city,
+          state: address.state,
+          postal_code: address.postalCode,
+          country: address.country,
+          phone: address.phone,
+        }], {
+          onConflict: 'user_id',
+        });
+
+      if (error) {
+        console.error("Supabase upsert error (shipping):", error);
+      } else {
+        localStorage.setItem(`shipping_address_${userId}`, JSON.stringify(address));
+      }
+    } catch (err) {
+      console.error("Failed to upsert shipping address:", err);
     }
   };
 
   // Function to clear shipping address
-  const clearShippingAddress = () => {
+  const clearShippingAddress = async () => {
     setShippingAddressState(null);
-    
-    // Remove from localStorage if user is logged in
-    if (user) {
-      localStorage.removeItem(`shipping_address_${user.id}`);
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("shipping_addresses")
+      .delete()
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error clearing shipping address:", error);
     }
   };
 

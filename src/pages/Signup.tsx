@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Star } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from "@/integrations/supabase/client";
 import { ShippingAddress } from '@/types/product';
 import { useShipping } from '@/contexts/ShippingContext';
 
@@ -170,10 +171,11 @@ const Signup = () => {
       
       // Sign up the user
       await signup(email, password, businessName, businessType, phone, businessAddress);
-      
-      // Save shipping address
-      setShippingAddress(shippingData);
-      console.log("Shipping address saved");
+
+      const userId = await supabase.auth.getUser().then(({ data }) => data.user?.id);
+      console.log("User ID after signup:", userId);
+
+      await setShippingAddress(shippingData, userId);
       
       toast({
         title: "Account created successfully",
