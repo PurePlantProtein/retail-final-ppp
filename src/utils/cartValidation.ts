@@ -5,7 +5,7 @@ import { getCategoryMOQ, getCategoryTotalQuantity } from './categoryMOQ';
 
 export const validateProductMinimum = (product: Product, quantity: number): { isValid: boolean; message?: string } => {
   // Check if this product has a category MOQ requirement
-  const categoryMOQ = getCategoryMOQ(product.category || '');
+  const categoryMOQ = getCategoryMOQ(product.category?.name || '');
   
   if (categoryMOQ) {
     // For products with category MOQ, we don't enforce individual minimums
@@ -35,14 +35,14 @@ export const validateCategoryMOQ = (
   isSuccess: boolean; 
   message?: string 
 } => {
-  const categoryMOQ = getCategoryMOQ(product.category || '');
+  const categoryMOQ = getCategoryMOQ(product.category?.name || 'Uncategorized');
   
   if (!categoryMOQ) {
     return { hasWarning: false, isSuccess: false };
   }
   
   // Calculate total quantity including the item being added
-  const currentCategoryQuantity = getCategoryTotalQuantity(items, product.category || '');
+  const currentCategoryQuantity = getCategoryTotalQuantity(items, product.category?.name || 'Uncategorized');
   const totalCategoryQuantity = currentCategoryQuantity + addingQuantity;
   
   if (totalCategoryQuantity < categoryMOQ) {
@@ -50,14 +50,14 @@ export const validateCategoryMOQ = (
     return {
       hasWarning: true,
       isSuccess: false,
-      message: `You need ${remainingNeeded} more units from the ${product.category} category to meet the minimum order of ${categoryMOQ} units. You can mix and match different products from this category.`
+      message: `You need ${remainingNeeded} more units from the ${product.category?.name || 'Uncategorized'} category to meet the minimum order of ${categoryMOQ} units. You can mix and match different products from this category.`
     };
   }
   
   return {
     hasWarning: false,
     isSuccess: true,
-    message: `Great! You now have ${totalCategoryQuantity} units from the ${product.category} category, meeting the minimum requirement.`
+    message: `Great! You now have ${totalCategoryQuantity} units from the ${product.category?.name || 'Uncategorized'} category, meeting the minimum requirement.`
   };
 };
 
@@ -89,20 +89,20 @@ export const shouldShowCategoryMOQWarning = (
   items: CartItem[],
   product: Product
 ): { shouldShow: boolean; message?: string } => {
-  const categoryMOQ = getCategoryMOQ(product.category || '');
+  const categoryMOQ = getCategoryMOQ(product.category?.name || 'Uncategorized');
   
   if (!categoryMOQ) {
     return { shouldShow: false };
   }
   
   // Only show warning if user already has items in cart for this category
-  const currentCategoryQuantity = getCategoryTotalQuantity(items, product.category || '');
+  const currentCategoryQuantity = getCategoryTotalQuantity(items, product.category?.name || 'Uncategorized');
   
   if (currentCategoryQuantity > 0 && currentCategoryQuantity < categoryMOQ) {
     const remainingNeeded = categoryMOQ - currentCategoryQuantity;
     return {
       shouldShow: true,
-      message: `You currently have ${currentCategoryQuantity} units from ${product.category}. You need ${remainingNeeded} more to meet the minimum of ${categoryMOQ} units.`
+      message: `You currently have ${currentCategoryQuantity} units from ${product.category?.name || 'Uncategorized'}. You need ${remainingNeeded} more to meet the minimum of ${categoryMOQ} units.`
     };
   }
   

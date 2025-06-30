@@ -49,7 +49,7 @@ const MobileProductCard: React.FC<MobileProductCardProps> = ({
                 {product.name}
               </Link>
               <div className="text-sm text-gray-600 space-y-1">
-                <p>Category: {product.category || '-'}</p>
+                <p>Category: {product.category?.name || 'Uncategorized'}</p>
                 <p>Price: ${product.price.toFixed(2)}</p>
                 <p>Stock: {product.stock}</p>
               </div>

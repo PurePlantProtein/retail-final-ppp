@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -181,7 +180,7 @@ export type Tables<
   }
     ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
   ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
@@ -281,7 +280,10 @@ export const Constants = {
   },
 } as const
 
-export type Category = string;
+export type Category = {
+  id: string;
+  name: string;
+};
 
 export interface AminoAcid {
   name: string;
@@ -311,32 +313,24 @@ export interface TrackingInfo {
   estimatedDeliveryDate?: string;
 }
 
-export interface Product {
+export type Product = {
   id: string;
   name: string;
   description: string;
   price: number;
-  image: string | null;
-  category: string;
+  minQuantity: number;
   stock: number;
-  min_quantity: number;
-  weight: number | null;
-  bag_size: string | null;
-  number_of_servings: number | null;
-  serving_size: string | null;
-  ingredients: string | null;
-  amino_acid_profile: AminoAcid[] | null;
-  nutritional_info: NutritionalValue[] | null;
-  created_at: string;
-  updated_at: string;
-  
-  // Add property aliases to make the code cleaner
-  minQuantity?: number; // Alias for min_quantity
-  bagSize?: string | null; // Alias for bag_size
-  numberOfServings?: number | null; // Alias for number_of_servings
-  servingSize?: string | null; // Alias for serving_size
-  aminoAcidProfile?: AminoAcid[] | null; // Alias for amino_acid_profile
-  nutritionalInfo?: NutritionalValue[] | null; // Alias for nutritional_info
+  image: string | null;
+  category: Category | null;
+  weight?: number | null;
+  bagSize?: string | null;
+  numberOfServings?: number | null;
+  servingSize?: string | null;
+  ingredients?: string | null;
+  aminoAcidProfile?: AminoAcid[] | null;
+  nutritionalInfo?: NutritionalValue[] | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Define a separate type to differentiate categories from products

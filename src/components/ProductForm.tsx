@@ -5,9 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Category, Product, AminoAcid, NutritionalValue } from '@/types/product';
+import { Category } from '@/types/product';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { createProduct, updateProduct, getCategories } from '@/services/productService';
+import { createProduct, updateProduct, getCategories, addCategory } from '@/services/productService';
 import { useToast } from '@/components/ui/use-toast';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,8 +24,6 @@ import {
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ImageUploader from '@/components/ImageUploader';
-
-const defaultCategories: Category[] = ['food', 'accessories', 'supplements', 'clothing', 'electronics', 'furniture', 'protein', 'other'];
 
 const aminoAcidSchema = z.object({
   name: z.string(),
@@ -65,7 +63,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<string[]>(defaultCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,18 +96,14 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
     const loadCategories = async () => {
       setIsLoading(true);
       try {
-        const fetchedCategories = await getCategories();
-        if (fetchedCategories && fetchedCategories.length > 0) {
-          setCategories(fetchedCategories);
-        }
+        const data = await getCategories();
+        setCategories(data);
       } catch (err) {
-        console.error("Error loading categories:", err);
-        // Fall back to default categories if fetch fails
+        setError('Failed to load categories');
       } finally {
         setIsLoading(false);
       }
     };
-
     loadCategories();
   }, []);
 
@@ -122,7 +116,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       minQuantity: product.minQuantity || 12, // Default to 12 as per MOQ requirement
       stock: product.stock,
       image: product.image,
-      category: product.category,
+      category: product.category?.id || '',
       // New fields
       weight: product.weight || 0,
       servingSize: product.servingSize || '',
@@ -179,7 +173,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
           minQuantity: formData.minQuantity || 12, // Default to 12 as per MOQ requirement
           stock: formData.stock,
           image: formData.image,
-          category: formData.category as Category,
+          category: formData.category, // category id as string
           weight: formData.weight || 0,
           servingSize: formData.servingSize,
           numberOfServings: formData.numberOfServings,
@@ -218,40 +212,33 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
       toast({
-        title: "Error",
-        description: "Category name cannot be empty",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Category name cannot be empty',
+        variant: 'destructive',
       });
       return;
     }
-
-    const lowerCaseName = newCategoryName.toLowerCase();
-    if (categories.includes(lowerCaseName)) {
+    if (categories.some(cat => cat.name.toLowerCase() === newCategoryName.toLowerCase())) {
       toast({
-        title: "Error",
-        description: "This category already exists",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Category already exists',
+        variant: 'destructive',
       });
       return;
     }
-
     try {
-      // Update UI immediately for better UX
-      setCategories([...categories, lowerCaseName]);
-      form.setValue("category", lowerCaseName);
-      setNewCategoryName("");
-      setIsAddingCategory(false);
-      
+      const newCat = await addCategory(newCategoryName);
+      setCategories([...categories, newCat]);
+      setNewCategoryName('');
       toast({
-        title: "Success",
-        description: `Category "${lowerCaseName}" has been added.`,
+        title: 'Success',
+        description: `Category "${newCategoryName}" added.`,
       });
     } catch (err) {
-      console.error('Error adding category:', err);
       toast({
-        title: "Error",
-        description: "Failed to add category",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to add category',
+        variant: 'destructive',
       });
     }
   };
@@ -366,9 +353,9 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {categories.map(category => (
-                                    <SelectItem key={category} value={category}>
-                                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                                  {categories.map(cat => (
+                                    <SelectItem key={cat.id} value={cat.id}>
+                                      {cat.name}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>

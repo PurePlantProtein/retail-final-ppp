@@ -1,10 +1,10 @@
-
-import { Product, AminoAcid, NutritionalValue } from '@/types/product';
+import { Product, AminoAcid, NutritionalValue, Category } from '@/types/product';
 import { Json } from '@/integrations/supabase/types';
 
 /**
  * Maps snake_case database fields to camelCase properties for frontend use
  * and ensures proper type casting for JSON fields
+ * Handles category as an object (id, name)
  */
 export const mapProductForClient = (product: any): Product => {
   if (!product) return {} as Product;
@@ -15,10 +15,9 @@ export const mapProductForClient = (product: any): Product => {
     if (Array.isArray(product.amino_acid_profile)) {
       aminoAcidProfile = product.amino_acid_profile;
     } else if (typeof product.amino_acid_profile === 'object') {
-      // Convert object format to array format if needed
       aminoAcidProfile = Object.entries(product.amino_acid_profile).map(([name, amount]) => ({
         name,
-        amount: typeof amount === 'number' ? `${amount}g` : amount as string
+        amount: typeof amount === 'number' ? `${amount}g` : (amount as string),
       }));
     }
   }
@@ -28,15 +27,26 @@ export const mapProductForClient = (product: any): Product => {
     if (Array.isArray(product.nutritional_info)) {
       nutritionalInfo = product.nutritional_info;
     } else if (typeof product.nutritional_info === 'object') {
-      // Convert object format to array format if needed
       nutritionalInfo = Object.entries(product.nutritional_info).map(([name, value]) => ({
         name,
-        perServing: typeof value === 'number' ? `${value}g` : value as string,
-        per100g: typeof value === 'number' ? `${value * 100 / 30}g` : value as string 
+        perServing: typeof value === 'number' ? `${value}g` : (value as string),
+        per100g: typeof value === 'number' ? `${(value * 100) / 30}g` : (value as string),
       }));
     }
   }
-  
+
+  // Handle category as object (joined from product_categories)
+  let category: Category | null = null;
+  if (product.product_categories) {
+    category = {
+      id: product.product_categories.id,
+      name: product.product_categories.name,
+    };
+  } else if (product.category) {
+    // fallback: just id
+    category = { id: product.category, name: '' };
+  }
+
   return {
     ...product,
     minQuantity: product.min_quantity,
@@ -45,30 +55,34 @@ export const mapProductForClient = (product: any): Product => {
     servingSize: product.serving_size,
     aminoAcidProfile: aminoAcidProfile,
     nutritionalInfo: nutritionalInfo,
+    category: category,
   };
 };
 
 /**
  * Maps camelCase properties to snake_case for database storage
+ * Handles category as uuid (id)
  */
 export const mapProductForStorage = (product: Partial<Product>): any => {
-  const { 
-    minQuantity, 
-    bagSize, 
-    numberOfServings, 
-    servingSize, 
-    aminoAcidProfile, 
-    nutritionalInfo, 
-    ...rest 
+  const {
+    minQuantity,
+    bagSize,
+    numberOfServings,
+    servingSize,
+    aminoAcidProfile,
+    nutritionalInfo,
+    category,
+    ...rest
   } = product;
 
   return {
     ...rest,
-    min_quantity: minQuantity !== undefined ? minQuantity : product.min_quantity,
-    bag_size: bagSize !== undefined ? bagSize : product.bag_size,
-    number_of_servings: numberOfServings !== undefined ? numberOfServings : product.number_of_servings,
-    serving_size: servingSize !== undefined ? servingSize : product.serving_size,
-    amino_acid_profile: aminoAcidProfile !== undefined ? aminoAcidProfile as unknown as Json : product.amino_acid_profile,
-    nutritional_info: nutritionalInfo !== undefined ? nutritionalInfo as unknown as Json : product.nutritional_info,
+    min_quantity: minQuantity !== undefined ? minQuantity : product.minQuantity,
+    bag_size: bagSize !== undefined ? bagSize : product.bagSize,
+    number_of_servings: numberOfServings !== undefined ? numberOfServings : product.numberOfServings,
+    serving_size: servingSize !== undefined ? servingSize : product.servingSize,
+    amino_acid_profile: aminoAcidProfile !== undefined ? (aminoAcidProfile as unknown as Json) : product.aminoAcidProfile,
+    nutritional_info: nutritionalInfo !== undefined ? (nutritionalInfo as unknown as Json) : product.nutritionalInfo,
+    category: category && typeof category === 'object' ? category.id : category,
   };
 };

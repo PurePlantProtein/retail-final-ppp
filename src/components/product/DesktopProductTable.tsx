@@ -65,7 +65,7 @@ const DesktopProductTable: React.FC<DesktopProductTableProps> = ({
                   {product.name}
                 </Link>
               </TableCell>
-              <TableCell>{product.category || '-'}</TableCell>
+              <TableCell>{product.category?.name || 'Uncategorized'}</TableCell>
               <TableCell>${product.price.toFixed(2)}</TableCell>
               <TableCell>{product.stock}</TableCell>
               <TableCell>

@@ -133,7 +133,7 @@ const ProductDetail = () => {
               </div>
               <div className="text-sm text-gray-600 mb-4">
                 <p>Stock: {product.stock} units available</p>
-                {product.category && <p>Category: {product.category}</p>}
+                {product.category && <p>Category: {product.category?.name || 'Uncategorized'}</p>}
                 {product.min_quantity && product.min_quantity > 1 && (
                   <p>Minimum order quantity: {product.min_quantity} units</p>
                 )}
@@ -145,7 +145,7 @@ const ProductDetail = () => {
               price={product.price}
               stock={product.stock}
               quantity={quantity}
-              category={product.category || ''}
+              category={product.category?.name || 'Uncategorized'}
               handleIncrementQuantity={handleIncrementQuantity}
               handleDecrementQuantity={handleDecrementQuantity}
               handleQuantityChange={handleQuantityChange}

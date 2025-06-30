@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/product';
 import { mapProductForClient, mapProductForStorage } from '@/utils/productUtils';
@@ -7,11 +6,11 @@ import { mapProductForClient, mapProductForStorage } from '@/utils/productUtils'
 export const getProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
     .from('products')
-    .select('*')
+    .select('*, product_categories(id, name)')
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error("Error fetching products:", error);
+    console.error('Error fetching products:', error);
     throw new Error(error.message);
   }
 
@@ -19,15 +18,15 @@ export const getProducts = async (): Promise<Product[]> => {
 };
 
 // Function to get products by category
-export const getProductsByCategory = async (category: string): Promise<Product[]> => {
+export const getProductsByCategory = async (categoryId: string): Promise<Product[]> => {
   const { data, error } = await supabase
     .from('products')
-    .select('*')
-    .eq('category', category)
+    .select('*, product_categories(id, name)')
+    .eq('category', categoryId)
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error(`Error fetching products for category ${category}:`, error);
+    console.error(`Error fetching products for category ${categoryId}:`, error);
     throw new Error(error.message);
   }
 
@@ -38,7 +37,7 @@ export const getProductsByCategory = async (category: string): Promise<Product[]
 export const getProductById = async (id: string): Promise<Product | null> => {
   const { data, error } = await supabase
     .from('products')
-    .select('*')
+    .select('*, product_categories(id, name)')
     .eq('id', id)
     .single();
 
@@ -54,11 +53,11 @@ export const getProductById = async (id: string): Promise<Product | null> => {
 export const addProduct = async (productData: any): Promise<Product> => {
   // Transform data for storage
   const transformedData = mapProductForStorage(productData);
-  
+
   const { data, error } = await supabase
     .from('products')
     .insert([transformedData])
-    .select('*')
+    .select('*, product_categories(id, name)')
     .single();
 
   if (error) {
@@ -73,12 +72,12 @@ export const addProduct = async (productData: any): Promise<Product> => {
 export const updateProduct = async (id: string, productData: any): Promise<Product | null> => {
   // Transform data for storage
   const transformedData = mapProductForStorage(productData);
-  
+
   const { data, error } = await supabase
     .from('products')
     .update(transformedData)
     .eq('id', id)
-    .select('*')
+    .select('*, product_categories(id, name)')
     .single();
 
   if (error) {
@@ -105,44 +104,27 @@ export const deleteProduct = async (id: string): Promise<void> => {
 // Function aliases for better naming
 export const createProduct = addProduct;
 
-// Function to get all unique categories
-export const getCategories = async (): Promise<string[]> => {
+// Function to get all unique categories (now from product_categories table)
+export const getCategories = async (): Promise<{ id: string; name: string }[]> => {
   const { data, error } = await supabase
-    .from('products')
-    .select('category')
-    .order('category');
+    .from('product_categories')
+    .select('id, name')
+    .order('name');
 
   if (error) {
-    console.error("Error fetching categories:", error);
+    console.error('Error fetching categories:', error);
     throw new Error(error.message);
   }
 
-  const categories = data
-    .map(item => item.category)
-    .filter(Boolean) // Remove null/undefined values
-    .filter((value, index, self) => self.indexOf(value) === index); // Unique values only
-
-  return categories;
+  return data || [];
 };
 
-// Function to add a new category (creates a placeholder product in that category)
-export const addCategory = async (categoryName: string): Promise<string> => {
-  const placeholderProduct = {
-    name: `${categoryName} Category`,
-    description: `Placeholder for ${categoryName} category`,
-    price: 0,
-    min_quantity: 1,
-    stock: 0,
-    category: categoryName,
-    image: null
-  };
-
-  const transformedData = mapProductForStorage(placeholderProduct);
-
+// Function to add a new category
+export const addCategory = async (categoryName: string): Promise<{ id: string; name: string }> => {
   const { data, error } = await supabase
-    .from('products')
-    .insert([transformedData])
-    .select()
+    .from('product_categories')
+    .insert([{ name: categoryName }])
+    .select('id, name')
     .single();
 
   if (error) {
@@ -150,14 +132,29 @@ export const addCategory = async (categoryName: string): Promise<string> => {
     throw new Error(error.message);
   }
 
-  return categoryName;
+  return data;
 };
 
-// Function to delete a category (removes the category from all products)
-export const deleteCategory = async (categoryName: string): Promise<void> => {
-  // We don't actually delete categories - we just remove the category from products
-  // This is just a placeholder implementation
-  console.log(`Category ${categoryName} would be deleted here`);
+// Function to delete a category (removes the category row and sets category to null for affected products)
+export const deleteCategory = async (categoryId: string): Promise<void> => {
+  // Set category to null for all products using this category
+  const { error: updateError } = await supabase
+    .from('products')
+    .update({ category: null })
+    .eq('category', categoryId);
+  if (updateError) {
+    console.error(`Error clearing category from products:`, updateError);
+    throw new Error(updateError.message);
+  }
+  // Delete the category
+  const { error } = await supabase
+    .from('product_categories')
+    .delete()
+    .eq('id', categoryId);
+  if (error) {
+    console.error(`Error deleting category ${categoryId}:`, error);
+    throw new Error(error.message);
+  }
 };
 
 // Sample products for import functionality

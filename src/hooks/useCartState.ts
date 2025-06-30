@@ -66,21 +66,20 @@ export function useCartState() {
       }
       
       // Check category MOQ after adding the product
-      const categoryMOQ = getCategoryMOQ(product.category || '');
+      const categoryMOQ = getCategoryMOQ(product.category?.name || 'Uncategorized');
       if (categoryMOQ) {
-        const totalCategoryQuantity = getCategoryTotalQuantity(newItems, product.category || '');
-        
+        const totalCategoryQuantity = getCategoryTotalQuantity(newItems, product.category?.name || 'Uncategorized');
         if (totalCategoryQuantity < categoryMOQ) {
           const remainingNeeded = categoryMOQ - totalCategoryQuantity;
           toast({
             title: "Category minimum info",
-            description: `You need ${remainingNeeded} more units from the ${product.category} category to meet the minimum order of ${categoryMOQ} units. You can mix and match different products from this category.`,
+            description: `You need ${remainingNeeded} more units from the ${product.category?.name || 'Uncategorized'} category to meet the minimum order of ${categoryMOQ} units. You can mix and match different products from this category.`,
             variant: "default"
           });
         } else {
           toast({
             title: "Category minimum met! ✅",
-            description: `Great! You now have ${totalCategoryQuantity} units from the ${product.category} category, meeting the minimum requirement.`,
+            description: `Great! You now have ${totalCategoryQuantity} units from the ${product.category?.name || 'Uncategorized'} category, meeting the minimum requirement.`,
           });
         }
       }
@@ -137,15 +136,15 @@ export function useCartState() {
       // Check category MOQ after updating quantity
       const updatedItem = newItems.find(item => item.product.id === productId);
       if (updatedItem) {
-        const categoryMOQ = getCategoryMOQ(updatedItem.product.category || '');
+        const categoryMOQ = getCategoryMOQ(updatedItem.product.category?.name || 'Uncategorized');
         if (categoryMOQ) {
-          const totalCategoryQuantity = getCategoryTotalQuantity(newItems, updatedItem.product.category || '');
-          
+          const totalCategoryQuantity = getCategoryTotalQuantity(newItems, updatedItem.product.category?.name || 'Uncategorized');
+
           if (totalCategoryQuantity < categoryMOQ) {
             const remainingNeeded = categoryMOQ - totalCategoryQuantity;
             toast({
               title: "Category minimum info",
-              description: `You need ${remainingNeeded} more units from the ${updatedItem.product.category} category to meet the minimum order of ${categoryMOQ} units.`,
+              description: `You need ${remainingNeeded} more units from the ${updatedItem.product.category?.name || 'Uncategorized'} category to meet the minimum order of ${categoryMOQ} units.`,
               variant: "default"
             });
           }

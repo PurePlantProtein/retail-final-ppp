@@ -76,7 +76,7 @@ const ProductsList: React.FC<ProductsListProps> = ({
                   <div className="text-sm text-gray-500 line-clamp-2">{product.description}</div>
                 </div>
               </TableCell>
-              <TableCell>{product.category || '-'}</TableCell>
+              <TableCell>{product.category?.name || 'Uncategorized'}</TableCell>
               <TableCell className="font-medium">${product.price.toFixed(2)}</TableCell>
               <TableCell>{product.stock}</TableCell>
               <TableCell>{product.weight ? `${product.weight} kg` : '-'}</TableCell>

@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCategories, addCategory, deleteCategory } from '@/services/productService';
+import { getCategories, addCategory, deleteCategory, getProducts } from '@/services/productService';
 import { AlertCircle, Plus, Tag, Trash } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,15 +19,17 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Category } from '@/types/product';
 
 const CategoriesManagement = () => {
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productCounts, setProductCounts] = useState<Record<string, number>>({});
   
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
@@ -47,8 +48,8 @@ const CategoriesManagement = () => {
       navigate('/products');
       return;
     }
-    
     loadCategories();
+    loadProductCounts();
   }, [user, isAdmin, navigate, toast]);
 
   const loadCategories = async () => {
@@ -58,76 +59,102 @@ const CategoriesManagement = () => {
       const data = await getCategories();
       setCategories(data);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to load categories";
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load categories';
       setError(errorMessage);
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const loadProductCounts = async () => {
+    try {
+      const products = await getProducts();
+      // Count products per category id
+      const counts: Record<string, number> = {};
+      products.forEach((product) => {
+        const catId = product.category?.id;
+        if (catId) {
+          counts[catId] = (counts[catId] || 0) + 1;
+        } else {
+          counts['uncategorized'] = (counts['uncategorized'] || 0) + 1;
+        }
+      });
+      setProductCounts(counts);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to load product counts';
+      setError(errorMessage);
+      console.error('Error loading product counts:', errorMessage);
+    }
+  };
+
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
       toast({
-        title: "Error",
-        description: "Category name cannot be empty",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Category name cannot be empty',
+        variant: 'destructive',
       });
       return;
     }
-
+    if (categories.some(cat => cat.name.toLowerCase() === newCategoryName.toLowerCase())) {
+      toast({
+        title: 'Error',
+        description: 'Category already exists',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
-
     try {
-      await addCategory(newCategoryName);
+      const newCat = await addCategory(newCategoryName);
       toast({
-        title: "Success",
+        title: 'Success',
         description: `Category "${newCategoryName}" has been added.`,
       });
       setNewCategoryName('');
       loadCategories();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to add category";
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add category';
       setError(errorMessage);
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeletePrompt = (category: string) => {
+  const handleDeletePrompt = (category: Category) => {
     setCategoryToDelete(category);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteCategory = async () => {
     if (!categoryToDelete) return;
-    
     setIsSubmitting(true);
     try {
-      await deleteCategory(categoryToDelete);
+      await deleteCategory(categoryToDelete.id);
       toast({
-        title: "Success",
-        description: `Category "${categoryToDelete}" has been deleted.`,
+        title: 'Success',
+        description: `Category "${categoryToDelete.name}" has been deleted.`,
       });
       loadCategories();
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to delete category";
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete category';
       toast({
-        title: "Error",
+        title: 'Error',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -223,11 +250,12 @@ const CategoriesManagement = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Category cards */}
             {categories.map((category) => (
-              <Card key={category}>
+              <Card key={category.id}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-md font-medium">
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                    {category.name.charAt(0).toUpperCase() + category.name.slice(1)}
                   </CardTitle>
                   <Button 
                     variant="ghost" 
@@ -240,15 +268,30 @@ const CategoriesManagement = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Products in this category: 
+                    Products in this category:
                     <span className="font-medium ml-1">
-                      {/* This would ideally show the count of products in this category */}
-                      calculating...
+                      {productCounts[category.id] ?? 0}
                     </span>
                   </p>
                 </CardContent>
               </Card>
             ))}
+            {/* Uncategorized products card */}
+            <Card key="uncategorized">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-md font-medium">
+                  Uncategorized
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Products in this category:
+                  <span className="font-medium ml-1">
+                    {productCounts['uncategorized'] ?? 0}
+                  </span>
+                </p>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
@@ -258,7 +301,7 @@ const CategoriesManagement = () => {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the category "{categoryToDelete}"? 
+              Are you sure you want to delete the category "{categoryToDelete?.name}"? 
               This may affect products using this category.
             </DialogDescription>
           </DialogHeader>

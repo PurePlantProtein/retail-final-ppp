@@ -231,6 +231,28 @@ export type Database = {
         }
         Relationships: []
       }
+      product_categories: {
+        Row: {
+          id: string;
+          name: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'fk_category';
+            columns: ['id'];
+            referencedRelation: 'products';
+            referencedColumns: ['category'];
+          }
+        ];
+      };
       profiles: {
         Row: {
           approval_status: string | null

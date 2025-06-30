@@ -9,6 +9,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Grid, Table as TableIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductTable from '@/components/ProductTable';
+import { Category } from '@/types/product';
 
 const Products = () => {
   const [searchParams] = useSearchParams();
@@ -39,26 +40,26 @@ const Products = () => {
   });
 
   // Extract categories from filtered products
-  const categories = filteredProducts 
-    ? [...new Set(filteredProducts.map(product => product.category))].filter(Boolean) 
+  const categories: Category[] = filteredProducts 
+    ? [...new Map(filteredProducts.map(product => [product.category?.id, product.category])).values()].filter(
+        (cat): cat is Category => !!cat && typeof cat !== 'string'
+      )
     : [];
 
   // Handle category selection
-  const handleCategoryClick = (category: string) => {
-    if (category === selectedCategory) {
-      // If clicking the same category, clear the filter
+  const handleCategoryClick = (category: Category) => {
+    if (category.id === selectedCategory) {
       setSelectedCategory(null);
       navigate('/products');
     } else {
-      // If clicking a different category, apply that filter
-      setSelectedCategory(category);
-      navigate(`/products?category=${encodeURIComponent(category)}`);
+      setSelectedCategory(category.id);
+      navigate(`/products?category=${encodeURIComponent(category.id)}`);
     }
   };
 
-  // Filter products by selected category, but first filter out placeholders
+  // Filter products by selected category id
   const displayProducts = selectedCategory 
-    ? filteredProducts?.filter(product => product.category === selectedCategory) 
+    ? filteredProducts?.filter(product => product.category?.id === selectedCategory) 
     : filteredProducts;
 
   // Toggle view mode
@@ -128,14 +129,14 @@ const Products = () => {
           <div className="flex flex-wrap gap-2">
             {categories.map((category) => (
               <Button
-                key={category}
-                variant={category === selectedCategory ? "default" : "outline"}
+                key={category.id}
+                variant={category.id === selectedCategory ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleCategoryClick(category)}
                 className="flex items-center gap-1"
               >
-                {category === selectedCategory && <ClipboardCheck className="h-4 w-4" />}
-                {category}
+                {category.id === selectedCategory && <ClipboardCheck className="h-4 w-4" />}
+                {category.name}
               </Button>
             ))}
           </div>
@@ -158,7 +159,7 @@ const Products = () => {
           <div className="py-8 text-center">
             <p className="text-muted-foreground">
               {selectedCategory ? 
-                `No products found in the ${selectedCategory} category.` : 
+                `No products found in the ${categories.find(cat => cat.id === selectedCategory)?.name || ''} category.` : 
                 "No products available."
               }
             </p>
