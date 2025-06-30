@@ -14,7 +14,7 @@ import { EditOrderDialog } from '@/components/admin/orders/EditOrderDialog';
 import { DeleteOrderDialog } from '@/components/admin/orders/DeleteOrderDialog';
 import { TrackingInfoDialog } from '@/components/admin/orders/TrackingInfoDialog';
 import { useOrders } from '@/hooks/useOrders';
-import { Order, OrderStatus } from '@/types/product';
+import { Order, OrderStatus, TrackingInfo } from '@/types/product';
 
 const OrdersManagement = () => {
   const {
@@ -25,12 +25,15 @@ const OrdersManagement = () => {
     isSubmitting,
     handleStatusChange,
     handleUpdateOrder,
-    handleDeleteOrder
+    handleDeleteOrder,
+    fetchTrackingInfo,
+    handleTrackingSubmit
   } = useOrders();
   
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>(null);
 
   const openEditDialog = (order: Order) => {
     setSelectedOrder(order);
@@ -45,6 +48,24 @@ const OrdersManagement = () => {
   const openTrackingDialog = (order: Order) => {
     setSelectedOrder(order);
     setShowTrackingDialog(true);
+
+    const fetchTracking = async () => {
+      if (order.id) {
+        const trackingData = await fetchTrackingInfo(order.id);
+        if (trackingData) {
+          setTrackingInfo({
+            trackingNumber: trackingData.tracking_number,
+            carrier: trackingData.carrier,
+            trackingUrl: trackingData.tracking_url,
+            shippedDate: trackingData.shipped_date,
+            estimatedDeliveryDate: trackingData.estimated_delivery_date,
+          });
+        } else {
+          setTrackingInfo(null);
+        }
+      }
+    };
+    fetchTracking();
   };
 
   if (isLoading) {
@@ -124,9 +145,10 @@ const OrdersManagement = () => {
         {/* Tracking Info Dialog */}
         <TrackingInfoDialog
           order={selectedOrder}
+          trackingInfo={trackingInfo}
           open={showTrackingDialog}
           onOpenChange={setShowTrackingDialog}
-          onSubmit={handleUpdateOrder}
+          onSubmit={handleTrackingSubmit}
           isSubmitting={isSubmitting}
         />
       </div>
