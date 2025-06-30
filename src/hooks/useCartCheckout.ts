@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { useCart } from '@/contexts/CartContext';
 import { useShipping } from '@/contexts/ShippingContext';
-import { Order, ShippingOption, ShippingAddress } from '@/types/product';
+import { Order, ShippingOption, ShippingAddress, TrackingInfo } from '@/types/product';
 import { calculateShippingOptions } from '@/services/shippingService';
 import { 
   sendOrderConfirmationEmail, 
@@ -14,6 +14,7 @@ import {
 import { normalizeOrder } from '@/utils/orderUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useOrders } from '@/hooks/useOrders';
 
 export const useCartCheckout = () => {
   const { 
@@ -27,6 +28,7 @@ export const useCartCheckout = () => {
   const { shippingAddress: savedShippingAddress, setShippingAddress } = useShipping();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { handleTrackingSubmit } = useOrders();
 
   const [bankDetails] = useState({
     accountName: 'JMP Foods Pty Ltd',
@@ -87,7 +89,7 @@ export const useCartCheckout = () => {
   const handleShippingFormSubmit = (data: ShippingAddress) => {
     setShippingAddressState(data);
     // Save to context (will also save to localStorage)
-    setShippingAddress(data);
+    setShippingAddress(data, user?.id);
     setCheckoutStep('payment');
     
     toast({
@@ -191,6 +193,18 @@ export const useCartCheckout = () => {
     return normalizeOrder(data);
   };
 
+  const submitEmptyTracking = async (orderId: string) => {
+    const emptyTracking: TrackingInfo = {
+      trackingNumber: null,
+      carrier: null,
+      trackingUrl: null,
+      shippedDate: null,
+      estimatedDeliveryDate: null
+    };
+
+    await handleTrackingSubmit(orderId, emptyTracking);
+  };
+
   const handleBankTransferCheckout = async () => {
     if (isProcessingOrder) return;
     
@@ -211,7 +225,7 @@ export const useCartCheckout = () => {
       const order = await createOrderInDatabase({
         id: bankDetails.reference,
         user_id: user?.id || 'guest',
-        user_name: user?.email || shippingAddress.name || 'guest',
+        user_name: shippingAddress.name || 'guest',
         email: user?.email || 'guest@example.com', // Add a default email for guest users
         items: items.slice(), // Create a copy of the items array
         total: subtotal + shippingCost,
@@ -223,6 +237,8 @@ export const useCartCheckout = () => {
         shipping_option: selectedOption,
         updated_at: new Date().toISOString()
       });
+
+      await submitEmptyTracking(order.id);
       
       // Clear the cart first to avoid race conditions
       clearCart();
