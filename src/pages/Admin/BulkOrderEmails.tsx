@@ -29,7 +29,7 @@ const BulkOrderEmails = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [subject, setSubject] = useState('New Products Available for Order');
-  const [message, setMessage] = useState('We have exciting new products available for order. Please review the items below and submit your quantities directly through this email.');
+  const [message, setMessage] = useState('Ready to reorder? We keep ordering super simple so you can focus on your customers.');
   const [isScheduleEnabled, setIsScheduleEnabled] = useState(false);
 
   useEffect(() => {
