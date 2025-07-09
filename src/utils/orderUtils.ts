@@ -35,6 +35,8 @@ export const normalizeOrder = (
     shippingAddress,
     invoiceStatus: (row.invoice_status as InvoiceStatus) || undefined,
     shippingOption,
+    invoiceUrl: row.invoice_url || '',
+    notes: row.notes || '',
     updatedAt: row.updated_at || row.created_at,
   };
 };

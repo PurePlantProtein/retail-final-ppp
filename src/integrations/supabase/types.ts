@@ -67,6 +67,8 @@ export type Database = {
           payment_method: string | null
           shipping_address: Json | null
           shipping_option: Json | null
+          invoice_url: string | null
+          notes: string | null
           status: string | null
           total: number | null
           updated_at: string | null
@@ -82,6 +84,8 @@ export type Database = {
           payment_method?: string | null
           shipping_address?: Json | null
           shipping_option?: Json | null
+          invoice_url?: string | null
+          notes?: string | null
           status?: string | null
           total?: number | null
           updated_at?: string | null
@@ -97,6 +101,8 @@ export type Database = {
           payment_method?: string | null
           shipping_address?: Json | null
           shipping_option?: Json | null
+          invoice_url?: string | null
+          notes?: string | null
           status?: string | null
           total?: number | null
           updated_at?: string | null

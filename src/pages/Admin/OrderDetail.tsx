@@ -1,41 +1,50 @@
-
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  ClipboardCheck, 
-  Truck, 
-  Package, 
-  CheckCircle, 
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  ClipboardCheck,
+  Truck,
+  Package,
+  CheckCircle,
   XCircle,
   Edit,
-  ExternalLink
-} from 'lucide-react';
-import Layout from '@/components/Layout';
-import { AdminLayout } from '@/components/AdminLayout';
-import { useOrders } from '@/hooks/useOrders';
-import { Order, TrackingInfo } from '@/types/product';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { TrackingInfoDialog } from '@/components/admin/orders/TrackingInfoDialog';
-import { formatDate, formatCurrency } from '@/utils/formatters';
-import { useToast } from '@/components/ui/use-toast';
+  ExternalLink,
+} from "lucide-react";
+import Layout from "@/components/Layout";
+import { AdminLayout } from "@/components/AdminLayout";
+import { useOrders } from "@/hooks/useOrders";
+import { Order, TrackingInfo } from "@/types/product";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TrackingInfoDialog } from "@/components/admin/orders/TrackingInfoDialog";
+import { formatDate, formatCurrency } from "@/utils/formatters";
+import { useToast } from "@/components/ui/use-toast";
+import { EditOrderDialog } from "@/components/admin/orders/EditOrderDialog";
 
 const OrderDetail = () => {
   const { id: orderId } = useParams<{ id: string }>();
-  const { getOrderById, handleStatusChange, handleUpdateOrder, fetchTrackingInfo, handleTrackingSubmit, isLoading: isLoadingOrders } = useOrders();
+  const {
+    getOrderById,
+    handleStatusChange,
+    handleUpdateOrder,
+    fetchTrackingInfo,
+    handleTrackingSubmit,
+    isLoading: isLoadingOrders,
+    isSubmitting,
+  } = useOrders();
   const [order, setOrder] = useState<Order | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -82,15 +91,15 @@ const OrderDetail = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending':
+      case "pending":
         return <ClipboardCheck className="h-5 w-5" />;
-      case 'processing':
+      case "processing":
         return <Package className="h-5 w-5" />;
-      case 'shipped':
+      case "shipped":
         return <Truck className="h-5 w-5" />;
-      case 'delivered':
+      case "delivered":
         return <CheckCircle className="h-5 w-5" />;
-      case 'cancelled':
+      case "cancelled":
         return <XCircle className="h-5 w-5" />;
       default:
         return null;
@@ -99,27 +108,27 @@ const OrderDetail = () => {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'outline';
-      case 'processing':
-        return 'secondary';
-      case 'shipped':
-        return 'default';
-      case 'delivered':
-        return 'success';
-      case 'cancelled':
-        return 'destructive';
+      case "pending":
+        return "outline";
+      case "processing":
+        return "secondary";
+      case "shipped":
+        return "default";
+      case "delivered":
+        return "success";
+      case "cancelled":
+        return "destructive";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
   const handleChangeStatus = (status: string) => {
     if (order && orderId) {
-      handleStatusChange(orderId, status as Order['status']);
+      handleStatusChange(orderId, status as Order["status"]);
       setOrder({
         ...order,
-        status: status as Order['status']
+        status: status as Order["status"],
       });
     }
   };
@@ -136,10 +145,10 @@ const OrderDetail = () => {
         <AdminLayout>
           <div className="container mx-auto py-8">
             <div className="flex items-center gap-2 mb-6">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
-                onClick={() => navigate('/admin/orders')}
+                onClick={() => navigate("/admin/orders")}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Orders
@@ -163,10 +172,10 @@ const OrderDetail = () => {
         <AdminLayout>
           <div className="container mx-auto py-8">
             <div className="flex items-center gap-2 mb-6">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
-                onClick={() => navigate('/admin/orders')}
+                onClick={() => navigate("/admin/orders")}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Orders
@@ -175,7 +184,7 @@ const OrderDetail = () => {
             <div className="text-center py-12">
               <h2 className="text-2xl font-bold mb-2">Order Not Found</h2>
               <p className="mb-6">The requested order could not be found.</p>
-              <Button onClick={() => navigate('/admin/orders')}>
+              <Button onClick={() => navigate("/admin/orders")}>
                 Return to Orders
               </Button>
             </div>
@@ -191,27 +200,24 @@ const OrderDetail = () => {
         <div className="container mx-auto py-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
-                onClick={() => navigate('/admin/orders')}
+                onClick={() => navigate("/admin/orders")}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Orders
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => setShowTrackingDialog(true)}
               >
                 <Truck className="mr-2 h-4 w-4" />
-                {order.trackingInfo ? 'Update Tracking' : 'Add Tracking'}
+                {order.trackingInfo ? "Update Tracking" : "Add Tracking"}
               </Button>
-              <Button 
-                variant="outline"
-                onClick={() => navigate(`/admin/orders/${order.id}/edit`)}
-              >
+              <Button variant="outline" onClick={() => setShowEditDialog(true)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Order
               </Button>
@@ -224,7 +230,9 @@ const OrderDetail = () => {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-2xl">Order #{order.id}</CardTitle>
+                    <CardTitle className="text-2xl">
+                      Order #{order.id}
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground">
                       Placed on {formatDate(order.createdAt)}
                     </p>
@@ -238,8 +246,12 @@ const OrderDetail = () => {
                         <SelectValue>
                           <div className="flex items-center">
                             {getStatusIcon(order.status)}
-                            <Badge variant={getStatusBadgeVariant(order.status)} className="ml-2">
-                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                            <Badge
+                              variant={getStatusBadgeVariant(order.status)}
+                              className="ml-2"
+                            >
+                              {order.status.charAt(0).toUpperCase() +
+                                order.status.slice(1)}
                             </Badge>
                           </div>
                         </SelectValue>
@@ -257,19 +269,29 @@ const OrderDetail = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-lg font-medium">Customer Information</h3>
+                      <h3 className="text-lg font-medium">
+                        Customer Information
+                      </h3>
                       <p>Name: {order.userName}</p>
                       <p>Email: {order.email}</p>
                     </div>
-                    
+
                     <Separator />
-                    
+
                     <div>
-                      <h3 className="text-lg font-medium">Payment Information</h3>
-                      <p>Method: {order.paymentMethod.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</p>
+                      <h3 className="text-lg font-medium">
+                        Payment Information
+                      </h3>
+                      <p>
+                        Method:{" "}
+                        {order.paymentMethod
+                          .split("-")
+                          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                          .join(" ")}
+                      </p>
                       <p>Status: {order.invoiceStatus || "Pending"}</p>
                     </div>
-                    
+
                     {order.notes && (
                       <>
                         <Separator />
@@ -305,21 +327,29 @@ const OrderDetail = () => {
                       {order.trackingInfo.shippedDate && (
                         <div className="flex justify-between">
                           <span className="font-medium">Shipped Date:</span>
-                          <span>{formatDate(order.trackingInfo.shippedDate)}</span>
+                          <span>
+                            {formatDate(order.trackingInfo.shippedDate)}
+                          </span>
                         </div>
                       )}
                       {order.trackingInfo.estimatedDeliveryDate && (
                         <div className="flex justify-between">
-                          <span className="font-medium">Estimated Delivery:</span>
-                          <span>{formatDate(order.trackingInfo.estimatedDeliveryDate)}</span>
+                          <span className="font-medium">
+                            Estimated Delivery:
+                          </span>
+                          <span>
+                            {formatDate(
+                              order.trackingInfo.estimatedDeliveryDate
+                            )}
+                          </span>
                         </div>
                       )}
                       {order.trackingInfo.trackingUrl && (
                         <div className="pt-2">
                           <Button variant="outline" size="sm" asChild>
-                            <a 
-                              href={order.trackingInfo.trackingUrl} 
-                              target="_blank" 
+                            <a
+                              href={order.trackingInfo.trackingUrl}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-2"
                             >
@@ -333,7 +363,7 @@ const OrderDetail = () => {
                   </CardContent>
                 </Card>
               )}
-              
+
               {/* Order Items */}
               <Card>
                 <CardHeader>
@@ -342,13 +372,13 @@ const OrderDetail = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {order.items.map((item, index) => (
-                      <div 
-                        key={`${item.product.id}-${index}`} 
+                      <div
+                        key={`${item.product.id}-${index}`}
                         className="flex items-center gap-4 border-b pb-4 last:border-0"
                       >
                         <div className="w-16 h-16 flex-shrink-0">
-                          <img 
-                            src={item.product.image || '/placeholder.svg'} 
+                          <img
+                            src={item.product.image || "/placeholder.svg"}
                             alt={item.product.name}
                             className="w-full h-full object-cover rounded"
                           />
@@ -364,7 +394,8 @@ const OrderDetail = () => {
                             {formatCurrency(item.product.price)}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Subtotal: {formatCurrency(item.quantity * item.product.price)}
+                            Subtotal:{" "}
+                            {formatCurrency(item.quantity * item.product.price)}
                           </p>
                         </div>
                       </div>
@@ -373,7 +404,7 @@ const OrderDetail = () => {
                 </CardContent>
               </Card>
             </div>
-            
+
             <div className="lg:w-1/3 space-y-6">
               {/* Order Summary */}
               <Card>
@@ -384,11 +415,17 @@ const OrderDetail = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
-                      <span>{formatCurrency(order.total - (order.shippingOption?.price || 0))}</span>
+                      <span>
+                        {formatCurrency(
+                          order.total - (order.shippingOption?.price || 0)
+                        )}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Shipping:</span>
-                      <span>{formatCurrency(order.shippingOption?.price || 0)}</span>
+                      <span>
+                        {formatCurrency(order.shippingOption?.price || 0)}
+                      </span>
                     </div>
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold">
@@ -398,7 +435,7 @@ const OrderDetail = () => {
                   </div>
                 </CardContent>
               </Card>
-              
+
               {/* Shipping Information */}
               {order.shippingAddress && (
                 <Card>
@@ -407,15 +444,19 @@ const OrderDetail = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <p className="font-medium">{order.shippingAddress.name}</p>
+                      <p className="font-medium">
+                        {order.shippingAddress.name}
+                      </p>
                       <p>{order.shippingAddress.street}</p>
                       <p>
-                        {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
+                        {order.shippingAddress.city},{" "}
+                        {order.shippingAddress.state}{" "}
+                        {order.shippingAddress.postalCode}
                       </p>
                       <p>{order.shippingAddress.country}</p>
                       <p>Phone: {order.shippingAddress.phone}</p>
                     </div>
-                    
+
                     {order.shippingOption && (
                       <div className="mt-4">
                         <p className="font-medium">Shipping Method:</p>
@@ -437,8 +478,18 @@ const OrderDetail = () => {
             trackingInfo={trackingInfo}
             open={showTrackingDialog}
             onOpenChange={setShowTrackingDialog}
-            onSubmit={(orderId, trackingInfo) => handleTrackingUpdate(trackingInfo)}
+            onSubmit={(orderId, trackingInfo) =>
+              handleTrackingUpdate(trackingInfo)
+            }
             isSubmitting={false}
+          />
+          {/* Edit Order Dialog */}
+          <EditOrderDialog
+            order={order}
+            open={showEditDialog}
+            onOpenChange={setShowEditDialog}
+            onSubmit={handleUpdateOrder}
+            isSubmitting={isSubmitting}
           />
         </div>
       </AdminLayout>

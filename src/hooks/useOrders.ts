@@ -73,7 +73,25 @@ export const useOrders = () => {
 
       const { error } = await supabase
         .from("orders")
-        .update(updatedOrder)
+        .update({
+          created_at: updatedOrder.createdAt,
+          id: updatedOrder.id,
+          user_id: updatedOrder.userId,
+          user_name: updatedOrder.userName,
+          email: updatedOrder.email,
+          items: JSON.stringify(updatedOrder.items),
+          total: updatedOrder.total,
+          status: updatedOrder.status,
+          payment_method: updatedOrder.paymentMethod,
+          shipping_address: JSON.stringify(updatedOrder.shippingAddress),
+          shipping_option: updatedOrder.shippingOption
+            ? JSON.stringify(updatedOrder.shippingOption)
+            : null,
+          invoice_status: updatedOrder.invoiceStatus,
+          invoice_url: updatedOrder.invoiceUrl || "",
+          notes: updatedOrder.notes || "",
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", updatedOrder.id);
 
       if (error) throw error;
