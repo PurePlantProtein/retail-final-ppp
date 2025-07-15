@@ -396,7 +396,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 w-full">
       <div className="flex flex-col md:flex-row min-h-screen">
         {/* Left side - Signup Form */}
         <div className="w-full md:w-[45%] p-6 md:p-12 flex items-center justify-center">
@@ -473,13 +473,13 @@ const Signup = () => {
             className="absolute inset-0 w-full h-full bg-cover bg-center"
             style={{ 
               backgroundImage: "url('/lovable-uploads/ca77458f-0931-4215-a7c7-151ddc81bd55.png')",
-              opacity: 0.15
+              opacity: 1
             }}
           ></div>
           
           <div className="absolute inset-0 bg-[#25a18e]/10"></div>
           <div className="h-full overflow-y-auto p-10 relative z-10">
-            <div className="max-w-lg mx-auto">
+            {/* <div className="max-w-lg mx-auto">
               <h2 className="text-2xl font-bold mb-6 text-gray-800">Benefits of our wholesale program</h2>
               
               <Testimonial 
@@ -503,7 +503,7 @@ const Signup = () => {
                 content="Order what you need, when you need it. Our minimum order quantities are designed to be accessible for businesses of all sizes."
                 rating={4}
               />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
