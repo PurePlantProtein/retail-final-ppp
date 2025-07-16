@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useBusinessTypes } from '@/hooks/users/useBusinessTypes';
 import { Control } from 'react-hook-form';
 import {
   FormControl,
@@ -17,12 +18,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserCreateFormData } from './userCreateSchema';
+import { BusinessType } from '@/types/user';
 
 interface BusinessInfoFieldsProps {
   control: Control<UserCreateFormData>;
 }
 
 const BusinessInfoFields: React.FC<BusinessInfoFieldsProps> = ({ control }) => {
+  const { businessTypes, loading, error } = useBusinessTypes();
   return (
     <div className="grid grid-cols-2 gap-4">
       <FormField
@@ -38,7 +41,6 @@ const BusinessInfoFields: React.FC<BusinessInfoFieldsProps> = ({ control }) => {
           </FormItem>
         )}
       />
-      
       <FormField
         control={control}
         name="businessType"
@@ -48,16 +50,21 @@ const BusinessInfoFields: React.FC<BusinessInfoFieldsProps> = ({ control }) => {
             <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder={loading ? "Loading..." : "Select type"} />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="Retail Store">Retail Store</SelectItem>
-                <SelectItem value="Online Shop">Online Shop</SelectItem>
-                <SelectItem value="Gym">Gym</SelectItem>
-                <SelectItem value="Health Food Store">Health Food Store</SelectItem>
-                <SelectItem value="Supplement Shop">Supplement Shop</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                {loading ? (
+                  <SelectItem value="loading" disabled>Loading...</SelectItem>
+                ) : error ? (
+                  <SelectItem value="error" disabled>Error loading types</SelectItem>
+                ) : businessTypes.length === 0 ? (
+                  <SelectItem value="no-types" disabled>No types found</SelectItem>
+                ) : (
+                  businessTypes.map((bt: BusinessType) => (
+                    <SelectItem key={bt.id} value={bt.name}>{bt.name}</SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             <FormMessage />

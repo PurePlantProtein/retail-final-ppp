@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useBusinessTypes } from '@/hooks/users/useBusinessTypes';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@/types/user';
+import { BusinessType, User } from '@/types/user';
 
 interface PricingTier {
   id: string;
@@ -54,6 +55,8 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
     role: '',
     pricing_tier_id: 'no-tier'
   });
+
+  const { businessTypes, loading: businessTypesLoading, error: businessTypesError } = useBusinessTypes();
 
   useEffect(() => {
     if (user) {
@@ -238,12 +241,27 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
             <Label htmlFor="business_type" className="text-right">
               Business Type
             </Label>
-            <Input
-              id="business_type"
+            <Select
               value={formData.business_type}
-              onChange={(e) => handleInputChange('business_type', e.target.value)}
-              className="col-span-3"
-            />
+              onValueChange={(value) => handleInputChange('business_type', value)}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder={businessTypesLoading ? 'Loading...' : 'Select business type'} />
+              </SelectTrigger>
+              <SelectContent>
+                {businessTypesLoading ? (
+                  <SelectItem value="loading" disabled>Loading...</SelectItem>
+                ) : businessTypesError ? (
+                  <SelectItem value="error" disabled>Error loading types</SelectItem>
+                ) : businessTypes.length === 0 ? (
+                  <SelectItem value="no-types" disabled>No types found</SelectItem>
+                ) : (
+                  businessTypes.map((bt: BusinessType) => (
+                    <SelectItem key={bt.id} value={bt.name}>{bt.name}</SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">

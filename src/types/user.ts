@@ -18,3 +18,8 @@ export interface User {
   approved_at?: string;
   approved_by?: string;
 }
+
+export interface BusinessType {
+  id: string;
+  name: string;
+}

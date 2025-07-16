@@ -1,8 +1,7 @@
 
 import {
   Building2,
-  Calendar,
-  CreditCard,
+  Factory,
   DollarSign,
   FileText,
   Home,
@@ -48,7 +47,7 @@ export const customerItems: MenuItem[] = [
   },
   {
     title: "Marketing Materials",
-    url: "https://drive.google.com/drive/folders/your-folder-id",
+    url: "https://drive.google.com/drive/folders/1pxLkF92zI2sogxEISkNUQJrGwTaJK6gR?usp=drive_link",
     icon: Building2,
   },
   {
@@ -114,6 +113,11 @@ export const adminItems: MenuItem[] = [
     title: "Categories",
     url: "/admin/categories",
     icon: Building2,
+  },
+  {
+    title: "Business Types",
+    url: "/admin/business-types",
+    icon: Factory,
   },
   {
     title: "Settings",

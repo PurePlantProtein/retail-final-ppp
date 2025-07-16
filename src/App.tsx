@@ -44,6 +44,7 @@ import BulkOrderEmails from "./pages/Admin/BulkOrderEmails";
 import PricingTiersManagement from "./pages/Admin/PricingTiersManagement";
 import ShippingSettings from "./pages/Admin/ShippingSettings";
 import CategoriesManagement from "./pages/Admin/CategoriesManagement";
+import BusinessTypesManagement from "./pages/Admin/BusinessTypesManagement";
 
 const queryClient = new QueryClient();
 
@@ -243,6 +244,14 @@ function App() {
                           element={
                             <ProtectedRoute>
                               <CategoriesManagement />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/business-types"
+                          element={
+                            <ProtectedRoute>
+                              <BusinessTypesManagement />
                             </ProtectedRoute>
                           }
                         />

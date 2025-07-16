@@ -11,7 +11,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { customerItems, adminItems } from "./sidebar/menuItems"
 import { AppSidebarMenuItem } from "./sidebar/SidebarMenuItem"
-import { AppSidebarFooter } from "./sidebar/SidebarFooter"
 
 export function AppSidebar() {
   const { isAdmin } = useAuth()

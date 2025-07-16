@@ -38,16 +38,8 @@ const AUS_STATES = [
   { value: 'NT', label: 'Northern Territory' }
 ];
 
-// Business types
-const BUSINESS_TYPES = [
-  "Gym",
-  "Health Store",
-  "Online Store",
-  "Nutrition Shop",
-  "Fitness Center",
-  "Pharmacy",
-  "Other"
-];
+import { useBusinessTypes } from '@/hooks/users/useBusinessTypes';
+import { BusinessType } from '@/types/user';
 
 const Signup = () => {
   // Form data states
@@ -56,6 +48,9 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
+
+  // Business types from hook
+  const { businessTypes, loading: businessTypesLoading, error: businessTypesError } = useBusinessTypes();
   
   // Shipping address states
   const [name, setName] = useState('');
@@ -252,12 +247,20 @@ const Signup = () => {
             <Label htmlFor="businessType" className="text-sm font-medium">Business Type</Label>
             <Select value={businessType} onValueChange={setBusinessType}>
               <SelectTrigger className="mt-1 w-full">
-                <SelectValue placeholder="Select your business type" />
+                <SelectValue placeholder={businessTypesLoading ? 'Loading...' : 'Select your business type'} />
               </SelectTrigger>
               <SelectContent>
-                {BUSINESS_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
+                {businessTypesLoading ? (
+                  <SelectItem value="loading" disabled>Loading...</SelectItem>
+                ) : businessTypesError ? (
+                  <SelectItem value="error" disabled>Error loading types</SelectItem>
+                ) : businessTypes.length === 0 ? (
+                  <SelectItem value="no-types" disabled>No types found</SelectItem>
+                ) : (
+                  businessTypes.map((bt: BusinessType) => (
+                    <SelectItem key={bt.id} value={bt.name}>{bt.name}</SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500 mt-1">This helps us tailor our services to your business needs</p>
