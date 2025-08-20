@@ -274,8 +274,6 @@ app.post('/api/functions/:name', authMiddleware, async (req, res) => {
       case 'create-user': {
         // Minimal local implementation of the Supabase "create-user" function used by the frontend.
         // Creates a users row, a profiles row (id = users.id), and a user_roles row. Optionally emails credentials.
-        // Support both direct payloads and the Supabase-edge style { body: { ... } } envelope.
-        const body = (payload && payload.body) ? payload.body : (payload || {});
         const {
           email,
           businessName,
@@ -289,7 +287,7 @@ app.post('/api/functions/:name', authMiddleware, async (req, res) => {
           postalCode,
           emailCredentials = true,
           currentUserId
-        } = body;
+        } = payload || {};
 
         if (!email) return res.status(400).json({ error: 'missing email' });
 
