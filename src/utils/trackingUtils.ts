@@ -113,7 +113,7 @@ export const getEstimatedDeliveryDate = (carrier: string): string | null => {
   }
   
   // Calculate delivery date (excluding weekends)
-  let deliveryDate = new Date(today);
+  const deliveryDate = new Date(today);
   let addedDays = 0;
   
   while (addedDays < deliveryDays) {

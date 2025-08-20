@@ -100,7 +100,7 @@ export const useCartCheckout = () => {
 
   // Helper function to send order confirmation emails
   const sendOrderConfirmationEmails = async (order: Order) => {
-    let emailResults = {
+  const emailResults = {
       customerEmailSent: false,
       adminEmailSent: false,
       dispatchEmailSent: false,

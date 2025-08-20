@@ -18,14 +18,15 @@ export const useFetchProfile = (
       console.log('Fetching profile for user:', userId);
       
       // First, check if the profile exists
-      let { data, error } = await supabase
+      const { data: fetchedData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       // If no profile exists, create one
-      if (error || !data) {
+  let data = fetchedData;
+  if (error || !data) {
         console.log('Profile not found, creating profile for user:', userId);
         
         // Get user email from auth.users indirectly through the session
