@@ -1,0 +1,44 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    version: '3.8'
+    services:
+      db:
+        image: postgres:15-alpine
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        volumes:
+          - dbdata:/var/lib/postgresql/data
+          - ./docker/init:/docker-entrypoint-initdb.d:ro
+        healthcheck:
+          test: ["CMD-SHELL","pg_isready -U postgres"]
+          interval: 10s
+          retries: 5
+
+      api:
+        build:
+          context: ./server
+          dockerfile: Dockerfile
+        environment:
+          DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+          JWT_SECRET: super-secret-for-dev
+        depends_on:
+          db:
+            condition: service_healthy
+        ports:
+          - "4000:4000"
+
+      web:
+        build:
+          context: .
+          dockerfile: ./docker/Dockerfile.web
+        ports:
+          - "80:80"
+        depends_on:
+          - api
+
+    volumes:
+      dbdata:
+      storagedata:
