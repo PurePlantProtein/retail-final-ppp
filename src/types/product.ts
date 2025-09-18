@@ -345,6 +345,9 @@ export interface CategoryDisplay {
 export interface OrderItem {
   product: Product;
   quantity: number;
+  // Optional manual line price used by admin-created or manually-updated orders
+  // kept in snake_case to match server payloads
+  unit_price?: number;
 }
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';

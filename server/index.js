@@ -769,6 +769,74 @@ app.post('/api/admin/orders', authMiddleware, async (req, res) => {
   }
 });
 
+// Admin: update order including items; send notification emails when updated manually
+app.put('/api/admin/orders/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const id = req.params.id;
+    const {
+      user_name, email, status, payment_method, invoice_status, invoice_url,
+      notes, items, shipping_address, shipping_option, total
+    } = req.body || {};
+
+    // Normalize JSON-capable fields
+    const tryJson = (v) => {
+      if (v == null) return null;
+      if (typeof v === 'string') { try { return JSON.parse(v); } catch { return v; } }
+      return v;
+    };
+    const upd = {
+      user_name: user_name ?? null,
+      email: email ?? null,
+      status: status ?? null,
+      payment_method: payment_method ?? null,
+      invoice_status: invoice_status ?? null,
+      invoice_url: invoice_url ?? null,
+      notes: notes ?? null,
+      items: items != null ? JSON.stringify(items) : null,
+      shipping_address: shipping_address != null ? JSON.stringify(tryJson(shipping_address)) : null,
+      shipping_option: shipping_option != null ? JSON.stringify(tryJson(shipping_option)) : null,
+      total: total != null ? Number(total) : null
+    };
+    const keys = Object.keys(upd).filter(k => upd[k] !== null);
+    if (!keys.length) return res.status(400).json({ error: 'no_fields_to_update' });
+    const assigns = keys.map((k,i)=>`${k}=$${i+1}`).join(', ');
+    const vals = keys.map(k => upd[k]);
+    const sql = `UPDATE orders SET ${assigns}, updated_at=now() WHERE id=$${keys.length+1} RETURNING *`;
+    const { rows } = await pool.query(sql, [...vals, id]);
+    const row = rows[0];
+
+    // Send notifications
+    let email_sent = false;
+    try {
+      const toList = [];
+      const sales = process.env.SALES_EMAIL || 'sales@ppprotein.com.au';
+      const accounts = process.env.ACCOUNTS_EMAIL || 'accounts@ppprotein.com.au';
+      const ordersEmail = process.env.ORDERS_EMAIL || 'orders@ppprotein.com.au';
+      const customer = row?.email || null;
+      [accounts, sales, ordersEmail, customer].forEach(e => { if (e) toList.push(e); });
+      if (resendClient && toList.length) {
+        const from = process.env.RESEND_FROM || 'no-reply@example.com';
+        const subject = `Order ${id} was manually updated`;
+        const html = `<p>Order <strong>${id}</strong> has been updated by an admin.</p>
+          <ul>
+            <li>Status: ${row.status}</li>
+            <li>Total: ${row.total}</li>
+            <li>Payment: ${row.payment_method || ''}</li>
+          </ul>
+          <p>View details in the admin portal.</p>`;
+        await resendClient.send({ from, to: toList, subject, html, text: `Order ${id} updated. Status=${row.status} Total=${row.total}` });
+        email_sent = true;
+      }
+    } catch (e) { console.error('update order email failed', e); }
+
+    return res.json({ data: row, email_sent });
+  } catch (err) {
+    console.error('admin update order error', err);
+    return res.status(500).json({ error: 'update_failed', message: err.message });
+  }
+});
+
 // Admin: save tracking info for an order
 app.post('/api/orders/:id/tracking', authMiddleware, async (req, res) => {
   try {

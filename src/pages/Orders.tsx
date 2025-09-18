@@ -102,21 +102,22 @@ const Orders = () => {
                                 className="flex items-center gap-4 py-3"
                               >
                                 <div className="w-16 h-16 flex-shrink-0">
-                                  <img 
-                                    src={item.product.image} 
+                                  <img
+                                    src={item.product.image || '/placeholder.svg'}
+                                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
                                     alt={item.product.name}
-                                    className="w-full h-full object-cover rounded"
+                                    className="w-full h-full object-cover rounded border"
                                   />
                                 </div>
                                 <div className="flex-grow">
                                   <p className="font-medium">{item.product.name}</p>
                                   <p className="text-sm text-gray-600">
-                                    Qty: {item.quantity} × {formatCurrency(item.product.price as any)}
+                                    Qty: {item.quantity} × {formatCurrency((item.unit_price != null ? Number(item.unit_price) : (typeof item.product.price === 'string' ? parseFloat(item.product.price) : (item.product.price || 0))) as any)}
                                   </p>
                                 </div>
                                 <div className="text-right">
                                   <p className="font-medium">
-                                    {formatCurrency((Number(item.quantity) || 0) * (typeof item.product.price === 'string' ? parseFloat(item.product.price) : (item.product.price || 0)))}
+                                    {formatCurrency((Number(item.quantity) || 0) * (item.unit_price != null ? Number(item.unit_price) : (typeof item.product.price === 'string' ? parseFloat(item.product.price) : (item.product.price || 0))))}
                                   </p>
                                 </div>
                               </div>

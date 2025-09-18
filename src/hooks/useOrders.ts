@@ -24,6 +24,26 @@ export const useOrders = () => {
       const { data: rawOrders, error } = await supabase.from("orders").select("*");
       if (error) throw error;
 
+      // 1) Pre-enrich items with product details when only product_id is present
+      let productMap: Record<string, any> = {};
+      try {
+        const needed = new Set<string>();
+        for (const ro of rawOrders || []) {
+          const items = typeof ro.items === 'string' ? JSON.parse(ro.items) : (ro.items || []);
+          for (const it of Array.isArray(items) ? items : []) {
+            const pid = it?.product?.id || it?.product_id;
+            if (!it?.product && pid) needed.add(String(pid));
+          }
+        }
+        if (needed.size) {
+          const ids = Array.from(needed);
+          const { data: prods } = await supabase.from('products').select('*').in('id', ids);
+          for (const p of prods || []) productMap[String(p.id)] = p;
+        }
+      } catch (e) {
+        console.warn('orders enrichment failed', e);
+      }
+
       // Build a map of tracking info for these orders
       let trackingMap: Record<string, TrackingInfo> = {};
       if (rawOrders && rawOrders.length) {
@@ -53,6 +73,20 @@ export const useOrders = () => {
       }
 
       const fetchedOrders = rawOrders?.map(o => {
+        // Enrich each order's items before normalization, so normalizeOrder can map product correctly
+        try {
+          const items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []);
+          const enriched = (Array.isArray(items) ? items : []).map((it: any) => {
+            if (!it.product && (it.product_id || it.id)) {
+              const pid = String(it.product_id || it.id);
+              const p = productMap[pid];
+              if (p) return { ...it, product: p };
+            }
+            return it;
+          });
+          o = { ...o, items: JSON.stringify(enriched) } as any;
+        } catch {}
+
         const base = normalizeOrder(o as any);
         const ti = trackingMap[base.id];
         return ti ? { ...base, trackingInfo: ti } : base;
@@ -103,48 +137,44 @@ export const useOrders = () => {
     try {
       setIsSubmitting(true);
 
-      const { error } = await supabase
-        .from("orders")
-        .update({
-          created_at: updatedOrder.createdAt,
-          id: updatedOrder.id,
-          user_id: updatedOrder.userId,
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(updatedOrder.id)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {})
+        },
+        body: JSON.stringify({
           user_name: updatedOrder.userName,
           email: updatedOrder.email,
-          items: JSON.stringify(updatedOrder.items),
-          total: updatedOrder.total,
           status: updatedOrder.status,
           payment_method: updatedOrder.paymentMethod,
-          shipping_address: JSON.stringify(updatedOrder.shippingAddress),
-          shipping_option: updatedOrder.shippingOption
-            ? JSON.stringify(updatedOrder.shippingOption)
-            : null,
           invoice_status: updatedOrder.invoiceStatus,
-          invoice_url: updatedOrder.invoiceUrl || "",
-          notes: updatedOrder.notes || "",
-          updated_at: new Date().toISOString(),
+          invoice_url: updatedOrder.invoiceUrl,
+          notes: updatedOrder.notes,
+          items: updatedOrder.items,
+          shipping_address: updatedOrder.shippingAddress,
+          shipping_option: updatedOrder.shippingOption,
+          total: updatedOrder.total
         })
-        .eq("id", updatedOrder.id);
+      });
+      const body = await res.json();
+      if (!res.ok || body.error) throw new Error(body.error || 'failed');
 
-      if (error) throw error;
-
-      setOrders(current =>
-        current.map(order =>
-          order.id === updatedOrder.id ? updatedOrder : order
-        )
-      );
+      // Normalize server response
+      const normalized = normalizeOrder(body.data);
+      setOrders(current => current.map(order => order.id === normalized.id ? { ...normalized } : order));
 
       toast({
         title: "Order Updated",
-        description: `Order #${updatedOrder.id} has been updated successfully.`,
+        description: `Order #${updatedOrder.id} has been updated successfully${body.email_sent ? ' and notifications were sent.' : '.'}`,
       });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating order:", error);
       toast({
         variant: "destructive",
         title: "Update Failed",
-        description: "There was a problem updating the order.",
+        description: error.message || "There was a problem updating the order.",
       });
       return false;
     } finally {

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm, SubmitHandler, useFieldArray } from 'react-hook-form';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Order, OrderStatus } from '@/types/product';
+import { supabase } from '@/integrations/supabase/client';
+import { Button as GhostButton } from '@/components/ui/button';
 
 type FormValues = {
   userName: string;
@@ -27,6 +29,7 @@ type FormValues = {
   paymentMethod: string;
   invoiceUrl: string;
   notes: string;
+  items: Array<{ product_id: string; quantity: number; unit_price?: number }>;
 };
 
 interface EditOrderDialogProps {
@@ -44,7 +47,9 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
   onSubmit,
   isSubmitting
 }) => {
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>();
+  const { register, handleSubmit, control, setValue, formState: { errors }, watch } = useForm<FormValues>({ defaultValues: { items: [] } });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: 'items' });
+  const [productOptions, setProductOptions] = React.useState<Array<{ id: string; name: string; price: number }>>([]);
 
   React.useEffect(() => {
     if (order) {
@@ -53,8 +58,21 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
       setValue("paymentMethod", order.paymentMethod);
       setValue("invoiceUrl", order.invoiceUrl || "");
       setValue("notes", order.notes || "");
+      const mapped = order.items.map(it => ({
+        product_id: (it as any).product_id || it.product.id,
+        quantity: Number(it.quantity) || 1,
+        unit_price: (it as any).unit_price != null ? Number((it as any).unit_price) : undefined,
+      }));
+      replace(mapped);
     }
   }, [order, setValue]);
+
+  React.useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('products').select('id,name,price').order('name');
+      setProductOptions((data as any[]) || []);
+    })();
+  }, []);
 
   const handleFormSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!order) return;
@@ -66,6 +84,11 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
       paymentMethod: data.paymentMethod,
       invoiceUrl: data.invoiceUrl,
       notes: data.notes,
+      items: data.items.map((l) => ({
+        product: { ...(order?.items.find(i => (i as any).product_id === l.product_id || i.product.id === l.product_id)?.product || {}), id: l.product_id } as any,
+        quantity: Number(l.quantity) || 1,
+        unit_price: l.unit_price != null ? Number(l.unit_price) : undefined,
+      })) as any,
     };
     
     const success = await onSubmit(updatedOrder);
@@ -149,6 +172,37 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
                 className="col-span-3"
                 {...register("notes")}
               />
+            </div>
+
+            {/* Items editor */}
+            <div className="col-span-4">
+              <label className="block text-sm font-medium mb-1">Items</label>
+              <div className="space-y-2">
+                {fields.map((field, idx) => {
+                  const productId = watch(`items.${idx}.product_id` as const);
+                  const product = productOptions.find(p => p.id === productId);
+                  return (
+                    <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
+                      <div className="col-span-6">
+                        <select className="w-full border rounded px-2 py-2" {...register(`items.${idx}.product_id` as const)}>
+                          <option value="">Select product</option>
+                          {productOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <Input type="number" min={1} {...register(`items.${idx}.quantity` as const, { valueAsNumber: true })} />
+                      </div>
+                      <div className="col-span-3">
+                        <Input type="number" step="0.01" placeholder={product ? String(product.price) : 'Override'} {...register(`items.${idx}.unit_price` as const, { valueAsNumber: true })} />
+                      </div>
+                      <div className="col-span-1 text-right">
+                        <GhostButton type="button" variant="ghost" onClick={()=>remove(idx)}>✕</GhostButton>
+                      </div>
+                    </div>
+                  );
+                })}
+                <GhostButton type="button" variant="outline" onClick={()=>append({ product_id: '', quantity: 1 })}>Add Item</GhostButton>
+              </div>
             </div>
           </div>
           <DialogFooter>
