@@ -13,6 +13,8 @@ import { OrdersTable } from '@/components/admin/orders/OrdersTable';
 import { EditOrderDialog } from '@/components/admin/orders/EditOrderDialog';
 import { DeleteOrderDialog } from '@/components/admin/orders/DeleteOrderDialog';
 import { TrackingInfoDialog } from '@/components/admin/orders/TrackingInfoDialog';
+import { CreateOrderDialog } from '@/components/admin/orders/CreateOrderDialog';
+import { Button } from '@/components/ui/button';
 import { useOrders } from '@/hooks/useOrders';
 import { Order, OrderStatus, TrackingInfo } from '@/types/product';
 
@@ -27,13 +29,15 @@ const OrdersManagement = () => {
     handleUpdateOrder,
     handleDeleteOrder,
     fetchTrackingInfo,
-    handleTrackingSubmit
+    handleTrackingSubmit,
+    createAdminOrder
   } = useOrders();
   
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const openEditDialog = (order: Order) => {
     setSelectedOrder(order);
@@ -73,6 +77,9 @@ const OrdersManagement = () => {
       <Layout>
         <div className="container mx-auto py-8">
           <h1 className="text-3xl font-bold mb-6">Orders Management</h1>
+          <div className="mb-4">
+            <Button onClick={() => setShowCreateDialog(true)} variant="default" size="sm">+ Create Order</Button>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Orders</CardTitle>
@@ -104,8 +111,13 @@ const OrdersManagement = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Orders</CardTitle>
-            <CardDescription>Manage customer orders and tracking information</CardDescription>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
+              <div>
+                <CardTitle>Orders</CardTitle>
+                <CardDescription>Manage customer orders and tracking information</CardDescription>
+              </div>
+              <Button onClick={() => setShowCreateDialog(true)} size="sm">Create Order</Button>
+            </div>
           </CardHeader>
           <CardContent>
             {orders.length === 0 ? (
@@ -149,6 +161,13 @@ const OrdersManagement = () => {
           open={showTrackingDialog}
           onOpenChange={setShowTrackingDialog}
           onSubmit={handleTrackingSubmit}
+          isSubmitting={isSubmitting}
+        />
+
+        <CreateOrderDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onCreate={createAdminOrder}
           isSubmitting={isSubmitting}
         />
       </div>

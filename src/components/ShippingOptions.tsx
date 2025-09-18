@@ -1,5 +1,6 @@
 
 import React, { useEffect } from 'react';
+import { formatCurrency } from '@/utils/formatters';
 import { ShippingOption } from '@/types/product';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -92,7 +93,7 @@ const ShippingOptions: React.FC<ShippingOptionsProps> = ({
             </div>
           </div>
           <div className="font-medium">
-            {option.price > 0 ? `$${option.price.toFixed(2)}` : (
+            {option.price > 0 ? `${formatCurrency(option.price as any)}` : (
               <span className="text-green-600 font-bold">FREE</span>
             )}
           </div>

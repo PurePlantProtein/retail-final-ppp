@@ -28,25 +28,16 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already authenticated and on this page due to recovery flow
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        // User is authenticated via recovery flow
-        console.log('Password recovery flow detected');
-      } else if (session?.user && event !== 'TOKEN_REFRESHED' && event !== 'SIGNED_IN') {
-        // User is already logged in and not in recovery flow - redirect them
-        navigate('/products');
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate]);
+    // Extract token from query string
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get('token');
+    setToken(t);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -62,33 +53,28 @@ const ResetPassword = () => {
       return;
     }
     
+    if (!token) {
+      setErrorMessage("Reset link is invalid or missing.");
+      return;
+    }
+
     setIsLoading(true);
-    
+
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
+      const res = await fetch('/api/auth/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password })
       });
-      
-      if (error) throw error;
-      
+      const body = await res.json();
+      if (!res.ok || body?.error) throw new Error(body?.error || 'Reset failed');
+
       setIsSuccess(true);
-      
-      toast({
-        title: "Success",
-        description: "Your password has been reset successfully.",
-      });
-      
-      // Redirect after a short delay
-      setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+      toast({ title: 'Success', description: 'Your password has been reset successfully.' });
+      setTimeout(() => navigate('/login'), 2000);
     } catch (error: any) {
-      setErrorMessage(error.message || "Failed to reset password");
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reset password",
-        variant: "destructive",
-      });
+      setErrorMessage(error.message || 'Failed to reset password');
+      toast({ title: 'Error', description: error.message || 'Failed to reset password', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +91,7 @@ const ResetPassword = () => {
                 src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=200" 
                 alt="PP Protein" 
                 className="h-10 mb-8" 
+                onError={(e)=>{(e.target as HTMLImageElement).src='/favicon.ico';}} 
               />
               <h1 className="text-3xl font-bold mb-2">Set New Password</h1>
               <p className="text-gray-600">
@@ -160,7 +147,7 @@ const ResetPassword = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-[#25a18e] hover:bg-[#1e8a77]" 
-                  disabled={isLoading}
+                  disabled={isLoading || !token}
                 >
                   {isLoading ? "Resetting..." : "Reset Password"}
                 </Button>

@@ -49,32 +49,39 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
     try {
       setIsUploading(true);
-      
-      // Create a unique file name to prevent overwriting
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+
+      // Create a client-side name; server will generate a safe filename regardless
+      const fileExt = file.name.includes('.') ? file.name.split('.').pop() : '';
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}${fileExt ? `.${fileExt}` : ''}`;
       const filePath = `${fileName}`;
-      
-      // Upload the file to Supabase Storage
+
+      // Upload via our supabase shim (which calls the backend /api/storage/product_images/upload)
       const { data, error } = await supabase.storage
         .from('product_images')
         .upload(filePath, file);
-        
+
       if (error) throw error;
-      
-      // Get the public URL for the uploaded file
-      const { data: publicUrlData } = supabase.storage
-        .from('product_images')
-        .getPublicUrl(filePath);
-        
-      const publicUrl = publicUrlData.publicUrl;
-      
+      if (!data || (data && (data.error || (!data.url && data.ok !== true)))) {
+        const msg = (data && (data.error || data.message)) || 'Upload failed';
+        throw new Error(msg);
+      }
+
+      // Prefer backend-provided URL (server returns { ok, url, filename })
+      let publicUrl: string | null = (data && data.url) ? data.url : null;
+      if (!publicUrl) {
+        // Fallback to constructing a public URL using the client path (legacy behavior)
+        const { data: publicUrlData } = supabase.storage
+          .from('product_images')
+          .getPublicUrl(filePath);
+        publicUrl = publicUrlData.publicUrl;
+      }
+
       // Set the preview image
-      setPreviewUrl(publicUrl);
-      
+      setPreviewUrl(publicUrl!);
+
       // Call the callback with the URL
-      onImageUploaded(publicUrl);
-      
+      onImageUploaded(publicUrl!);
+
       toast({
         title: "Image uploaded successfully",
         description: "Your product image has been uploaded.",

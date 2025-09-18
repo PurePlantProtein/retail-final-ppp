@@ -9,6 +9,11 @@ import { Json } from '@/integrations/supabase/types';
 export const mapProductForClient = (product: any): Product => {
   if (!product) return {} as Product;
   
+  // Ensure numeric fields are proper numbers (pg numeric may come back as strings)
+  const priceNum = typeof product.price === 'string' ? parseFloat(product.price) : (product.price ?? 0);
+  const stockNum = typeof product.stock === 'string' ? parseInt(product.stock, 10) : (product.stock ?? 0);
+  const weightNum = typeof product.weight === 'string' ? parseFloat(product.weight) : product.weight;
+
   // Handle conversion of JSON types
   let aminoAcidProfile: AminoAcid[] | null = null;
   if (product.amino_acid_profile) {
@@ -49,12 +54,15 @@ export const mapProductForClient = (product: any): Product => {
 
   return {
     ...product,
+  price: Number.isFinite(priceNum) ? priceNum : 0,
+  stock: Number.isFinite(stockNum) ? stockNum : 0,
+  weight: typeof weightNum === 'number' && Number.isFinite(weightNum) ? weightNum : null,
     minQuantity: product.min_quantity,
     bagSize: product.bag_size,
     numberOfServings: product.number_of_servings,
     servingSize: product.serving_size,
-    aminoAcidProfile: aminoAcidProfile,
-    nutritionalInfo: nutritionalInfo,
+  aminoAcidProfile: aminoAcidProfile || [],
+  nutritionalInfo: nutritionalInfo || [],
     category: category,
   };
 };
@@ -77,12 +85,15 @@ export const mapProductForStorage = (product: Partial<Product>): any => {
 
   return {
     ...rest,
+  // Ensure price is numeric when sending to DB
+  price: typeof (rest as any).price === 'string' ? Number((rest as any).price) : (rest as any).price,
     min_quantity: minQuantity !== undefined ? minQuantity : product.minQuantity,
     bag_size: bagSize !== undefined ? bagSize : product.bagSize,
     number_of_servings: numberOfServings !== undefined ? numberOfServings : product.numberOfServings,
     serving_size: servingSize !== undefined ? servingSize : product.servingSize,
     amino_acid_profile: aminoAcidProfile !== undefined ? (aminoAcidProfile as unknown as Json) : product.aminoAcidProfile,
     nutritional_info: nutritionalInfo !== undefined ? (nutritionalInfo as unknown as Json) : product.nutritionalInfo,
-    category: category && typeof category === 'object' ? category.id : category,
+  // Coerce category to string for frontend form compatibility but DB expects integer; let server convert to integer.
+  category: category && typeof category === 'object' ? String(category.id) : (category != null ? String(category as any) : category),
   };
 };

@@ -19,6 +19,7 @@ export type EmailSettings = {
   adminTemplate?: string;
   dispatchTemplate?: string;
   accountsTemplate?: string;
+  trackingTemplate?: string;
 };
 
 export type CartContextType = {

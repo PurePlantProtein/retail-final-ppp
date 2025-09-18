@@ -9,6 +9,9 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Minus } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { Badge } from '@/components/ui/badge';
+import { useUserPricingTier } from '@/hooks/usePricingTiers';
+import { formatCurrency } from '@/utils/formatters';
 
 interface ProductCardProps {
   product: Product;
@@ -17,27 +20,15 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
-  const [quantity, setQuantity] = useState(product.min_quantity || 1);
-
-  // Set up property aliases for cleaner code
-  useEffect(() => {
-    if (product) {
-      // Add the camelCase aliases to make the code easier to work with
-      product.minQuantity = product.min_quantity;
-      product.bagSize = product.bag_size;
-      product.numberOfServings = product.number_of_servings;
-      product.servingSize = product.serving_size;
-      product.aminoAcidProfile = product.amino_acid_profile as any;
-      product.nutritionalInfo = product.nutritional_info as any;
-    }
-  }, [product]);
+  const { userTier } = useUserPricingTier(user?.id);
+  const [quantity, setQuantity] = useState(product.minQuantity || 1);
 
   const handleIncrementQuantity = () => {
     setQuantity(prev => prev + 1);
   };
 
   const handleDecrementQuantity = () => {
-    const minQty = product.min_quantity || 1;
+  const minQty = product.minQuantity || 1;
     if (quantity > minQty) {
       setQuantity(prev => prev - 1);
     }
@@ -45,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
-    const minQty = product.min_quantity || 1;
+  const minQty = product.minQuantity || 1;
     if (!isNaN(value) && value >= minQty) {
       setQuantity(value);
     }
@@ -55,7 +46,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     addToCart(product, quantity);
   };
 
-  const minQty = product.min_quantity || 1;
+  const minQty = product.minQuantity || 1;
 
   return (
     <Card className="h-full flex flex-col overflow-hidden">
@@ -68,7 +59,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+                target.src = '/placeholder.svg';
               }}
             />
           </AspectRatio>
@@ -89,8 +80,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <p className="text-gray-600 text-sm line-clamp-2">{product.description}</p>
       </CardContent>
       <CardFooter className="flex flex-col pt-2 space-y-3 border-t">
-        <div className="flex justify-between items-center w-full">
-          <p className="font-bold text-lg">${product.price.toFixed(2)}</p>
+        <div className="flex justify-between items-center w-full gap-2">
+          <p className="font-bold text-lg">{formatCurrency(product.price as any)}</p>
+          {user && userTier?.tier?.name && (
+            <Badge variant="outline" className="ml-auto whitespace-nowrap">{userTier.tier.name} tier</Badge>
+          )}
         </div>
         
         {user ? (

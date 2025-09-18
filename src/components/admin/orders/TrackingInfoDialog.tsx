@@ -21,7 +21,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { Order, TrackingInfo } from '@/types/product';
-import { sendTrackingEmail } from '@/services/trackingEmailService';
 import { autoDetectCarrier, generateTrackingUrl, getEstimatedDeliveryDate } from '@/utils/trackingUtils';
 
 type FormValues = {
@@ -38,7 +37,8 @@ interface TrackingInfoDialogProps {
   trackingInfo?: TrackingInfo;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (orderId: string, trackingInfo: TrackingInfo) => Promise<boolean>;
+  // Updated to reflect the actual return shape from handleTrackingSubmit
+  onSubmit: (orderId: string, trackingInfo: TrackingInfo) => Promise<{ success: boolean; emailSent: boolean }>;
   isSubmitting: boolean;
 }
 
@@ -117,43 +117,24 @@ React.useEffect(() => {
 
     console.log('Button Clicked - Form Data:', trackingInfo);
     
-    const success = await onSubmit(order.id, trackingInfo);
-
-    if (success) {
-      // If saving was successful and user wants to send email
+    const result = await onSubmit(order.id, trackingInfo);
+    if (result && result.success) {
       if (data.sendEmail) {
-        setIsSendingEmail(true);
-        try {
-          const emailResult = await sendTrackingEmail(updatedOrder);
-          if (emailResult.success) {
-            toast({
-              title: "Tracking Added & Email Sent",
-              description: `Tracking information saved and notification email sent to ${order.email}.`,
-            });
-          } else {
-            toast({
-              title: "Tracking Added",
-              description: "Tracking information saved, but email could not be sent.",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error('Error sending tracking email:', error);
+        if (result.emailSent) {
           toast({
-            title: "Tracking Added",
-            description: "Tracking information saved, but email could not be sent.",
-            variant: "destructive",
+            title: 'Tracking Added & Email Sent',
+            description: `Tracking information saved and email sent to ${order.email}.`
           });
-        } finally {
-          setIsSendingEmail(false);
+        } else {
+          toast({
+            title: 'Tracking Added',
+            description: 'Tracking information saved, but email could not be sent.',
+            variant: 'destructive'
+          });
         }
       } else {
-        toast({
-          title: "Tracking Added",
-          description: "Tracking information has been saved successfully.",
-        });
+        toast({ title: 'Tracking Added', description: 'Tracking information has been saved successfully.' });
       }
-      
       onOpenChange(false);
       reset();
     }

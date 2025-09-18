@@ -17,6 +17,7 @@ import { Truck, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/hooks/useOrders';
 import { Order } from '@/types/product';
+import { formatDate, formatCurrency } from '@/utils/formatters';
 
 const Orders = () => {
   const { user } = useAuth();
@@ -110,12 +111,12 @@ const Orders = () => {
                                 <div className="flex-grow">
                                   <p className="font-medium">{item.product.name}</p>
                                   <p className="text-sm text-gray-600">
-                                    Qty: {item.quantity} × ${item.product.price.toFixed(2)}
+                                    Qty: {item.quantity} × {formatCurrency(item.product.price as any)}
                                   </p>
                                 </div>
                                 <div className="text-right">
                                   <p className="font-medium">
-                                    ${(item.quantity * item.product.price).toFixed(2)}
+                                    {formatCurrency((Number(item.quantity) || 0) * (typeof item.product.price === 'string' ? parseFloat(item.product.price) : (item.product.price || 0)))}
                                   </p>
                                 </div>
                               </div>
@@ -194,7 +195,7 @@ const Orders = () => {
                             </div>
                             <div className="flex justify-between">
                               <p>Order Total:</p>
-                              <p className="font-medium">${order.total.toFixed(2)}</p>
+                              <p className="font-medium">{formatCurrency(order.total)}</p>
                             </div>
                           </div>
                         </AccordionContent>

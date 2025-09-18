@@ -45,6 +45,8 @@ import PricingTiersManagement from "./pages/Admin/PricingTiersManagement";
 import ShippingSettings from "./pages/Admin/ShippingSettings";
 import CategoriesManagement from "./pages/Admin/CategoriesManagement";
 import BusinessTypesManagement from "./pages/Admin/BusinessTypesManagement";
+import SampleOrders from "./pages/Admin/SampleOrders";
+import SiteAssets from "./pages/Admin/SiteAssets";
 
 const queryClient = new QueryClient();
 
@@ -168,6 +170,14 @@ function App() {
                           }
                         />
                         <Route
+                          path="/admin/sample-orders"
+                          element={
+                            <ProtectedRoute>
+                              <SampleOrders />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
                           path="/admin/orders/:id"
                           element={
                             <ProtectedRoute>
@@ -252,6 +262,14 @@ function App() {
                           element={
                             <ProtectedRoute>
                               <BusinessTypesManagement />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/site-assets"
+                          element={
+                            <ProtectedRoute>
+                              <SiteAssets />
                             </ProtectedRoute>
                           }
                         />

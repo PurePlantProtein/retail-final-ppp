@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -58,7 +59,7 @@ const CartItem = ({ product, quantity, onRemove, onUpdateQuantity }: CartItemPro
                   size="icon" 
                   className="h-8 w-8"
                   onClick={() => onUpdateQuantity(product.id, quantity - 1)}
-                  disabled={quantity <= product.min_quantity}
+                  disabled={quantity <= (product.minQuantity || 0)}
                 >
                   <Minus className="h-3 w-3" />
                 </Button>
@@ -86,10 +87,10 @@ const CartItem = ({ product, quantity, onRemove, onUpdateQuantity }: CartItemPro
               
               <div className="flex flex-col items-end">
                 <p className="font-medium">
-                  ${(product.price * quantity).toFixed(2)}
+                    {formatCurrency(((typeof product.price === 'string' ? parseFloat(product.price) : product.price) || 0) * (Number(quantity) || 0))}
                 </p>
                 <p className="text-xs text-gray-500">
-                  ${product.price.toFixed(2)} each
+                  {formatCurrency(product.price as any)} each
                 </p>
               </div>
             </div>

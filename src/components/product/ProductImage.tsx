@@ -8,7 +8,7 @@ interface ProductImageProps {
 }
 
 const ProductImage: React.FC<ProductImageProps> = ({ image, name }) => {
-  const fallbackImage = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+  const fallbackImage = '/placeholder.svg';
   
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;

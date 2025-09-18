@@ -22,12 +22,13 @@ export const formatDate = (dateString: string): string => {
  * @param amount Number to format as currency
  * @returns Formatted currency string
  */
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount: number | string): string => {
   if (amount === undefined || amount === null) return '$0.00';
-  
+  const n = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const safe = Number.isFinite(n) ? n : 0;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
-  }).format(amount);
+  }).format(safe);
 };

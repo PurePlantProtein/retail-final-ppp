@@ -13,7 +13,8 @@ export const defaultEmailSettings: EmailSettings = {
   customerTemplate: '',
   adminTemplate: '',
   dispatchTemplate: '',
-  accountsTemplate: ''
+  accountsTemplate: '',
+  trackingTemplate: ''
 };
 
 export const loadEmailSettings = (): EmailSettings => {

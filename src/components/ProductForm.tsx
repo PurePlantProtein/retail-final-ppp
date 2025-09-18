@@ -24,6 +24,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ImageUploader from '@/components/ImageUploader';
+import type { Product, AminoAcid, NutritionalValue } from '@/types/product';
 
 const aminoAcidSchema = z.object({
   name: z.string(),
@@ -42,7 +43,12 @@ const productSchema = z.object({
   price: z.coerce.number().positive({ message: "Price must be a positive number" }),
   minQuantity: z.coerce.number().int().positive({ message: "Minimum quantity must be a positive integer" }).default(12),
   stock: z.coerce.number().int().nonnegative({ message: "Stock must be a non-negative integer" }),
-  image: z.string().url({ message: "Image must be a valid URL" }),
+  // Allow absolute or relative URLs for images
+  image: z.string().refine((v) => {
+    if (!v) return false;
+    // Accept http(s):// or starting with / (served by our API)
+    return /^https?:\/\//i.test(v) || v.startsWith('/');
+  }, { message: 'Image must be a valid URL' }),
   category: z.string().min(1, { message: "Please select a category" }),
   // Ensure weight is properly validated as a number
   weight: z.coerce.number().nonnegative({ message: "Weight must be a non-negative number" }).optional(),
@@ -112,11 +118,12 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
     defaultValues: product ? {
       name: product.name,
       description: product.description,
-      price: product.price,
+      // Ensure numeric default to satisfy form typing expecting number
+      price: typeof product.price === 'number' ? product.price : (parseFloat(product.price as any) || 0),
       minQuantity: product.minQuantity || 12, // Default to 12 as per MOQ requirement
       stock: product.stock,
       image: product.image,
-      category: product.category?.id || '',
+      category: (product.category?.id ?? '').toString(),
       // New fields
       weight: product.weight || 0,
       servingSize: product.servingSize || '',
@@ -151,6 +158,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
     // Include amino acid profile and nutritional info
     const formData = {
       ...data,
+      price: typeof data.price === 'number' ? data.price.toString() : data.price,
       aminoAcidProfile: aminoAcids,
       nutritionalInfo: nutritionalValues
     };
@@ -354,7 +362,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
                                 </FormControl>
                                 <SelectContent>
                                   {categories.map(cat => (
-                                    <SelectItem key={cat.id} value={cat.id}>
+                                    <SelectItem key={cat.id} value={String(cat.id)}>
                                       {cat.name}
                                     </SelectItem>
                                   ))}

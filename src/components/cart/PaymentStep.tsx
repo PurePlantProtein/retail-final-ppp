@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -81,7 +82,7 @@ const PaymentStep = ({
                       </div>
                     </div>
                     <div className="font-medium">
-                      ${selectedOption.price.toFixed(2)}
+                      {formatCurrency(selectedOption.price as any)}
                     </div>
                   </div>
                 </div>

@@ -7,6 +7,7 @@ import Layout from '@/components/Layout';
 import { ppProteinSampleProducts, importProducts } from '@/services/productService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { formatCurrency } from '@/utils/formatters';
 
 const ProductImport = () => {
   const [isImporting, setIsImporting] = useState(false);
@@ -76,7 +77,7 @@ const ProductImport = () => {
                     className="h-32 w-32 object-contain mb-2"
                   />
                   <h3 className="font-medium text-center">{product.name}</h3>
-                  <p className="text-sm text-center text-gray-500 mt-1">${product.price.toFixed(2)}</p>
+                  <p className="text-sm text-center text-gray-500 mt-1">{formatCurrency(product.price as any)}</p>
                 </div>
               ))}
             </div>

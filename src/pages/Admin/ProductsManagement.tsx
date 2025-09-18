@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import ProductForm from '@/components/ProductForm';
 import { getProducts, deleteProduct, createProduct } from '@/services/productService';
 import { Product } from '@/types/product';
-import { Plus, AlertCircle } from 'lucide-react';
+import { Plus, AlertCircle, CloudDownload } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import ProductsList from '@/components/admin/ProductsList';
 import DeleteConfirmDialog from '@/components/admin/DeleteConfirmDialog';
@@ -65,6 +65,23 @@ const ProductsManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShopifyImport = async () => {
+    try {
+      const { data } = await supabase.functions.invoke('import-shopify-products', { body: { limit: 50 } });
+      if (data?.ok) {
+        toast({ title: 'Imported from Shopify', description: `${data.inserted} inserted, ${data.updated} updated.` });
+        await loadProducts();
+      } else if (data?.error) {
+        toast({ title: 'Import failed', description: data.error, variant: 'destructive' });
+      } else {
+        toast({ title: 'Import complete', description: 'Check products list.' });
+        await loadProducts();
+      }
+    } catch (e: any) {
+      toast({ title: 'Import error', description: e?.message || 'Failed to import', variant: 'destructive' });
     }
   };
 
@@ -162,6 +179,10 @@ const ProductsManagement = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold">Product Management</h1>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button variant="secondary" onClick={handleShopifyImport} className="flex items-center gap-2">
+              <CloudDownload className="h-4 w-4" />
+              Import from Shopify
+            </Button>
             <ImageMigrationButton 
               products={products}
               onSuccess={loadProducts}

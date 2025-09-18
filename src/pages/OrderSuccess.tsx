@@ -1,14 +1,10 @@
-
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import { 
-  Card, 
-  CardContent, 
-  CardFooter, 
-} from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatters';
 
 const OrderSuccess = () => {
   const location = useLocation();
@@ -53,7 +49,7 @@ const OrderSuccess = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Total</p>
-                  <p className="font-medium">${orderDetails.total.toFixed(2)}</p>
+                  <p className="font-medium">{formatCurrency(orderDetails.total)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Payment Method</p>

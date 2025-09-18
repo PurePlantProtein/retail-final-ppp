@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Shield, AlertTriangle, Copy } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { generateSecureOrderReference } from '@/utils/securityUtils';
@@ -48,7 +49,7 @@ const BankTransferInstructions: React.FC<BankTransferInstructionsProps> = ({
             </CardDescription>
           </div>
           <div className="text-right">
-            <p className="font-semibold text-xl">${amount.toFixed(2)}</p>
+            <p className="font-semibold text-xl">{formatCurrency(amount)}</p>
             <p className="text-sm text-muted-foreground">Order #{orderId}</p>
           </div>
         </div>

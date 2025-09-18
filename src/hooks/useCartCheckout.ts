@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { useCart } from '@/contexts/CartContext';
 import { useShipping } from '@/contexts/ShippingContext';
-import { Order, ShippingOption, ShippingAddress, TrackingInfo } from '@/types/product';
+import { Order, ShippingOption, ShippingAddress } from '@/types/product';
 import { calculateShippingOptions } from '@/services/shippingService';
 import { 
   sendOrderConfirmationEmail, 
@@ -14,7 +14,7 @@ import {
 import { normalizeOrder } from '@/utils/orderUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrders } from '@/hooks/useOrders';
+// import { useOrders } from '@/hooks/useOrders';
 
 export const useCartCheckout = () => {
   const { 
@@ -28,7 +28,7 @@ export const useCartCheckout = () => {
   const { shippingAddress: savedShippingAddress, setShippingAddress } = useShipping();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { handleTrackingSubmit } = useOrders();
+  // const { handleTrackingSubmit } = useOrders();
 
   const [bankDetails] = useState({
     accountName: 'JMP Foods Pty Ltd',
@@ -178,32 +178,20 @@ export const useCartCheckout = () => {
     }
 
     console.log('Order created successfully:', data);
+    const normalized = normalizeOrder(data);
     
-    // Send order confirmation email
+    // Send configured order emails (customer + team) using helper
     try {
-      await supabase.functions.invoke('send-order-email', {
-        body: normalizeOrder(data)
-      });
-      console.log('Order confirmation email sent');
+      await sendOrderConfirmationEmails(normalized);
     } catch (emailError) {
-      console.error('Error sending order confirmation email:', emailError);
-      // Don't throw here - order was created successfully
+      console.error('Error sending configured order emails:', emailError);
+      // don't propagate
     }
 
-    return normalizeOrder(data);
+    return normalized;
   };
 
-  const submitEmptyTracking = async (orderId: string) => {
-    const emptyTracking: TrackingInfo = {
-      trackingNumber: null,
-      carrier: null,
-      trackingUrl: null,
-      shippedDate: null,
-      estimatedDeliveryDate: null
-    };
-
-    await handleTrackingSubmit(orderId, emptyTracking);
-  };
+  // Removed empty tracking submission to avoid 400s on server.
 
   const handleBankTransferCheckout = async () => {
     if (isProcessingOrder) return;
@@ -238,7 +226,7 @@ export const useCartCheckout = () => {
         updated_at: new Date().toISOString()
       });
 
-      await submitEmptyTracking(order.id);
+  // Skip creating an empty tracking record; dispatch can add tracking later.
       
       // Clear the cart first to avoid race conditions
       clearCart();

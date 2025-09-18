@@ -135,8 +135,8 @@ const OrderDetail = () => {
 
   const handleTrackingUpdate = async (trackingInfo: TrackingInfo) => {
     if (!order) return false;
-    const success = await handleTrackingSubmit(order.id, trackingInfo);
-    return success;
+    const result = await handleTrackingSubmit(order.id, trackingInfo);
+    return result.success; // consumer expects boolean
   };
 
   if (isLoading || isLoadingOrders) {

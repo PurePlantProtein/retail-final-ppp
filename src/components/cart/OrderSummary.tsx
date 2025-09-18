@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,12 +31,12 @@ const OrderSummary = ({
       <CardContent className="space-y-4">
         <div className="flex justify-between">
           <span>Subtotal</span>
-          <span>${subtotal.toFixed(2)}</span>
+          <span>{formatCurrency(subtotal)}</span>
         </div>
         <div className="flex justify-between">
           <span>Shipping</span>
           {selectedShippingOption ? (
-            <span>${selectedShippingOption.price.toFixed(2)}</span>
+            <span>{formatCurrency(selectedShippingOption.price as any)}</span>
           ) : (
             <span className="text-muted-foreground">
               {checkoutStep === 'cart' ? 'Calculated at checkout' : 'Select shipping option'}
@@ -45,7 +46,7 @@ const OrderSummary = ({
         <Separator />
         <div className="flex justify-between font-medium text-lg">
           <span>Total</span>
-          <span>${totalWithShipping.toFixed(2)}</span>
+          <span>{formatCurrency(totalWithShipping)}</span>
         </div>
         
         {checkoutStep === 'cart' && (

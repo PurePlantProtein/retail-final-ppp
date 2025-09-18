@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
+import { formatCurrency } from '@/utils/formatters';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Mail, Package } from 'lucide-react';
@@ -225,7 +226,7 @@ const BulkOrderEmails = () => {
                       )}
                       <div className="flex-1">
                         <h3 className="font-medium">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground">${product.price.toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">{formatCurrency(product.price as any)}</p>
                       </div>
                     </div>
                   ))}

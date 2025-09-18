@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Minus } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { formatCurrency } from '@/utils/formatters';
 import { getProductTierPrice, calculateEffectivePrice } from '@/types/pricing';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -158,16 +159,16 @@ const ProductPurchaseForm: React.FC<ProductPurchaseFormProps> = ({
           {quantity > 0 && (
             <div className="mt-4 text-sm text-gray-600 space-y-1 bg-gray-50 p-3 rounded-md">
               <p className="font-medium">
-                Total: ${(effectivePrice * quantity).toFixed(2)}
+                Total: {formatCurrency((Number(effectivePrice) || 0) * (Number(quantity) || 0))}
                 {savings > 0 && (
                   <span className="ml-2 text-green-600">
-                    (Saved: ${savings.toFixed(2)})
+                    (Saved: {formatCurrency(savings)})
                   </span>
                 )}
               </p>
               {effectivePrice !== price && (
                 <p className="text-xs text-gray-500">
-                  Base price: ${(price * quantity).toFixed(2)}
+                  Base price: {formatCurrency((Number(price) || 0) * (Number(quantity) || 0))}
                 </p>
               )}
             </div>

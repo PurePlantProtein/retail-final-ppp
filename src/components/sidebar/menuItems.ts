@@ -15,6 +15,7 @@ import {
   User2,
   Users,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 export interface SubMenuItem {
   title: string
@@ -24,7 +25,7 @@ export interface SubMenuItem {
 export interface MenuItem {
   title: string
   url: string
-  icon: React.ComponentType
+  icon: LucideIcon
   items?: SubMenuItem[]
 }
 
@@ -75,6 +76,11 @@ export const adminItems: MenuItem[] = [
     icon: ShoppingCart,
   },
   {
+    title: "Sample Orders",
+    url: "/admin/sample-orders",
+    icon: FileText,
+  },
+  {
     title: "Users",
     url: "/admin/users",
     icon: Users,
@@ -118,6 +124,11 @@ export const adminItems: MenuItem[] = [
     title: "Business Types",
     url: "/admin/business-types",
     icon: Factory,
+  },
+  {
+    title: "Site Assets",
+    url: "/admin/site-assets",
+    icon: Inbox,
   },
   {
     title: "Settings",

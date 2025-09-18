@@ -77,6 +77,7 @@ const ForgotPassword = () => {
                 src="https://www.ppprotein.com.au/cdn/shop/files/PPPlogo-bold.svg?v=1731701457&width=200" 
                 alt="PP Protein" 
                 className="h-10 mb-8" 
+                  onError={(e)=>{(e.target as HTMLImageElement).src='/favicon.ico';}} 
               />
               <h1 className="text-3xl font-bold mb-2">Reset Password</h1>
               <p className="text-gray-600">
@@ -134,10 +135,11 @@ const ForgotPassword = () => {
           <div className="absolute inset-0 bg-[#25a18e]/10"></div>
           <div className="h-full overflow-y-auto p-10 relative z-10">
             <div className="max-w-lg mx-auto">
-              <img 
-                src="https://ppprotein.com.au/cdn/shop/products/collagen-coffee-creamer-350g-pp-protein-414141_1000x.jpg?v=1647926202" 
+                <img 
+                  src="https://ppprotein.com.au/cdn/shop/products/collagen-coffee-creamer-350g-pp-protein-414141_1000x.jpg?v=1647926202" 
                 alt="PP Protein Products" 
                 className="w-full h-64 object-cover rounded-xl mb-8" 
+                  onError={(e)=>{(e.target as HTMLImageElement).src='/placeholder.svg';}}
               />
               
               <h2 className="text-2xl font-bold mb-6 text-gray-800">Customer Support</h2>

@@ -2,102 +2,121 @@ import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/product';
 import { mapProductForClient, mapProductForStorage } from '@/utils/productUtils';
 
-// Function to get all products
+const apiBase = '/api';
+const authHeaders = () => {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+// Function to get all products (REST)
 export const getProducts = async (): Promise<Product[]> => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*, product_categories(id, name)')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching products:', error);
-    throw new Error(error.message);
-  }
-
-  return (data || []).map((item) => mapProductForClient(item));
+  const res = await fetch(`${apiBase}/products`, { headers: { ...authHeaders() } });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body?.error || 'Failed to fetch products');
+  return (body.data || []).map((item: any) => mapProductForClient(item));
 };
 
-// Function to get products by category
+// Function to get products by category (REST)
 export const getProductsByCategory = async (categoryId: string): Promise<Product[]> => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*, product_categories(id, name)')
-    .eq('category', categoryId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error(`Error fetching products for category ${categoryId}:`, error);
-    throw new Error(error.message);
-  }
-
-  return (data || []).map((item) => mapProductForClient(item));
+  const res = await fetch(`${apiBase}/products?category=${encodeURIComponent(categoryId)}`, { headers: { ...authHeaders() } });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body?.error || `Failed to fetch products for category ${categoryId}`);
+  return (body.data || []).map((item: any) => mapProductForClient(item));
 };
 
-// Function to get a product by ID
+// Function to get a product by ID (REST)
 export const getProductById = async (id: string): Promise<Product | null> => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*, product_categories(id, name)')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error(`Error fetching product with ID ${id}:`, error);
-    throw new Error(error.message);
-  }
-
-  return data ? mapProductForClient(data) : null;
+  const res = await fetch(`${apiBase}/products/${id}`, { headers: { ...authHeaders() } });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body?.error || `Failed to fetch product ${id}`);
+  return body.data ? mapProductForClient(body.data) : null;
 };
 
 // Function to add a new product
 export const addProduct = async (productData: any): Promise<Product> => {
-  // Transform data for storage
-  const transformedData = mapProductForStorage(productData);
-
-  const { data, error } = await supabase
-    .from('products')
-    .insert([transformedData])
-    .select('*, product_categories(id, name)')
-    .single();
-
-  if (error) {
-    console.error('Error adding product:', error);
-    throw new Error(error.message);
+  const token = localStorage.getItem('token');
+  const payload = mapProductForStorage(productData);
+  const resp = await fetch('/api/products', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(payload)
+  });
+  let rawText = '';
+  let body: any = {};
+  try { rawText = await resp.text(); body = rawText ? JSON.parse(rawText) : {}; } catch { body = {}; }
+  if (resp.status === 422) {
+    const details = (body && (body.details || {}));
+    const first = Object.values(details)[0];
+    const message = (typeof first === 'string' ? first : undefined) || 'Validation failed';
+    throw new Error(message);
   }
-
-  return mapProductForClient(data);
+  if (resp.status === 401) {
+    throw new Error('Unauthorized (session expired). Please log in again.');
+  }
+  if (!resp.ok) {
+    console.error('[addProduct] create failed', { status: resp.status, body, rawText });
+    throw new Error(body?.error || body?.message || `Product create failed (status ${resp.status})`);
+  }
+  const row = body.data;
+  return mapProductForClient({ ...row, product_categories: row.category ? { id: row.category, name: '' } : null });
 };
 
 // Function to update an existing product
 export const updateProduct = async (id: string, productData: any): Promise<Product | null> => {
-  // Transform data for storage
+  const token = localStorage.getItem('token');
   const transformedData = mapProductForStorage(productData);
-
-  const { data, error } = await supabase
-    .from('products')
-    .update(transformedData)
-    .eq('id', id)
-    .select('*, product_categories(id, name)')
-    .single();
-
-  if (error) {
-    console.error(`Error updating product with ID ${id}:`, error);
-    throw new Error(error.message);
+  const resp = await fetch(`/api/products/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(transformedData)
+  });
+  let rawText = ''; let body: any = {};
+  try { rawText = await resp.text(); body = rawText ? JSON.parse(rawText) : {}; } catch { body = {}; }
+  if (resp.status === 422) {
+    const details = body?.details || {};
+    const first = Object.values(details)[0];
+    const message = (typeof first === 'string' ? first : undefined) || 'Validation failed';
+    throw new Error(message);
   }
-
-  return data ? mapProductForClient(data) : null;
+  if (resp.status === 401) {
+    throw new Error('Unauthorized (session expired). Please log in again.');
+  }
+  if (!resp.ok) {
+    console.error('[updateProduct] failed', { status: resp.status, body, rawText });
+    throw new Error(body?.error || body?.message || `Product update failed (status ${resp.status})`);
+  }
+  const row = body.data;
+  return row ? mapProductForClient({ ...row, product_categories: row.category ? { id: row.category, name: row.product_categories?.name || '' } : null }) : null;
 };
 
 // Function to delete a product
 export const deleteProduct = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('products')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error deleting product with ID ${id}:`, error);
-    throw new Error(error.message);
+  const token = localStorage.getItem('token');
+  const resp = await fetch(`/api/products/${id}`, {
+    method: 'DELETE',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+  if (resp.status === 401) {
+    throw new Error('Unauthorized (session expired). Please log in again.');
+  }
+  if (!resp.ok) {
+    // Fallback to generic query delete
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+    if (error) {
+      console.error(`Error deleting product with ID ${id}:`, error);
+      throw new Error(error.message);
+    }
   }
 };
 
@@ -115,8 +134,7 @@ export const getCategories = async (): Promise<{ id: string; name: string }[]> =
     console.error('Error fetching categories:', error);
     throw new Error(error.message);
   }
-
-  return data || [];
+  return (data || []).map((c: any) => ({ id: String(c.id), name: c.name }));
 };
 
 // Function to add a new category
@@ -135,9 +153,8 @@ export const addCategory = async (categoryName: string): Promise<{ id: string; n
   return data;
 };
 
-// Function to delete a category (removes the category row and sets category to null for affected products)
+// Function to delete a category
 export const deleteCategory = async (categoryId: string): Promise<void> => {
-  // Set category to null for all products using this category
   const { error: updateError } = await supabase
     .from('products')
     .update({ category: null })
@@ -146,7 +163,6 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
     console.error(`Error clearing category from products:`, updateError);
     throw new Error(updateError.message);
   }
-  // Delete the category
   const { error } = await supabase
     .from('product_categories')
     .delete()
@@ -157,7 +173,6 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
   }
 };
 
-// Sample products for import functionality
 export const ppProteinSampleProducts = [
   {
     name: "Pure Plant Protein - Vanilla",
@@ -216,7 +231,7 @@ export const importProducts = async (products: any[]): Promise<void> => {
       await createProduct(product);
     }
   } catch (error) {
-    console.error("Error importing products:", error);
+    console.error('Error importing products:', error);
     throw error;
   }
 };

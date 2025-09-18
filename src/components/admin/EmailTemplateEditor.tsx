@@ -16,6 +16,8 @@ interface EmailTemplateEditorProps {
   setDispatchTemplate: (value: string) => void;
   accountsTemplate: string;
   setAccountsTemplate: (value: string) => void;
+  trackingTemplate: string;
+  setTrackingTemplate: (value: string) => void;
   editingTemplate: boolean;
   setEditingTemplate: (value: boolean) => void;
   currentTab: string;
@@ -31,6 +33,8 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
   setDispatchTemplate,
   accountsTemplate,
   setAccountsTemplate,
+  trackingTemplate,
+  setTrackingTemplate,
   editingTemplate,
   setEditingTemplate,
   currentTab,
@@ -64,6 +68,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
             <TabsTrigger value="admin">Sales</TabsTrigger>
             <TabsTrigger value="dispatch">Dispatch</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="tracking">Tracking</TabsTrigger>
           </TabsList>
           
           <TabsContent value="customer">
@@ -189,6 +194,35 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
               </div>
             )}
           </TabsContent>
+        <TabsContent value="tracking">
+          {editingTemplate ? (
+            <div className="space-y-2">
+              <Label htmlFor="trackingTemplate">Tracking Update Template</Label>
+              <Textarea
+                id="trackingTemplate"
+                value={trackingTemplate}
+                onChange={(e) => setTrackingTemplate(e.target.value)}
+                className="min-h-[300px] font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Available variables: &#123;&#123;orderId&#125;&#125;, &#123;&#123;carrier&#125;&#125;, &#123;&#123;trackingNumber&#125;&#125;, &#123;&#123;trackingLink&#125;&#125;, &#123;&#123;brand&#125;&#125;, &#123;&#123;userName&#125;&#125;
+              </p>
+            </div>
+          ) : (
+            <div className="p-4 border rounded-md">
+              <h3 className="font-medium mb-1">Tracking Update Email</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                Sent to customers when tracking information is added or updated for an order.
+              </p>
+              <div className="text-xs bg-slate-50 p-3 rounded border max-h-[200px] overflow-y-auto">
+                <pre className="whitespace-pre-wrap">{trackingTemplate}</pre>
+              </div>
+              <p className="text-sm text-muted-foreground mt-4">
+                Sender: <strong>orders@retail.ppprotein.com.au</strong>
+              </p>
+            </div>
+          )}
+        </TabsContent>
         </Tabs>
       </CardContent>
     </Card>

@@ -12,33 +12,76 @@ services:
       test: ["CMD-SHELL","pg_isready -U postgres"]
       interval: 10s
       retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
 
   api:
     build:
       context: ./server
       dockerfile: Dockerfile
+    env_file:
+      - ./.env
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
       JWT_SECRET: ${JWT_SECRET}
       RESEND_API_KEY: ${RESEND_API_KEY}
       RESEND_FROM: ${RESEND_FROM}
+      STORAGE_DIR: /data/storage
+      DEBUG_ERRORS: "true"
+      SHOPIFY_STORE_DOMAIN: ${SHOPIFY_STORE_DOMAIN}
+      SHOPIFY_ADMIN_ACCESS_TOKEN: ${SHOPIFY_ADMIN_ACCESS_TOKEN}
+      BRAND_NAME: ${BRAND_NAME}
+      BRAND_LOGO_EMAIL_URL: ${BRAND_LOGO_EMAIL_URL}
+      EMAIL_BRAND_NAME: ${EMAIL_BRAND_NAME}
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "4000:4000"
+    volumes:
+      - storagedata:/data/storage
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.web
+    env_file:
+      - ./.env
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
 volumes:
   dbdata:

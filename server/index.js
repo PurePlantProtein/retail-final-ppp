@@ -5,6 +5,11 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
+const crypto = require('crypto');
+const fs = require('fs');
+const fsp = require('fs').promises; // For async file operations
+const path = require('path');
+const multer = require('multer');
 
 const app = express();
 app.use(cors());
@@ -14,19 +19,40 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@db:5432/postgres'
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+// Runtime lightweight migration: ensure products.updated_at exists (with time zone)
+(async () => {
+  try {
+    const check = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='products' AND column_name='updated_at'");
+    if (!check.rows.length) {
+      console.log('[startup] adding products.updated_at TIMESTAMP WITH TIME ZONE');
+      await pool.query('ALTER TABLE products ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE');
+      // Optionally backfill current time
+      await pool.query("UPDATE products SET updated_at = now() WHERE updated_at IS NULL");
+    }
+  } catch (e) {
+    console.error('[startup] failed ensuring products.updated_at', e.message);
+  }
+})();
+
+// FIXED: Enforce a secure JWT_SECRET in production.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'dev-secret') {
+  console.error('FATAL ERROR: A secure JWT_SECRET environment variable must be set.');
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY || null;
 
 let resendClient = null;
 if (RESEND_API_KEY) {
   console.log('RESEND_API_KEY present; configuring resendClient');
 
-  // Provide a robust fetch implementation: prefer global fetch (Node 18+), otherwise dynamically import node-fetch
   const getFetch = async () => {
     if (typeof globalThis.fetch !== 'undefined') return globalThis.fetch;
     try {
       const mod = await import('node-fetch');
-      // node-fetch default export is the fetch function
       return mod.default || mod;
     } catch (err) {
       console.warn('dynamic import of node-fetch failed; fetch not available', err);
@@ -34,13 +60,11 @@ if (RESEND_API_KEY) {
     }
   };
 
-  // Create resendClient that lazily resolves a working fetch impl
   resendClient = {
     send: async ({ from, to, subject, html, text }) => {
       const fetchImpl = await getFetch();
       if (!fetchImpl) throw new Error('no fetch implementation available for Resend');
 
-      // Normalize recipients
       const recipients = Array.isArray(to) ? to : [to];
       const body = { from, to: recipients, subject, html };
       try {
@@ -112,13 +136,12 @@ app.get('/api/auth/session', async (req, res) => {
   const token = auth.replace(/Bearer\s*/, '');
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    // payload.sub is user id
     const { rows } = await pool.query('SELECT id,email FROM users WHERE id=$1', [payload.sub]);
     const user = rows[0];
     if (!user) return res.json({ data: { session: null }, error: null });
     const session = {
       access_token: token,
-      expires_at: Math.floor((Date.now() + 7 * 24 * 60 * 60 * 1000) / 1000),
+      expires_at: payload.exp, // Use the actual expiration from the token
       user: { id: user.id, email: user.email }
     };
     return res.json({ data: { session }, error: null });
@@ -127,20 +150,18 @@ app.get('/api/auth/session', async (req, res) => {
   }
 });
 
-// Password reset request -> creates a reset token (dev: returns token in response and logs it)
-const crypto = require('crypto');
+// Password reset request
 app.post('/api/auth/reset-request', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'missing email' });
   try {
     const { rows } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
     const user = rows[0];
-    if (!user) return res.json({ ok: true });
+    if (!user) return res.json({ ok: true }); // Don't reveal if user exists
     const token = crypto.randomBytes(20).toString('hex');
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
     await pool.query('INSERT INTO reset_tokens(user_id, token, expires_at) VALUES($1,$2,$3)', [user.id, token, expiresAt]);
     console.log('Password reset token for', email, token);
-    // In production, send email here. For now return token in response to allow testing.
     return res.json({ ok: true, token });
   } catch (err) {
     console.error(err);
@@ -159,7 +180,6 @@ app.post('/api/auth/reset', async (req, res) => {
     if (new Date(rec.expires_at) < new Date()) return res.status(400).json({ error: 'token expired' });
     const hashed = await bcrypt.hash(password, 10);
     await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hashed, rec.user_id]);
-    // delete token
     await pool.query('DELETE FROM reset_tokens WHERE token=$1', [token]);
     return res.json({ ok: true });
   } catch (err) {
@@ -168,21 +188,18 @@ app.post('/api/auth/reset', async (req, res) => {
   }
 });
 
-// Update user (profile or password) - expects Authorization header
+// Update user (profile or password)
 app.post('/api/auth/update', authMiddleware, async (req, res) => {
   const payload = req.body;
   try {
-    // If password provided, update password
     if (payload.password) {
       const hashed = await bcrypt.hash(payload.password, 10);
       await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hashed, req.user.sub]);
     }
-    // For profile fields, upsert into profiles table
     const profileFields = ['business_name','business_address','phone','business_type','email','payment_terms'];
     const updates = {};
     for (const f of profileFields) if (payload[f] !== undefined) updates[f] = payload[f];
     if (Object.keys(updates).length) {
-      // upsert profiles where id = user id
       const keys = Object.keys(updates);
       const vals = keys.map(k => updates[k]);
       const setSql = keys.map((k, i) => `${k} = $${i+2}`).join(', ');
@@ -213,11 +230,410 @@ function authMiddleware(req, res, next) {
 // Example endpoint used by frontend to fetch products
 app.get('/api/products', authMiddleware, async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM products ORDER BY id');
+    const { category } = req.query || {};
+    const params = [];
+    let sql = `
+      SELECT p.*, json_build_object('id', c.id, 'name', c.name) AS product_categories
+      FROM products p
+      LEFT JOIN product_categories c ON p.category = c.id`;
+    if (category) {
+      params.push(String(category));
+      sql += ` WHERE p.category = $1`;
+    }
+    sql += ` ORDER BY p.id`;
+    const { rows } = await pool.query(sql, params);
     res.json({ data: rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db error' });
+  }
+});
+
+// Single product with joined category
+app.get('/api/products/:id', authMiddleware, async (req, res) => {
+  const id = req.params.id;
+  try {
+    const { rows } = await pool.query(`
+      SELECT p.*, json_build_object('id', c.id, 'name', c.name) AS product_categories
+      FROM products p
+      LEFT JOIN product_categories c ON p.category = c.id
+      WHERE p.id = $1
+      LIMIT 1
+    `, [id]);
+    return res.json({ data: rows[0] || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'db error' });
+  }
+});
+
+// Product Categories CRUD
+app.get('/api/categories', authMiddleware, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT id, name, created_at FROM product_categories ORDER BY name');
+    return res.json({ data: rows, error: null });
+  } catch (e) {
+    console.error('categories list error', e);
+    return res.status(500).json({ error: 'db error' });
+  }
+});
+
+async function isAdmin(userId) {
+  try {
+    const { rows } = await pool.query('SELECT 1 FROM user_roles WHERE user_id=$1 AND role=$2', [userId, 'admin']);
+    return rows.length > 0;
+  } catch { return false; }
+}
+
+app.post('/api/categories', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const { name } = req.body || {};
+    if (!name || !String(name).trim()) return res.status(400).json({ error: 'missing name' });
+    const clean = String(name).trim();
+    const { rows: existing } = await pool.query('SELECT id FROM product_categories WHERE LOWER(name)=LOWER($1) LIMIT 1', [clean]);
+    if (existing.length) return res.status(409).json({ error: 'exists', id: existing[0].id });
+    const { rows } = await pool.query('INSERT INTO product_categories(name, created_at) VALUES($1, now()) RETURNING id, name, created_at', [clean]);
+    return res.json({ data: rows[0], error: null });
+  } catch (e) {
+    console.error('categories create error', e);
+    return res.status(500).json({ error: 'db error' });
+  }
+});
+
+app.put('/api/categories/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const id = req.params.id;
+    const { name } = req.body || {};
+    if (!name || !String(name).trim()) return res.status(400).json({ error: 'missing name' });
+    const clean = String(name).trim();
+    const { rows } = await pool.query('UPDATE product_categories SET name=$1 WHERE id=$2 RETURNING id, name, created_at', [clean, id]);
+    return res.json({ data: rows[0] || null, error: null });
+  } catch (e) {
+    console.error('categories update error', e);
+    return res.status(500).json({ error: 'db error' });
+  }
+});
+
+app.delete('/api/categories/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const id = req.params.id;
+    const { rows } = await pool.query('DELETE FROM product_categories WHERE id=$1 RETURNING id', [id]);
+    return res.json({ data: rows[0] || null, error: null });
+  } catch (e) {
+    console.error('categories delete error', e);
+    return res.status(500).json({ error: 'db error' });
+  }
+});
+
+// Utility: normalize JSON-capable fields in product payload
+function coerceProductJsonFields(obj) {
+  const jsonKeys = ['amino_acid_profile','nutritional_info','metadata'];
+  for (const k of jsonKeys) {
+    if (obj[k] === undefined || obj[k] === null) continue;
+    const v = obj[k];
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (!s) { obj[k] = {}; continue; }
+      try { obj[k] = JSON.parse(s); } catch { obj[k] = {}; }
+    }
+  }
+  return obj;
+}
+
+// Utility: map alias keys from UI to actual DB columns for products
+function mapProductAliases(obj) {
+  const out = { ...obj };
+  if (out.amino !== undefined && out.amino_acid_profile === undefined) {
+    out.amino_acid_profile = out.amino; delete out.amino;
+  }
+  if (out.nutrients !== undefined && out.nutritional_info === undefined) {
+    out.nutritional_info = out.nutrients; delete out.nutrients;
+  }
+  return out;
+}
+
+// Utility: accept camelCase keys from client and map to snake_case DB columns
+function mapProductClientCamelToDb(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out = { ...obj };
+  const mapping = {
+    aminoAcidProfile: 'amino_acid_profile',
+    nutritionalInfo: 'nutritional_info',
+    minQuantity: 'min_quantity',
+    bagSize: 'bag_size',
+    numberOfServings: 'number_of_servings',
+    servingSize: 'serving_size',
+  };
+  for (const [from, to] of Object.entries(mapping)) {
+    if (out[from] !== undefined && out[to] === undefined) {
+      out[to] = out[from];
+      delete out[from];
+    }
+  }
+  return out;
+}
+
+// Utility: resolve category input to category id (creates if name string not found)
+async function resolveCategoryId(cat) {
+  if (cat === undefined || cat === null) return null;
+  // If already a number or numeric string
+  if (typeof cat === 'number' && Number.isFinite(cat)) return cat;
+  if (typeof cat === 'string' && /^\d+$/.test(cat.trim())) return parseInt(cat.trim(), 10);
+  if (typeof cat === 'string') {
+    const name = cat.trim();
+    if (!name) return null;
+    const { rows } = await pool.query('SELECT id FROM product_categories WHERE LOWER(name)=LOWER($1) LIMIT 1', [name]);
+    if (rows.length) return rows[0].id;
+    const ins = await pool.query('INSERT INTO product_categories(name, created_at) VALUES($1, now()) RETURNING id', [name]);
+    return ins.rows[0].id;
+  }
+  return null;
+}
+
+// Create product (dedicated endpoint)
+app.post('/api/products', authMiddleware, async (req, res) => {
+  try {
+    const body = coerceProductJsonFields(mapProductClientCamelToDb({ ...(req.body || {}) }));
+    // Coerce numeric fields from strings
+    const num = (v) => (v === '' || v === null || v === undefined) ? null : (typeof v === 'string' ? Number(v) : v);
+    const intNum = (v) => (v === '' || v === null || v === undefined) ? null : (typeof v === 'string' ? parseInt(v, 10) : v);
+    if (body.price !== undefined) body.price = num(body.price) ?? 0;
+    if (body.stock !== undefined) body.stock = intNum(body.stock) ?? 0;
+    if (body.min_quantity !== undefined) body.min_quantity = intNum(body.min_quantity) ?? 1;
+    if (body.number_of_servings !== undefined) body.number_of_servings = intNum(body.number_of_servings) ?? null;
+    if (body.weight !== undefined) body.weight = num(body.weight);
+    if (body.category === '') body.category = null;
+    if (body.category !== undefined) {
+      try { body.category = await resolveCategoryId(body.category); } catch (e) { /* ignore; will fail in insert if bad */ }
+    }
+    // Discover existing product columns
+    const { rows: colRows } = await pool.query("SELECT column_name, is_nullable, data_type, column_default FROM information_schema.columns WHERE table_name='products'");
+    const existing = new Set(colRows.map(r=>r.column_name));
+
+    // Sanitize JSON fields defensively (in case UI sends non-JSON types)
+    const ensureJson = (k, v) => {
+      if (v === undefined || v === null) return v;
+      const t = typeof v;
+      if (t === 'object') return v; // arrays/objects fine
+      if (t === 'string') {
+        const s = v.trim();
+        if (!s) return (k === 'amino_acid_profile' || k === 'nutritional_info') ? [] : {};
+        try { return JSON.parse(s); } catch { return (k === 'amino_acid_profile' || k === 'nutritional_info') ? [] : {}; }
+      }
+      return (k === 'amino_acid_profile' || k === 'nutritional_info') ? [] : {};
+    };
+    for (const c of colRows) {
+      if (/json/i.test(c.data_type) && body[c.column_name] !== undefined) {
+        body[c.column_name] = ensureJson(c.column_name, body[c.column_name]);
+      }
+    }
+
+    // Provide minimal sane defaults for NOT NULL columns without defaults
+    const provideDefault = (dt) => {
+      const t = String(dt || '').toLowerCase();
+      if (/int|numeric|decimal|double|real/.test(t)) return 0;
+      if (/json/.test(t)) return {};
+      if (/bool/.test(t)) return false;
+      if (/timestamp|date/.test(t)) return new Date();
+      return '';
+    };
+    const provided = new Set(Object.keys(body));
+    for (const c of colRows) {
+      if (c.is_nullable === 'NO' && !c.column_default && !['id'].includes(c.column_name) && !provided.has(c.column_name)) {
+        body[c.column_name] = provideDefault(c.data_type);
+      }
+    }
+
+    // Build insert from intersection of known columns
+    const keys = Object.keys(body).filter(k => existing.has(k));
+    if (!keys.length) return res.status(400).json({ error: 'no_valid_columns' });
+    // Serialize JSON columns to JSON strings for pg
+    const jsonCols = new Set(colRows.filter(c => /json/i.test(c.data_type)).map(c => c.column_name));
+    const vals = keys.map(k => jsonCols.has(k) ? JSON.stringify(body[k] ?? (k === 'amino_acid_profile' || k === 'nutritional_info' ? [] : {})) : body[k]);
+    const placeholders = keys.map((_,i)=>`$${i+1}`).join(',');
+    let sql = `INSERT INTO products(${keys.join(',')}) VALUES(${placeholders}) RETURNING *`;
+    const { rows } = await pool.query(sql, vals);
+    return res.json({ data: rows[0], error: null });
+  } catch (err) {
+    console.error('[products.create] failed', err);
+    const dbg = process.env.DEBUG_ERRORS === 'true' ? { bodyKeys: Object.keys(req.body||{}), types: Object.fromEntries(Object.entries(req.body||{}).map(([k,v])=>[k, typeof v])) } : undefined;
+    return res.status(400).json({ error: 'insert_failed', message: err.message, debug: dbg });
+  }
+});
+
+// Update product (dedicated endpoint)
+app.put('/api/products/:id', authMiddleware, async (req, res) => {
+  const id = req.params.id;
+  try {
+    const body = coerceProductJsonFields(mapProductClientCamelToDb(mapProductAliases({ ...(req.body || {}) })));
+    // Coerce numeric fields from strings
+    const num = (v) => (v === '' || v === null || v === undefined) ? null : (typeof v === 'string' ? Number(v) : v);
+    const intNum = (v) => (v === '' || v === null || v === undefined) ? null : (typeof v === 'string' ? parseInt(v, 10) : v);
+    if (body.price !== undefined) body.price = num(body.price);
+    if (body.stock !== undefined) body.stock = intNum(body.stock);
+    if (body.min_quantity !== undefined) body.min_quantity = intNum(body.min_quantity);
+    if (body.number_of_servings !== undefined) body.number_of_servings = intNum(body.number_of_servings);
+    if (body.weight !== undefined) body.weight = num(body.weight);
+    if (body.category === '') body.category = null;
+    if (body.category !== undefined) {
+      try { body.category = await resolveCategoryId(body.category); } catch (e) { /* ignore */ }
+    }
+    const { rows: colRows } = await pool.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name='products'");
+    const existing = new Set(colRows.map(r=>r.column_name));
+
+    // Sanitize JSON fields defensively
+    const ensureJson = (k, v) => {
+      if (v === undefined || v === null) return v;
+      const t = typeof v;
+      if (t === 'object') return v;
+      if (t === 'string') {
+        const s = v.trim();
+        if (!s) return (k === 'amino_acid_profile' || k === 'nutritional_info') ? [] : {};
+        try { return JSON.parse(s); } catch { return (k === 'amino_acid_profile' || k === 'nutritional_info') ? [] : {}; }
+      }
+      return (k === 'amino_acid_profile' || k === 'nutritional_info') ? [] : {};
+    };
+    for (const c of colRows) {
+      if (/json/i.test(c.data_type) && body[c.column_name] !== undefined) {
+        body[c.column_name] = ensureJson(c.column_name, body[c.column_name]);
+      }
+    }
+    const keys = Object.keys(body).filter(k => existing.has(k));
+    if (!keys.length) return res.status(400).json({ error: 'no_valid_columns' });
+    const assigns = keys.map((k,i)=>`${k}=$${i+1}`).join(', ');
+    let sql = `UPDATE products SET ${assigns}`;
+    if (existing.has('updated_at')) sql += ', updated_at=now()';
+    sql += ` WHERE id=$${keys.length+1} RETURNING *`;
+    const jsonCols = new Set(colRows.filter(c => /json/i.test(c.data_type)).map(c => c.column_name));
+    const vals = keys.map(k => jsonCols.has(k) ? JSON.stringify(body[k] ?? (k === 'amino_acid_profile' || k === 'nutritional_info' ? [] : {})) : body[k]);
+    const { rows } = await pool.query(sql, [...vals, id]);
+    return res.json({ data: rows[0], error: null });
+  } catch (err) {
+    console.error('[products.update] failed', err);
+    const dbg = process.env.DEBUG_ERRORS === 'true' ? {
+      bodyKeys: Object.keys(req.body||{}),
+      types: Object.fromEntries(Object.entries(req.body||{}).map(([k,v])=>[k, typeof v])),
+      assignedKeys: (()=>{ try { const b = mapProductClientCamelToDb(mapProductAliases({ ...(req.body||{}) })); return Object.keys(b); } catch { return []; }})(),
+      hint: 'Ensure json fields are objects/arrays (not plain strings). Fields: amino_acid_profile, nutritional_info, metadata.'
+    } : undefined;
+    return res.status(400).json({ error: 'update_failed', message: err.message, debug: dbg });
+  }
+});
+
+// Delete product (dedicated endpoint) and attempt to clean up local image
+app.delete('/api/products/:id', authMiddleware, async (req, res) => {
+  const id = req.params.id;
+  try {
+    // Fetch image path before delete
+    const { rows: pre } = await pool.query('SELECT image FROM products WHERE id=$1', [id]);
+    const img = pre[0]?.image || '';
+    const { rows } = await pool.query('DELETE FROM products WHERE id=$1 RETURNING id', [id]);
+    const deleted = rows[0]?.id ? true : false;
+    // Best-effort cleanup of local product image
+    if (deleted && typeof img === 'string' && img.startsWith('/api/storage/product_images/')) {
+      const filename = img.split('/').pop();
+      if (filename && !filename.includes('..') && !filename.includes('/')) {
+        const filePath = path.join(productImagesDir, filename);
+        try { if (fs.existsSync(filePath)) await fsp.unlink(filePath); } catch {}
+      }
+    }
+    return res.json({ ok: true, deleted });
+  } catch (err) {
+    console.error('[products.delete] failed', err);
+    return res.status(500).json({ error: 'delete_failed', message: err.message });
+  }
+});
+
+// Debug: products schema
+app.get('/api/debug/products-schema', authMiddleware, async (req, res) => {
+  try {
+    // basic admin check
+    const { rows: roles } = await pool.query('SELECT 1 FROM user_roles WHERE user_id=$1 AND role=$2', [req.user.sub, 'admin']);
+    if (!roles.length) return res.status(403).json({ error: 'forbidden' });
+    const { rows } = await pool.query("SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name='products' ORDER BY ordinal_position");
+    return res.json({ data: rows });
+  } catch (e) {
+    return res.status(500).json({ error: 'schema_fetch_failed', message: e.message });
+  }
+});
+
+// Debug: products constraints, indexes, triggers
+app.get('/api/debug/products-constraints', authMiddleware, async (req, res) => {
+  try {
+    const { rows: roles } = await pool.query('SELECT 1 FROM user_roles WHERE user_id=$1 AND role=$2', [req.user.sub, 'admin']);
+    if (!roles.length) return res.status(403).json({ error: 'forbidden' });
+    const constraintSQL = `
+      SELECT c.conname AS name, pg_get_constraintdef(c.oid) AS definition, c.contype
+      FROM pg_constraint c
+      JOIN pg_class t ON c.conrelid = t.oid
+      WHERE t.relname = 'products';
+    `;
+    const indexSQL = `
+      SELECT indexname, indexdef
+      FROM pg_indexes
+      WHERE tablename = 'products';
+    `;
+    const triggersSQL = `
+      SELECT trigger_name, event_manipulation, action_statement
+      FROM information_schema.triggers
+      WHERE event_object_table = 'products';
+    `;
+    const [constraints, indexes, triggers] = await Promise.all([
+      pool.query(constraintSQL),
+      pool.query(indexSQL),
+      pool.query(triggersSQL)
+    ]);
+    res.json({ data: { constraints: constraints.rows, indexes: indexes.rows, triggers: triggers.rows } });
+  } catch (e) {
+    res.status(500).json({ error: 'constraints_fetch_failed', message: e.message });
+  }
+});
+
+// Debug: self-test insert into products
+app.post('/api/debug/products-selftest', authMiddleware, async (req, res) => {
+  try {
+    const base = {
+      name: 'SELFTEST-' + Date.now(),
+      description: 'diagnostic insert',
+      price: 0,
+      stock: 0,
+      min_quantity: 1,
+      category: 'Diagnostics',
+      metadata: {}
+    };
+    const payload = coerceProductJsonFields({ ...base, ...(req.body || {}) });
+    // Attempt direct insert reusing the same logic
+    const { rows: colRows } = await pool.query("SELECT column_name, is_nullable, data_type, column_default FROM information_schema.columns WHERE table_name='products'");
+    const existing = new Set(colRows.map(r=>r.column_name));
+    const provided = new Set(Object.keys(payload));
+    const provideDefault = (dt) => {
+      const t = String(dt || '').toLowerCase();
+      if (/int|numeric|decimal|double|real/.test(t)) return 0;
+      if (/json/.test(t)) return {};
+      if (/bool/.test(t)) return false;
+      if (/timestamp|date/.test(t)) return new Date();
+      return '';
+    };
+    for (const c of colRows) {
+      if (c.is_nullable === 'NO' && !c.column_default && !['id'].includes(c.column_name) && !provided.has(c.column_name)) {
+        payload[c.column_name] = provideDefault(c.data_type);
+      }
+    }
+    const keys = Object.keys(payload).filter(k => existing.has(k));
+    const vals = keys.map(k => payload[k]);
+    const placeholders = keys.map((_,i)=>`$${i+1}`).join(',');
+    const sql = `INSERT INTO products(${keys.join(',')}) VALUES(${placeholders}) RETURNING *`;
+    try {
+      const { rows } = await pool.query(sql, vals);
+      return res.json({ ok: true, id: rows[0]?.id, usedColumns: keys });
+    } catch (e) {
+      return res.status(400).json({ ok: false, error: e.message, code: e.code, sql, keys, types: Object.fromEntries(keys.map((k,i)=>[k, typeof vals[i]])) });
+    }
+  } catch (e) {
+    return res.status(500).json({ error: 'selftest_failed', message: e.message });
   }
 });
 
@@ -244,91 +660,63 @@ app.post('/api/functions/:name', authMiddleware, async (req, res) => {
       case 'send-tracking-email':
       case 'send-user-notification':
       case 'send-bulk-order-email':
-        // Build a simple email message from payload.
-        // Expected payload shape varies; support common fields: to, subject, html, text
         const to = payload.to || payload.email || (payload.recipients && payload.recipients[0]) || null;
         const subject = payload.subject || payload.title || `Notification: ${name}`;
         const html = payload.html || payload.body || `<pre>${JSON.stringify(payload, null, 2)}</pre>`;
         const text = payload.text || (typeof payload.body === 'string' ? payload.body : null) || `See details in HTML body.`;
 
-  if (resendClient) {
+        if (resendClient) {
           try {
             const from = process.env.RESEND_FROM || 'no-reply@example.com';
             await resendClient.send({
-              from,
-              to: Array.isArray(to) ? to : [to],
-              subject,
-              html,
-              text
+              from, to: Array.isArray(to) ? to : [to], subject, html, text
             });
             return res.json({ ok: true });
           } catch (err) {
             console.error('resend send error', err);
-            // fallback to logging
           }
         }
-
-        // Fallback: log the email payload for dev/testing
         console.log(`Function ${name} would send email: to=${to} subject=${subject} html=${html}`);
         return res.json({ ok: true });
+
       case 'create-user': {
-        // Minimal local implementation of the Supabase "create-user" function used by the frontend.
-        // Creates a users row, a profiles row (id = users.id), and a user_roles row. Optionally emails credentials.
-        // Support both direct payloads and the Supabase-edge style { body: { ... } } envelope.
-        const body = (payload && payload.body) ? payload.body : (payload || {});
-        const {
-          email,
-          businessName,
-          businessType,
-          role = 'retailer',
-          contactName,
-          phone,
-          street,
-          city,
-          state,
-          postalCode,
-          emailCredentials = true,
-          currentUserId
-        } = body;
-
+        const { email, businessName, businessType, role = 'retailer', contactName, phone, street, city, state, postalCode, emailCredentials = true } = payload || {};
         if (!email) return res.status(400).json({ error: 'missing email' });
-
+        
+        // FIXED: Wrap user creation in a database transaction for data integrity.
+        const client = await pool.connect();
         try {
-          // Check existing user
-          const { rows: existing } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
+          await client.query('BEGIN');
+
+          const { rows: existing } = await client.query('SELECT id FROM users WHERE email=$1', [email]);
           if (existing && existing.length) {
+            await client.query('ROLLBACK');
             return res.status(400).json({ error: `A user with the email ${email} already exists.` });
           }
-
-          // Generate temp password
+          
           const tempPassword = emailCredentials ? crypto.randomBytes(9).toString('base64') : 'TempPass123!';
           const hashed = await bcrypt.hash(tempPassword, 10);
-
-          // Create user
-          const { rows } = await pool.query('INSERT INTO users(email, password_hash) VALUES($1,$2) RETURNING id', [email, hashed]);
+          
+          const { rows } = await client.query('INSERT INTO users(email, password_hash) VALUES($1,$2) RETURNING id', [email, hashed]);
           const createdUserId = rows[0].id;
 
-          // Compose address
           const business_address = [street, city, state, postalCode].filter(Boolean).join(', ');
-
-          // Create profile (use same id as user)
-          await pool.query(
+          
+          await client.query(
             'INSERT INTO profiles(id, email, business_name, business_type, phone, business_address, payment_terms, created_at) VALUES($1,$2,$3,$4,$5,$6,$7,now())',
             [createdUserId, email, businessName || null, businessType || null, phone || null, business_address || null, 14]
           );
 
-          // Assign role
-          await pool.query('INSERT INTO user_roles(user_id, role) VALUES($1,$2)', [createdUserId, role]);
+          await client.query('INSERT INTO user_roles(user_id, role) VALUES($1,$2)', [createdUserId, role]);
 
-          // Send credentials email if configured
+          await client.query('COMMIT');
+          
           let emailSent = false;
           if (emailCredentials && resendClient) {
             try {
               const from = process.env.RESEND_FROM || 'no-reply@example.com';
               await resendClient.send({
-                from,
-                to: [email],
-                subject: 'Your PPP Retailers Account - Login Credentials',
+                from, to: [email], subject: 'Your PPP Retailers Account - Login Credentials',
                 html: `<p>Hello ${contactName || ''},</p><p>Your account has been created. Temporary password: <strong>${tempPassword}</strong></p>`,
                 text: `Your temporary password: ${tempPassword}`
               });
@@ -337,19 +725,13 @@ app.post('/api/functions/:name', authMiddleware, async (req, res) => {
               console.error('Failed to send credentials email:', err);
             }
           }
-
           return res.json({ success: true, message: `${businessName || email} has been added and approved.`, emailSent });
         } catch (err) {
+          await client.query('ROLLBACK');
           console.error('create-user error', err);
-          // Attempt cleanup if partial state exists
-          try {
-            if (err && err.code) {
-              // nothing special
-            }
-          } catch (e) {
-            console.error('cleanup helper error', e);
-          }
           return res.status(500).json({ error: 'user creation failed' });
+        } finally {
+          client.release();
         }
       }
       default:
@@ -361,89 +743,309 @@ app.post('/api/functions/:name', authMiddleware, async (req, res) => {
   }
 });
 
-// Storage endpoints (minimal): upload marketing files and list
-const fs = require('fs');
-const path = require('path');
-const multer = require('multer');
-const storageDir = path.join(__dirname, '..', 'storage');
+// Storage endpoints
+const storageDir = process.env.STORAGE_DIR || path.join(__dirname, '..', 'storage');
 if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
 const upload = multer({ dest: storageDir });
+const productImagesDir = path.join(storageDir, 'product_images');
+if (!fs.existsSync(productImagesDir)) fs.mkdirSync(productImagesDir, { recursive: true });
+// New generic site assets directory (for login background, hero images, etc.)
+const assetsDir = path.join(storageDir, 'assets');
+if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, { recursive: true });
 
 app.post('/api/storage/marketing/upload', authMiddleware, upload.single('file'), async (req, res) => {
-  // move file to a readable name
-  const file = req.file;
-  const dest = path.join(storageDir, file.originalname);
-  fs.renameSync(file.path, dest);
-  // persist a record
-  await pool.query('INSERT INTO marketing(path) VALUES($1)', [file.originalname]);
-  res.json({ ok: true, path: file.originalname });
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'no file uploaded' });
+
+    // FIXED: Path Traversal vulnerability. Generate a safe filename instead of using the user-provided one.
+    const safeFilename = `${crypto.randomUUID()}${path.extname(file.originalname)}`;
+    const dest = path.join(storageDir, safeFilename);
+
+    // FIXED: Use asynchronous rename to avoid blocking the event loop.
+    await fsp.rename(file.path, dest);
+    
+    // Persist the safe filename to the database
+    await pool.query('INSERT INTO marketing(path) VALUES($1)', [safeFilename]);
+    res.json({ ok: true, path: safeFilename });
+  } catch (err) {
+    console.error('File upload error:', err);
+    res.status(500).json({ error: 'file upload failed' });
+  }
 });
 
 app.get('/api/storage/marketing/:file', async (req, res) => {
   const file = req.params.file;
+  // Basic sanitization to prevent path traversal on download
+  if (file.includes('..') || file.includes('/')) {
+    return res.status(400).json({ error: 'invalid filename' });
+  }
   const filePath = path.join(storageDir, file);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
   res.sendFile(filePath);
+});
+
+// Product images upload (expects multipart/form-data with field 'file')
+app.post('/api/storage/product_images/upload', authMiddleware, upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'no file uploaded' });
+    // Basic mime check
+    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+      try { await fsp.unlink(file.path); } catch {}
+      return res.status(400).json({ error: 'invalid file type' });
+    }
+
+    const safeFilename = `${crypto.randomUUID()}${path.extname(file.originalname || '')}`;
+    const dest = path.join(productImagesDir, safeFilename);
+    await fsp.rename(file.path, dest);
+    const url = `/api/storage/product_images/${safeFilename}`;
+    return res.json({ ok: true, url, filename: safeFilename });
+  } catch (err) {
+    console.error('product_images upload error:', err);
+    return res.status(500).json({ error: 'file upload failed' });
+  }
+});
+
+// Serve product images
+app.get('/api/storage/product_images/:file', async (req, res) => {
+  const file = req.params.file;
+  if (file.includes('..') || file.includes('/')) {
+    return res.status(400).json({ error: 'invalid filename' });
+  }
+  const filePath = path.join(productImagesDir, file);
+  if (!fs.existsSync(filePath)) {
+    // Gracefully redirect to placeholder to avoid noisy 404s in UI
+    return res.redirect(302, '/placeholder.svg');
+  }
+  res.sendFile(filePath);
+});
+
+// --- Site Assets APIs ---
+// Helper to sanitize a provided base key for filenames
+function sanitizeKey(key) {
+  return String(key || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// Upload a site asset (admin only). Accepts multipart 'file' and optional 'path' as a stable key.
+app.post('/api/storage/assets/upload', authMiddleware, upload.single('file'), async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'no file uploaded' });
+    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+      try { await fsp.unlink(file.path); } catch {}
+      return res.status(400).json({ error: 'invalid file type' });
+    }
+
+    // Optional key provided as 'path' (to align with frontend supabase shim)
+    const providedKey = sanitizeKey((req.body && req.body.path) || '');
+    const ext = path.extname(file.originalname || '').toLowerCase() || '.png';
+
+    let finalName;
+    if (providedKey) {
+      // Remove any existing files for this key (any extension)
+      try {
+        const entries = await fsp.readdir(assetsDir);
+        await Promise.all(entries
+          .filter(n => n.startsWith(providedKey + '.'))
+          .map(n => fsp.unlink(path.join(assetsDir, n)).catch(() => {}))
+        );
+      } catch {}
+      finalName = `${providedKey}${ext}`;
+    } else {
+      finalName = `${crypto.randomUUID()}${ext}`;
+    }
+
+    const dest = path.join(assetsDir, finalName);
+    await fsp.rename(file.path, dest);
+    const url = `/api/storage/assets/${finalName}`;
+    return res.json({ ok: true, name: finalName, url, key: providedKey || null });
+  } catch (err) {
+    console.error('assets upload error:', err);
+    return res.status(500).json({ error: 'file upload failed' });
+  }
+});
+
+// Public get for assets. Supports either exact filename with extension or base key without extension.
+app.get('/api/storage/assets/:name', async (req, res) => {
+  const name = req.params.name;
+  if (name.includes('..') || name.includes('/')) {
+    return res.status(400).json({ error: 'invalid filename' });
+  }
+  let chosen = null;
+  const exactPath = path.join(assetsDir, name);
+  if (fs.existsSync(exactPath)) {
+    chosen = exactPath;
+  } else {
+    // Try resolving by base name without extension
+    const base = name.replace(/\.[^/.]+$/, '');
+    try {
+      const entries = await fsp.readdir(assetsDir);
+      const match = entries.find(n => n.startsWith(base + '.'));
+      if (match) chosen = path.join(assetsDir, match);
+    } catch {}
+  }
+  if (!chosen || !fs.existsSync(chosen)) {
+    return res.redirect(302, '/placeholder.svg');
+  }
+  return res.sendFile(chosen);
+});
+
+// List assets (admin only)
+app.get('/api/storage/assets', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const entries = await fsp.readdir(assetsDir, { withFileTypes: true });
+    const files = await Promise.all(entries.filter(e => e.isFile()).map(async (e) => {
+      const p = path.join(assetsDir, e.name);
+      const st = await fsp.stat(p);
+      return { name: e.name, size: st.size, mtime: st.mtime, url: `/api/storage/assets/${e.name}` };
+    }));
+    // Sort by mtime desc
+    files.sort((a, b) => +new Date(b.mtime) - +new Date(a.mtime));
+    return res.json({ data: files, error: null });
+  } catch (err) {
+    console.error('assets list error', err);
+    return res.status(500).json({ error: 'list_failed' });
+  }
+});
+
+// Delete asset (admin only). Accepts name with or without extension; deletes matching file(s).
+app.delete('/api/storage/assets/:name', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const name = req.params.name;
+    if (name.includes('..') || name.includes('/')) return res.status(400).json({ error: 'invalid filename' });
+    const exact = path.join(assetsDir, name);
+    let deleted = 0;
+    if (fs.existsSync(exact)) {
+      try { await fsp.unlink(exact); deleted++; } catch {}
+    } else {
+      const base = name.replace(/\.[^/.]+$/, '');
+      try {
+        const entries = await fsp.readdir(assetsDir);
+        const matches = entries.filter(n => n.startsWith(base + '.'));
+        await Promise.all(matches.map(n => fsp.unlink(path.join(assetsDir, n)).then(()=>{deleted++;}).catch(()=>{})));
+      } catch {}
+    }
+    return res.json({ ok: true, deleted });
+  } catch (err) {
+    console.error('assets delete error', err);
+    return res.status(500).json({ error: 'delete_failed' });
+  }
 });
 
 // Generic query endpoint used by the frontend shim
 app.post('/api/query', authMiddleware, async (req, res) => {
   const { table, select = '*', filters = [], maybeSingle = false, action, values } = req.body || {};
   if (!table) return res.status(400).json({ data: null, error: 'missing table' });
-  // Simple allowlist for safety; include common tables used by frontend
-  const allowed = ['users','products','orders','tracking_info','marketing','profiles','user_roles','pricing_tiers','business_types'];
+
+  const allowed = ['users','products','orders','tracking_info','marketing','profiles','user_roles','pricing_tiers','business_types','product_categories'];
   if (!allowed.includes(table)) {
-    // If unknown table, return empty payload instead of error to avoid breaking frontend
     return res.json({ data: maybeSingle ? null : [], error: null });
   }
 
+  // SECURITY WARNING: For a production app, you should implement column-level whitelisting
+  // for insert/update actions to prevent users from modifying sensitive columns.
+  
   try {
+    // Normalize values: for 'products' table, map/normalize; accept arrays for inserts
+    let normValues = values;
+    if (action === 'insert' || action === 'update') {
+      if (table === 'products') {
+        if (Array.isArray(values)) {
+          normValues = values.map(v => coerceProductJsonFields(mapProductClientCamelToDb(mapProductAliases({ ...(v || {}) }))));
+        } else if (values && typeof values === 'object') {
+          normValues = coerceProductJsonFields(mapProductClientCamelToDb(mapProductAliases({ ...values })));
+        } else {
+          return res.status(400).json({ data: null, error: 'invalid values shape' });
+        }
+      } else {
+        if (Array.isArray(values)) {
+          normValues = values.map(v => ({ ...(v || {}) }));
+        } else if (values && typeof values === 'object') {
+          normValues = { ...values };
+        } else {
+          return res.status(400).json({ data: null, error: 'invalid values shape' });
+        }
+      }
+    }
     if (action === 'insert') {
-      // Build a simple insert statement
-      const keys = Object.keys(values || {});
-      const vals = keys.map(k => values[k]);
-      const sql = `INSERT INTO ${table}(${keys.join(',')}) VALUES(${keys.map((_,i)=>`$${i+1}`).join(',')}) RETURNING *`;
-      const { rows } = await pool.query(sql, vals);
-      return res.json({ data: rows, error: null });
+      if (Array.isArray(normValues)) {
+        const results = [];
+        for (const row of normValues) {
+          const keys = Object.keys(row || {});
+          if (!keys.length) continue;
+          // Serialize JSON for products table
+          const jsonCols = table === 'products' ? new Set(['amino_acid_profile','nutritional_info','metadata']) : new Set();
+          const vals = keys.map(k => jsonCols.has(k) ? JSON.stringify(row[k] ?? (k === 'amino_acid_profile' || k === 'nutritional_info' ? [] : {})) : row[k]);
+          const sql = `INSERT INTO ${table}(${keys.join(',')}) VALUES(${keys.map((_,i)=>`$${i+1}`).join(',')}) RETURNING *`;
+          const { rows } = await pool.query(sql, vals);
+          results.push(...rows);
+        }
+        return res.json({ data: results, error: null });
+      } else {
+        const keys = Object.keys(normValues || {});
+        const jsonCols = table === 'products' ? new Set(['amino_acid_profile','nutritional_info','metadata']) : new Set();
+        const vals = keys.map(k => jsonCols.has(k) ? JSON.stringify(normValues[k] ?? (k === 'amino_acid_profile' || k === 'nutritional_info' ? [] : {})) : normValues[k]);
+        const sql = `INSERT INTO ${table}(${keys.join(',')}) VALUES(${keys.map((_,i)=>`$${i+1}`).join(',')}) RETURNING *`;
+        const { rows } = await pool.query(sql, vals);
+        return res.json({ data: rows, error: null });
+      }
     }
 
     if (action === 'update') {
-      // expects values and where { field, value }
       const { where } = req.body;
       if (!where) return res.status(400).json({ data: null, error: 'missing where' });
-      const setKeys = Object.keys(values || {});
-      const setVals = setKeys.map(k => values[k]);
+      const setKeys = Object.keys(normValues || {});
+      const jsonCols = table === 'products' ? new Set(['amino_acid_profile','nutritional_info','metadata']) : new Set();
+      const setVals = setKeys.map(k => jsonCols.has(k) ? JSON.stringify(normValues[k] ?? (k === 'amino_acid_profile' || k === 'nutritional_info' ? [] : {})) : normValues[k]);
       const sql = `UPDATE ${table} SET ${setKeys.map((k,i)=>`${k}=$${i+1}`).join(', ')} WHERE ${where.field}=$${setKeys.length+1} RETURNING *`;
       const { rows } = await pool.query(sql, [...setVals, where.value]);
       return res.json({ data: rows, error: null });
     }
 
-    // Build select query with simple eq filters
-    let sql = `SELECT ${select} FROM ${table}`;
+    if (action === 'delete') {
+      const { where } = req.body;
+      if (!where) return res.status(400).json({ data: null, error: 'missing where' });
+      const sql = `DELETE FROM ${table} WHERE ${where.field}=$1 RETURNING *`;
+      const { rows } = await pool.query(sql, [where.value]);
+      return res.json({ data: rows, error: null });
+    }
+
+    // FIXED: SQL Injection vulnerability. Do not allow arbitrary user input in the SELECT clause.
+    // The 'select' variable from the request body is now ignored for security.
     const params = [];
-    if (Array.isArray(filters) && filters.length) {
-      const clauses = filters.map((f, idx) => {
-        params.push(f.value);
-        return `${f.op || '='}(${f.field}) = $${params.length}`; // intentionally keep simple
-      });
-      // The above line is intentionally simplistic; use a safe fallback below
+    let sql;
+    if (table === 'products') {
+      sql = `SELECT p.*, json_build_object('id', c.id, 'name', c.name) AS product_categories
+             FROM products p LEFT JOIN product_categories c ON p.category = c.id`;
+      const eqFilters = (filters || []).filter(f => f.type === 'eq');
+      if (eqFilters.length) {
+        const whereClauses = eqFilters.map((f, i) => { params.push(f.value); return `p.${f.field} = $${i+1}`; });
+        sql += ` WHERE ` + whereClauses.join(' AND ');
+      }
+      sql += ' ORDER BY p.id';
+    } else {
+      sql = `SELECT * FROM ${table}`;
+      const eqFilters = (filters || []).filter(f => f.type === 'eq');
+      if (eqFilters.length) {
+        const whereClauses = eqFilters.map((f, i) => { params.push(f.value); return `${f.field} = $${i+1}`; });
+        sql += ` WHERE ` + whereClauses.join(' AND ');
+      }
+      sql += ' ORDER BY id';
     }
-
-    // Simpler: support single eq filter objects { type: 'eq', field, value }
-    const eqFilters = (filters || []).filter(f => f.type === 'eq');
-    if (eqFilters.length) {
-      const whereClauses = eqFilters.map((f, i) => { params.push(f.value); return `${f.field} = $${i+1}`; });
-      sql += ` WHERE ` + whereClauses.join(' AND ');
-    }
-
-    sql += ' ORDER BY id';
     const { rows } = await pool.query(sql, params);
     if (maybeSingle) return res.json({ data: rows[0] ?? null, error: null });
     return res.json({ data: rows, error: null });
   } catch (err) {
     console.error('query error', err);
-    // Don't expose DB errors to the client; return empty data
-    return res.json({ data: maybeSingle ? null : [], error: null });
+    return res.json({ data: maybeSingle ? null : [], error: 'Query failed' });
   }
 });
 

@@ -22,9 +22,41 @@ export const useOrders = () => {
       setIsLoading(true);
 
       const { data: rawOrders, error } = await supabase.from("orders").select("*");
-      const fetchedOrders = rawOrders?.map(normalizeOrder);
-
       if (error) throw error;
+
+      // Build a map of tracking info for these orders
+      let trackingMap: Record<string, TrackingInfo> = {};
+      if (rawOrders && rawOrders.length) {
+        try {
+          const orderIds = rawOrders.map(o => o.id).filter(Boolean);
+          if (orderIds.length) {
+            const { data: trackingRows, error: trackingErr } = await supabase
+              .from('tracking_info')
+              .select('*')
+              .in('order_id', orderIds);
+            if (!trackingErr && trackingRows) {
+              trackingRows.forEach((r: any) => {
+                if (!r) return;
+                trackingMap[r.order_id] = {
+                  trackingNumber: r.tracking_number || '',
+                  carrier: r.carrier || '',
+                  trackingUrl: r.tracking_url || undefined,
+                  shippedDate: r.shipped_date ? String(r.shipped_date).split('T')[0] : undefined,
+                  estimatedDeliveryDate: r.estimated_delivery_date ? String(r.estimated_delivery_date).split('T')[0] : undefined,
+                };
+              });
+            }
+          }
+        } catch (tErr) {
+          console.warn('Unable to merge tracking info', tErr);
+        }
+      }
+
+      const fetchedOrders = rawOrders?.map(o => {
+        const base = normalizeOrder(o as any);
+        const ti = trackingMap[base.id];
+        return ti ? { ...base, trackingInfo: ti } : base;
+      });
 
       setOrders(fetchedOrders || []);
     } catch (error) {
@@ -209,62 +241,41 @@ export const useOrders = () => {
     }
   }
 
-  const handleTrackingSubmit = async (orderId: string, trackingInfo: TrackingInfo) => {
+  const handleTrackingSubmit = async (orderId: string, trackingInfo: TrackingInfo): Promise<{success:boolean; emailSent:boolean}> => {
     try {
-      // Check if tracking info exists for this order
-      const existing = await fetchTrackingInfo(orderId);
-
-      const payload = {
-        tracking_number: trackingInfo.trackingNumber,
-        carrier: trackingInfo.carrier,
-        tracking_url: trackingInfo.trackingUrl,
-        shipped_date: trackingInfo.shippedDate,
-        estimated_delivery_date: trackingInfo.estimatedDeliveryDate,
-        updated_at: new Date().toISOString()
+      const res = await fetch(`/api/orders/${orderId}/tracking`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {})
+        },
+        body: JSON.stringify({
+          tracking_number: trackingInfo.trackingNumber,
+          carrier: trackingInfo.carrier,
+          tracking_url: trackingInfo.trackingUrl,
+          shipped_date: trackingInfo.shippedDate,
+          estimated_delivery_date: trackingInfo.estimatedDeliveryDate
+        })
+      });
+      const body = await res.json().catch(()=>({}));
+      if (!res.ok) throw new Error(body.error || 'failed');
+      // Use server-returned tracking row (snake_case) to ensure we capture derived URL
+      const row = body.data || {};
+      const normalized: TrackingInfo = {
+        trackingNumber: row.tracking_number || trackingInfo.trackingNumber,
+        carrier: row.carrier || trackingInfo.carrier,
+        trackingUrl: row.tracking_url || trackingInfo.trackingUrl,
+        shippedDate: row.shipped_date ? String(row.shipped_date).split('T')[0] : trackingInfo.shippedDate,
+        estimatedDeliveryDate: row.estimated_delivery_date ? String(row.estimated_delivery_date).split('T')[0] : trackingInfo.estimatedDeliveryDate,
       };
-
-      console.log("Saving tracking info:", payload);
-
-      // Insert or update the tracking info
-      const { error } = existing
-        ? await supabase.from("tracking_info").update({
-            ...payload,
-            updated_at: new Date().toISOString(),
-          }).eq("order_id", orderId)
-        : await supabase.from("tracking_info").insert({
-            ...payload,
-            order_id: orderId,
-          });
-
-      if (error) throw error;
-
-      toast({
-        title: "Tracking Info Saved",
-        description: `Tracking info for order #${orderId} was successfully saved.`,
-      });
-
-      // Optionally update local order state
-      setOrders(current =>
-        current.map(order =>
-          order.id === orderId ? { ...order, trackingInfo } : order
-        )
-      );
-
-      // Auto-update the order status to shipped
-      await supabase
-        .from("orders")
-        .update({ status: 'shipped', updated_at: new Date().toISOString() })
-        .eq("id", orderId);
-
-      return true;
-    } catch (error: any) {
-      console.error("Error saving tracking info:", error.message || error);
-      toast({
-        variant: "destructive",
-        title: "Tracking Save Failed",
-        description: error.message || "Unable to save tracking info. Please try again.",
-      });
-      return false;
+      // Update local state
+      setOrders(current => current.map(o => o.id === orderId ? { ...o, trackingInfo: normalized, status: o.status === 'shipped' ? o.status : 'shipped' } : o));
+      toast({ title: 'Tracking Info Saved', description: `Tracking info for order #${orderId} saved.` });
+      return { success: true, emailSent: !!body.email_sent };
+    } catch (e:any) {
+      console.error('tracking endpoint error', e);
+      toast({ variant: 'destructive', title: 'Tracking Save Failed', description: e.message || 'Unable to save tracking info.' });
+      return { success: false, emailSent: false };
     }
   };
 
@@ -293,6 +304,42 @@ export const useOrders = () => {
     return normalizeOrder(data);
   };
 
+  // Admin create order with manual line pricing and shipping
+  const createAdminOrder = async (payload: {
+    user: { id?: string; email?: string };
+    items: Array<{ product_id: string; quantity: number; unit_price?: number }>;
+    shipping_price?: number;
+    shipping_address?: any;
+    shipping_option?: any;
+    notes?: string;
+    payment_method?: string;
+    status?: OrderStatus;
+  }): Promise<Order | null> => {
+    try {
+      setIsSubmitting(true);
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      const body = await res.json();
+      if (!res.ok || body.error) throw new Error(body.error || 'Failed to create order');
+      const newOrder = normalizeOrder(body.data);
+      setOrders(curr => [newOrder, ...curr]);
+      toast({ title: 'Order Created', description: `Order ${newOrder.id} created.` });
+      return newOrder;
+    } catch (e: any) {
+      console.error('createAdminOrder error', e);
+      toast({ variant: 'destructive', title: 'Create Failed', description: e.message || 'Unable to create order.' });
+      return null;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return {
     orders,
     isLoading,
@@ -306,6 +353,7 @@ export const useOrders = () => {
     fetchTrackingInfo,
     handleTrackingSubmit,
     clearAllOrders,
-    updateOrder
+  updateOrder,
+  createAdminOrder
   };
 };

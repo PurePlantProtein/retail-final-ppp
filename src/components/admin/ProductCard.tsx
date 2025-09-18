@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 
 import React from 'react';
 import { Product } from '@/types/product';
@@ -29,14 +30,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
           className="w-full h-full object-cover"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+            target.src = '/placeholder.svg';
           }}
         />
       </div>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">{product.name}</CardTitle>
         <div className="flex justify-between">
-          <span className="text-primary font-medium">${product.price.toFixed(2)}</span>
+          <span className="text-primary font-medium">{formatCurrency(product.price as any)}</span>
           <span className="text-gray-500 text-sm">Stock: {product.stock}</span>
         </div>
       </CardHeader>

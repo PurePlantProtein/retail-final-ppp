@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -139,7 +140,7 @@ const ProductPricingManager: React.FC<ProductPricingManagerProps> = ({
           Set Prices for "{product.name}"
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Base Price: ${product.price.toFixed(2)}
+          Base Price: {formatCurrency(product.price as any)}
         </p>
       </CardHeader>
       <CardContent>

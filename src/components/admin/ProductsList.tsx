@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 
 import React from 'react';
 import { Product } from '@/types/product';
@@ -66,7 +67,7 @@ const ProductsList: React.FC<ProductsListProps> = ({
                   className="w-12 h-12 object-cover rounded-md"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+                    target.src = '/placeholder.svg';
                   }}
                 />
               </TableCell>
@@ -77,7 +78,7 @@ const ProductsList: React.FC<ProductsListProps> = ({
                 </div>
               </TableCell>
               <TableCell>{product.category?.name || 'Uncategorized'}</TableCell>
-              <TableCell className="font-medium">${product.price.toFixed(2)}</TableCell>
+              <TableCell className="font-medium">{formatCurrency(product.price as any)}</TableCell>
               <TableCell>{product.stock}</TableCell>
               <TableCell>{product.weight ? `${product.weight} kg` : '-'}</TableCell>
               <TableCell className="text-right">

@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -56,7 +57,7 @@ const DesktopProductTable: React.FC<DesktopProductTableProps> = ({
                   className="w-12 h-12 object-cover rounded-md"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+                    target.src = '/placeholder.svg';
                   }}
                 />
               </TableCell>
@@ -66,7 +67,7 @@ const DesktopProductTable: React.FC<DesktopProductTableProps> = ({
                 </Link>
               </TableCell>
               <TableCell>{product.category?.name || 'Uncategorized'}</TableCell>
-              <TableCell>${product.price.toFixed(2)}</TableCell>
+              <TableCell>{formatCurrency(product.price as any)}</TableCell>
               <TableCell>{product.stock}</TableCell>
               <TableCell>
                 {isLoggedIn ? (

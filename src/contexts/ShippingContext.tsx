@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 type ShippingContextType = {
   shippingAddress: ShippingAddress | null;
-  setShippingAddress: (address: ShippingAddress, userId: string) => Promise<void>;
+  setShippingAddress: (address: ShippingAddress, userId?: string) => Promise<void>;
   clearShippingAddress: () => void;
   isLoading: boolean;
 };
@@ -37,7 +37,7 @@ export const ShippingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             console.error("Error fetching shipping from Supabase:", error);
           }
 
-          if (data) {
+      if (data) {
             const address: ShippingAddress = {
               name: data.name,
               street: data.street,
@@ -45,7 +45,7 @@ export const ShippingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               state: data.state,
               postalCode: data.postal_code,
               country: data.country,
-              phone: data.phone,
+        phone: (data as any).phone || '',
             };
 
             setShippingAddressState(address);
@@ -63,16 +63,17 @@ export const ShippingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [user]);
 
   // Function to update shipping address
-  const setShippingAddress = async (address: ShippingAddress, userId: string) => {
+  const setShippingAddress = async (address: ShippingAddress, userId?: string) => {
     setShippingAddressState(address);
-
-    if (!userId) return;
+    const uid = userId || user?.id;
+    if (!uid) return;
 
     try {
       const { error } = await supabase
         .from("shipping_addresses")
-        .upsert([{
-          user_id: userId,
+        .upsert([
+          {
+          user_id: uid,
           name: address.name,
           street: address.street,
           city: address.city,
@@ -80,14 +81,15 @@ export const ShippingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           postal_code: address.postalCode,
           country: address.country,
           phone: address.phone,
-        }], {
+        }
+        ], {
           onConflict: 'user_id',
         });
 
       if (error) {
         console.error("Supabase upsert error (shipping):", error);
       } else {
-        localStorage.setItem(`shipping_address_${userId}`, JSON.stringify(address));
+  localStorage.setItem(`shipping_address_${uid}`, JSON.stringify(address));
       }
     } catch (err) {
       console.error("Failed to upsert shipping address:", err);

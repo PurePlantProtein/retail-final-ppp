@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import Layout from '@/components/Layout';
 import { AdminLayout } from '@/components/AdminLayout';
@@ -7,7 +7,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { sendOrderConfirmationEmail } from '@/services/emailService';
 import { mapProductForClient } from '@/utils/productUtils';
 import { EmailSettingsForm } from '@/components/admin/EmailSettingsForm';
-import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
+// Template editing disabled; templates are now managed on the backend
+// import { EmailTemplateEditor } from '@/components/admin/EmailTemplateEditor';
 import { defaultDispatchTemplate, defaultAccountsTemplate } from '@/utils/emailUtils';
 
 const EmailSettings = () => {
@@ -66,13 +67,40 @@ const EmailSettings = () => {
   
   const [dispatchTemplate, setDispatchTemplate] = useState(emailSettings.dispatchTemplate || defaultDispatchTemplate);
   const [accountsTemplate, setAccountsTemplate] = useState(emailSettings.accountsTemplate || defaultAccountsTemplate);
+  const [trackingTemplate, setTrackingTemplate] = useState(emailSettings.trackingTemplate || `<p style="margin:0 0 12px;font-size:15px;">Your order <strong>{{orderId}}</strong> is now in transit via <strong>{{carrier}}</strong>.</p>\n<p style=\"margin:0 0 12px;font-size:14px;\">Tracking Number: <strong>{{trackingNumber}}</strong></p>\n<p style=\"margin:0 0 12px;font-size:14px;\">Track here: <a href=\"{{trackingLink}}\" style=\"color:#2563eb;\">{{trackingLink}}</a></p>\n<p style=\"margin:0;font-size:13px;color:#6b7280;\">Thank you for choosing {{brand}}.</p>`);
   
   // Template editing state
-  const [editingTemplate, setEditingTemplate] = useState(false);
+  // const [editingTemplate, setEditingTemplate] = useState(false);
   const [currentTab, setCurrentTab] = useState("customer");
 
-  const handleSaveSettings = () => {
-    // Save email notification settings
+  // Load persisted settings from backend (single row) on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return; // must be authed
+        const res = await fetch('/api/email-settings', { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+        const body = await res.json();
+        const data = body?.data;
+        if (data) {
+          setAdminEmail(data.admin_email || '');
+          setDispatchEmail(data.dispatch_email || '');
+          setAccountsEmail(data.accounts_email || '');
+          setNotifyAdmin(!!data.notify_admin);
+          setNotifyDispatch(!!data.notify_dispatch);
+            setNotifyAccounts(!!data.notify_accounts);
+          setNotifyCustomer(!!data.notify_customer);
+          if (data.tracking_template) setTrackingTemplate(data.tracking_template);
+          // still keep templates from local settings for now
+        }
+      } catch (e) {
+        console.warn('failed to load email-settings from api', e);
+      }
+    })();
+  }, []);
+
+  const handleSaveSettings = async () => {
+    // Update local state & localStorage immediately for responsiveness
     updateEmailSettings({
       adminEmail,
       dispatchEmail,
@@ -84,13 +112,41 @@ const EmailSettings = () => {
       customerTemplate,
       adminTemplate,
       dispatchTemplate,
-      accountsTemplate
+  accountsTemplate,
+  trackingTemplate
     });
 
-    toast({
-      title: "Settings Saved",
-      description: "Email notification settings have been updated.",
-    });
+    // Persist to backend table (creates a new row each save)
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Not authenticated');
+      const res = await fetch('/api/email-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          admin_email: adminEmail || null,
+          dispatch_email: dispatchEmail || null,
+          accounts_email: accountsEmail || null,
+          notify_admin: notifyAdmin,
+          notify_dispatch: notifyDispatch,
+          notify_accounts: notifyAccounts,
+          notify_customer: notifyCustomer,
+          customer_template: customerTemplate || null,
+          admin_template: adminTemplate || null,
+          dispatch_template: dispatchTemplate || null,
+          accounts_template: accountsTemplate || null,
+          tracking_template: trackingTemplate || null
+        })
+      });
+      if (!res.ok) throw new Error('Save failed');
+      toast({
+        title: 'Settings Saved',
+        description: 'Email notification settings have been updated and persisted.'
+      });
+    } catch (e:any) {
+      console.error('save email-settings failed', e);
+      toast({ title: 'Save Failed', description: e.message || 'Unable to persist settings', variant: 'destructive' });
+    }
   };
 
   const sendTestEmail = async () => {
@@ -216,20 +272,7 @@ const EmailSettings = () => {
             handleSaveSettings={handleSaveSettings}
           />
 
-          <EmailTemplateEditor
-            customerTemplate={customerTemplate}
-            setCustomerTemplate={setCustomerTemplate}
-            adminTemplate={adminTemplate}
-            setAdminTemplate={setAdminTemplate}
-            dispatchTemplate={dispatchTemplate}
-            setDispatchTemplate={setDispatchTemplate}
-            accountsTemplate={accountsTemplate}
-            setAccountsTemplate={setAccountsTemplate}
-            editingTemplate={editingTemplate}
-            setEditingTemplate={setEditingTemplate}
-            currentTab={currentTab}
-            setCurrentTab={setCurrentTab}
-          />
+          {/* Template editor disabled; templates are defined server-side for consistency */}
         </div>
       </AdminLayout>
     </Layout>

@@ -19,11 +19,29 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
+    // Treat known transient DOM selection errors as non-fatal
+    const msg = (error?.message || '').toLowerCase();
+    const isTransientSelectionError = /node cannot be found in the current page|node was not found|the node is no longer/i.test(msg);
+    if (isTransientSelectionError) {
+      // Don't trip the fatal fallback UI; let componentDidCatch attempt recovery
+      return { hasError: false } as State;
+    }
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Attempt soft recovery for selection-related DOMExceptions sometimes thrown by browsers
+    const msg = (error?.message || '').toLowerCase();
+    const isTransientSelectionError = /node cannot be found in the current page|node was not found|the node is no longer/i.test(msg);
+    if (isTransientSelectionError) {
+      try {
+        const sel = window.getSelection?.();
+        sel?.removeAllRanges?.();
+      } catch {}
+      // Force a re-render without showing the error screen
+      this.setState({ hasError: false, error: undefined });
+    }
   }
 
   private handleReset = () => {

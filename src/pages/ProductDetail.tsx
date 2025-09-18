@@ -8,6 +8,7 @@ import ProductSpecifications from '@/components/product/ProductSpecifications';
 import ProductPurchaseForm from '@/components/product/ProductPurchaseForm';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Heart } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatters';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -66,7 +67,7 @@ const ProductDetail = () => {
   };
 
   const handleDecrementQuantity = () => {
-    if (product && quantity > (product.min_quantity || 1)) {
+    if (product && quantity > (product.minQuantity || 1)) {
       setQuantity(quantity - 1);
     }
   };
@@ -74,7 +75,7 @@ const ProductDetail = () => {
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
     if (product) {
-      const min = product.min_quantity || 1;
+  const min = product.minQuantity || 1;
       if (!isNaN(value) && value >= min && value <= product.stock) {
         setQuantity(value);
       }
@@ -125,17 +126,19 @@ const ProductDetail = () => {
               </h1>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
                 <p className="text-xl sm:text-2xl text-gray-700 font-semibold">
-                  ${product.price.toFixed(2)}
+                  {formatCurrency(product.price as any)}
                 </p>
-                {/* <Button variant="outline" size="icon" className="self-start sm:self-auto">
-                  <Heart className="h-4 w-4" />
-                </Button> */}
+                  {user && userTier?.tier?.name && (
+                    <span className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
+                      {userTier.tier.name} tier pricing available
+                    </span>
+                  )}
               </div>
               <div className="text-sm text-gray-600 mb-4">
                 <p>Stock: {product.stock} units available</p>
                 {product.category && <p>Category: {product.category?.name || 'Uncategorized'}</p>}
-                {product.min_quantity && product.min_quantity > 1 && (
-                  <p>Minimum order quantity: {product.min_quantity} units</p>
+                {product.minQuantity && product.minQuantity > 1 && (
+                  <p>Minimum order quantity: {product.minQuantity} units</p>
                 )}
               </div>
             </div>
@@ -150,7 +153,7 @@ const ProductDetail = () => {
               handleDecrementQuantity={handleDecrementQuantity}
               handleQuantityChange={handleQuantityChange}
               handleAddToCart={handleAddToCart}
-              minQuantity={product.min_quantity}
+              minQuantity={product.minQuantity}
               categoryMOQ={undefined}
             />
             
@@ -158,9 +161,9 @@ const ProductDetail = () => {
             <div className="mt-6 sm:mt-8">
               <ProductSpecifications
                 stock={product.stock}
-                servingSize={product.serving_size}
-                numberOfServings={product.number_of_servings}
-                bagSize={product.bag_size}
+                servingSize={product.servingSize}
+                numberOfServings={product.numberOfServings}
+                bagSize={product.bagSize}
               />
             </div>
           </div>

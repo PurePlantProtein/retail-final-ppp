@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -37,7 +38,7 @@ const MobileProductCard: React.FC<MobileProductCardProps> = ({
                 className="w-16 h-16 object-cover rounded-md"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = 'https://ppprotein.com.au/cdn/shop/files/ppprotein-circles_180x.png';
+                  target.src = '/placeholder.svg';
                 }}
               />
             </div>
@@ -50,7 +51,7 @@ const MobileProductCard: React.FC<MobileProductCardProps> = ({
               </Link>
               <div className="text-sm text-gray-600 space-y-1">
                 <p>Category: {product.category?.name || 'Uncategorized'}</p>
-                <p>Price: ${product.price.toFixed(2)}</p>
+                <p>Price: {formatCurrency(product.price as any)}</p>
                 <p>Stock: {product.stock}</p>
               </div>
             </div>

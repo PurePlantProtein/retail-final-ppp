@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useBusinessTypes } from '@/hooks/users/useBusinessTypes';
 
 const profileSchema = z.object({
   business_name: z.string().min(2, {
@@ -23,15 +24,6 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const businessTypes = [
-  "Gym",
-  "Health Store",
-  "Online Store",
-  "Nutrition Shop",
-  "Fitness Center",
-  "Pharmacy",
-  "Other"
-];
 
 type ProfileFormProps = {
   user: any;
@@ -47,6 +39,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   refreshProfile 
 }) => {
   const { toast } = useToast();
+  const { businessTypes, loading: businessTypesLoading, error: businessTypesError } = useBusinessTypes();
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -80,26 +73,16 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
     }
     
     try {
-      const updateData = {
-        business_name: data.business_name,
-        business_address: data.business_address,
-        phone: data.phone,
-        business_type: data.business_type,
-        updated_at: new Date().toISOString(),
-      };
-      
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({ 
-          id: user.id,
-          ...updateData
-        }, { 
-          onConflict: 'id'
-        });
+      // Use auth.updateUser which calls our API route that upserts into profiles and maps camelCase fields
+      const payload = {
+        businessName: data.business_name,
+        businessAddress: data.business_address,
+        contactPhone: data.phone,
+        businessType: data.business_type,
+      } as any;
 
-      if (error) {
-        throw error;
-      }
+      const { data: updateResp } = await supabase.auth.updateUser(payload);
+      if (updateResp?.error) throw new Error(updateResp.error);
 
       await refreshProfile();
       
@@ -154,13 +137,21 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a business type" />
+                        <SelectValue placeholder={businessTypesLoading ? 'Loading...' : (businessTypesError ? 'Error loading types' : 'Select a business type')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {businessTypes.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
+                      {businessTypesLoading ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : businessTypesError ? (
+                        <SelectItem value="error" disabled>Error loading types</SelectItem>
+                      ) : businessTypes.length === 0 ? (
+                        <SelectItem value="no-types" disabled>No types found</SelectItem>
+                      ) : (
+                        businessTypes.map((bt: any) => (
+                          <SelectItem key={bt.id} value={bt.name}>{bt.name}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormDescription>
