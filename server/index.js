@@ -649,6 +649,112 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
   }
 });
 
+// Admin: create order with manual pricing and shipping
+app.post('/api/admin/orders', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const {
+      user: u = {},
+      items = [],
+      shipping_price = 0,
+      shipping_address = null,
+      shipping_option = null,
+      notes = '',
+      payment_method = 'manual',
+      status = 'pending'
+    } = req.body || {};
+
+    if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'items_required' });
+    const lineTotal = items.reduce((acc, it) => acc + Number(it.unit_price ?? 0) * Number(it.quantity ?? 0), 0);
+    const total = Number(lineTotal) + Number(shipping_price || 0);
+
+    // Generate an order id if not provided by client: ADMIN-<timestamp>
+    const orderId = `ADMIN-${Date.now()}`;
+
+    const { rows } = await pool.query(
+      `INSERT INTO orders(id, user_id, user_name, email, items, total, status, payment_method, shipping_address, shipping_option, notes, created_at, updated_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now(), now())
+       RETURNING *`,
+      [
+        orderId,
+        u.id || null,
+        u.name || null,
+        u.email || null,
+        JSON.stringify(items),
+        total,
+        status,
+        payment_method,
+        shipping_address ? JSON.stringify(shipping_address) : null,
+        shipping_option ? JSON.stringify(shipping_option) : null,
+        notes || ''
+      ]
+    );
+    return res.json({ data: rows[0], error: null });
+  } catch (err) {
+    console.error('admin create order error', err);
+    return res.status(500).json({ error: 'create_failed', message: err.message });
+  }
+});
+
+// Admin: save tracking info for an order
+app.post('/api/orders/:id/tracking', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const orderId = req.params.id;
+    const { tracking_number, carrier, tracking_url, shipped_date, estimated_delivery_date } = req.body || {};
+    // Upsert tracking info
+    const { rows: existing } = await pool.query('SELECT id FROM tracking_info WHERE order_id=$1 LIMIT 1', [orderId]);
+
+    // Try to derive tracking URL when carrier + number provided if tracking_url missing
+    let derivedUrl = tracking_url || null;
+    if (!derivedUrl && carrier && tracking_number) {
+      const c = String(carrier).toLowerCase();
+      if (c.includes('aus') || c.includes('australia')) derivedUrl = `https://auspost.com.au/mypost/track/#/details/${encodeURIComponent(tracking_number)}`;
+      if (!derivedUrl && c.includes('star')) derivedUrl = `https://track.startrack.com.au/${encodeURIComponent(tracking_number)}`;
+    }
+
+    let row;
+    if (existing.length) {
+      const { rows: up } = await pool.query(
+        `UPDATE tracking_info SET tracking_number=$1, carrier=$2, tracking_url=$3, shipped_date=$4, estimated_delivery_date=$5, updated_at=now()
+         WHERE order_id=$6 RETURNING *`,
+        [tracking_number || null, carrier || null, derivedUrl, shipped_date || null, estimated_delivery_date || null, orderId]
+      );
+      row = up[0];
+    } else {
+      const { rows: ins } = await pool.query(
+        `INSERT INTO tracking_info(order_id, tracking_number, carrier, tracking_url, shipped_date, estimated_delivery_date, created_at, updated_at)
+         VALUES($1,$2,$3,$4,$5,$6, now(), now()) RETURNING *`,
+        [orderId, tracking_number || null, carrier || null, derivedUrl, shipped_date || null, estimated_delivery_date || null]
+      );
+      row = ins[0];
+    }
+
+    // Optionally send tracking email via resendClient
+    let email_sent = false;
+    if (resendClient) {
+      try {
+        const { rows: o } = await pool.query('SELECT email FROM orders WHERE id=$1', [orderId]);
+        const to = o[0]?.email || null;
+        if (to) {
+          const from = process.env.RESEND_FROM || 'no-reply@example.com';
+          const subject = 'Your order has shipped';
+          const html = `<p>Your order <strong>${orderId}</strong> has shipped.</p>
+                        ${row.tracking_number ? `<p>Tracking number: <strong>${row.tracking_number}</strong></p>` : ''}
+                        ${row.tracking_url ? `<p>Track here: <a href="${row.tracking_url}">${row.tracking_url}</a></p>` : ''}`;
+          await resendClient.send({ from, to: [to], subject, html, text: `Order ${orderId} shipped. Tracking: ${row.tracking_number || ''} ${row.tracking_url || ''}` });
+          email_sent = true;
+        }
+      } catch (e) { console.error('send tracking email failed', e); }
+    }
+
+    return res.json({ data: row, email_sent });
+  } catch (err) {
+    console.error('save tracking error', err);
+    return res.status(500).json({ error: 'tracking_failed', message: err.message });
+  }
+});
+
 // Supabase-like function invocations
 app.post('/api/functions/:name', authMiddleware, async (req, res) => {
   const name = req.params.name;
