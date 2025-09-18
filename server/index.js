@@ -466,7 +466,12 @@ app.post('/api/auth/update', authMiddleware, async (req, res) => {
 
 // Middleware to verify token
 function authMiddleware(req, res, next) {
-  const auth = req.headers.authorization;
+  let auth = req.headers.authorization;
+  // Fallback: allow ?jwt=TOKEN for admin troubleshooting (Xero connect/status) when headers cannot be set via direct navigation.
+  // NOTE: This should be removed or locked down later; query param tokens can leak via logs/referrers.
+  if (!auth && req.query && req.query.jwt) {
+    auth = 'Bearer ' + req.query.jwt;
+  }
   if (!auth) return res.status(401).json({ error: 'Unauthorized' });
   const token = auth.replace(/Bearer\s*/, '');
   try {
