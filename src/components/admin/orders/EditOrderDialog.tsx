@@ -25,6 +25,7 @@ import { Button as GhostButton } from '@/components/ui/button';
 
 type FormValues = {
   userName: string;
+  email: string;
   status: OrderStatus;
   paymentMethod: string;
   invoiceUrl: string;
@@ -54,6 +55,7 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
   React.useEffect(() => {
     if (order) {
       setValue("userName", order.userName);
+      setValue("email", order.email || "");
       setValue("status", order.status);
       setValue("paymentMethod", order.paymentMethod);
       setValue("invoiceUrl", order.invoiceUrl || "");
@@ -80,6 +82,7 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
     const updatedOrder = {
       ...order,
       userName: data.userName,
+      email: data.email,
       status: data.status,
       paymentMethod: data.paymentMethod,
       invoiceUrl: data.invoiceUrl,
@@ -99,7 +102,7 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Edit Order</DialogTitle>
           <DialogDescription>
@@ -107,71 +110,46 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(handleFormSubmit)}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="userName" className="text-right">
-                Customer
-              </label>
-              <Input
-                id="userName"
-                className="col-span-3"
-                {...register("userName", { required: "Customer name is required" })}
-              />
-              {errors.userName && (
-                <p className="col-span-3 col-start-2 text-sm text-red-500">
-                  {errors.userName.message}
-                </p>
-              )}
+          <div className="grid gap-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1">
+                <label htmlFor="userName" className="text-sm font-medium">Customer</label>
+                <Input id="userName" {...register("userName", { required: "Customer name is required" })} />
+                {errors.userName && (<p className="text-sm text-red-500">{errors.userName.message}</p>)}
+              </div>
+              <div className="grid gap-1">
+                <label htmlFor="email" className="text-sm font-medium">Customer Email</label>
+                <Input id="email" type="email" placeholder="customer@example.com" {...register("email")} />
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="status" className="text-right">
-                Status
-              </label>
-              <Select
-                onValueChange={(value) => setValue("status", value as OrderStatus)}
-                defaultValue={order?.status}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="shipped">Shipped</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-1">
+                <label className="text-sm font-medium">Status</label>
+                <Select onValueChange={(value) => setValue("status", value as OrderStatus)} defaultValue={order?.status}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="shipped">Shipped</SelectItem>
+                    <SelectItem value="delivered">Delivered</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1">
+                <label htmlFor="paymentMethod" className="text-sm font-medium">Payment</label>
+                <Input id="paymentMethod" {...register("paymentMethod")} />
+              </div>
+              <div className="grid gap-1">
+                <label htmlFor="invoiceUrl" className="text-sm font-medium">Invoice URL</label>
+                <Input id="invoiceUrl" {...register("invoiceUrl")} />
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="paymentMethod" className="text-right">
-                Payment
-              </label>
-              <Input
-                id="paymentMethod"
-                className="col-span-3"
-                {...register("paymentMethod")}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="invoiceUrl" className="text-right">
-                Invoice URL
-              </label>
-              <Input
-                id="invoiceUrl"
-                className="col-span-3"
-                {...register("invoiceUrl")}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="notes" className="text-right">
-                Notes
-              </label>
-              <Textarea
-                id="notes"
-                className="col-span-3"
-                {...register("notes")}
-              />
+            <div className="grid gap-1">
+              <label htmlFor="notes" className="text-sm font-medium">Notes</label>
+              <Textarea id="notes" {...register("notes")} />
             </div>
 
             {/* Items editor */}
@@ -183,7 +161,7 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
                   const product = productOptions.find(p => p.id === productId);
                   return (
                     <div key={field.id} className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-6">
+                      <div className="col-span-7">
                         <select className="w-full border rounded px-2 py-2" {...register(`items.${idx}.product_id` as const)}>
                           <option value="">Select product</option>
                           {productOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -192,7 +170,7 @@ export const EditOrderDialog: React.FC<EditOrderDialogProps> = ({
                       <div className="col-span-2">
                         <Input type="number" min={1} {...register(`items.${idx}.quantity` as const, { valueAsNumber: true })} />
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-2">
                         <Input type="number" step="0.01" placeholder={product ? String(product.price) : 'Override'} {...register(`items.${idx}.unit_price` as const, { valueAsNumber: true })} />
                       </div>
                       <div className="col-span-1 text-right">
