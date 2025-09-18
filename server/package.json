@@ -6,7 +6,8 @@
   "main": "index.js",
   "scripts": {
   "start": "node index.js",
-  "import:csv": "node scripts/import_csv_products.js data/products_with_macros_no_samples.csv"
+  "import:csv": "node scripts/import_csv_products.js data/products_with_macros_no_samples.csv",
+  "smoke": "node scripts/smoke_api.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.0",

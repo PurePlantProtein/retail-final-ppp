@@ -637,15 +637,88 @@ app.post('/api/debug/products-selftest', authMiddleware, async (req, res) => {
   }
 });
 
-// Endpoint to create orders
+// Endpoint to create orders (robust create with generated ID and JSON serialization)
 app.post('/api/orders', authMiddleware, async (req, res) => {
-  const { items, total } = req.body;
   try {
-    const { rows } = await pool.query('INSERT INTO orders(user_id, items, total) VALUES($1,$2,$3) RETURNING id', [req.user.sub, JSON.stringify(items), total]);
-    res.json({ id: rows[0].id });
+    const payload = req.body || {};
+    const {
+      id: providedId,
+      items: rawItems = [],
+      total: rawTotal,
+      user_id = req.user?.sub || null,
+      user_name = null,
+      email = null,
+      status = 'pending',
+      payment_method = null,
+      shipping_address: rawShippingAddress = null,
+      shipping_option: rawShippingOption = null,
+      invoice_status = null,
+      invoice_url = null,
+      notes = null,
+      is_sample = false
+    } = payload;
+
+    const tryParse = (v) => {
+      if (v == null) return null;
+      if (typeof v === 'string') {
+        const s = v.trim();
+        if (!s) return null;
+        try { return JSON.parse(s); } catch { return v; }
+      }
+      return v;
+    };
+
+    const items = Array.isArray(rawItems) ? rawItems : (Array.isArray(tryParse(rawItems)) ? tryParse(rawItems) : []);
+    const shipping_address = tryParse(rawShippingAddress);
+    const shipping_option = tryParse(rawShippingOption);
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'items_required' });
+    }
+
+    // Compute total if not provided
+    const safeNum = (v) => {
+      if (v === null || v === undefined || v === '') return 0;
+      const n = typeof v === 'string' ? Number(v) : v;
+      return Number.isFinite(n) ? n : 0;
+    };
+    let computed = 0;
+    try {
+      computed = items.reduce((acc, it) => acc + safeNum(it.unit_price ?? it.price ?? it.product?.price) * safeNum(it.quantity ?? 1), 0);
+    } catch {}
+    const total = rawTotal != null ? safeNum(rawTotal) : computed;
+
+    const orderId = providedId && String(providedId).trim() ? String(providedId).trim() : `ORDER-${Date.now()}`;
+
+    const sql = `INSERT INTO orders(
+      id, user_id, user_name, email, items, total, status, payment_method,
+      shipping_address, shipping_option, invoice_status, invoice_url, notes,
+      created_at, updated_at, is_sample
+    ) VALUES (
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, now(), now(), $14
+    ) RETURNING *`;
+    const vals = [
+      orderId,
+      user_id || null,
+      user_name || null,
+      email || null,
+      JSON.stringify(items),
+      total,
+      status,
+      payment_method,
+      shipping_address ? JSON.stringify(shipping_address) : null,
+      shipping_option ? JSON.stringify(shipping_option) : null,
+      invoice_status,
+      invoice_url,
+      notes,
+      !!is_sample
+    ];
+
+    const { rows } = await pool.query(sql, vals);
+    return res.json({ data: rows[0], error: null });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'db error' });
+    console.error('orders.create error', err);
+    return res.status(500).json({ error: 'create_failed', message: err.message });
   }
 });
 
@@ -758,7 +831,7 @@ app.post('/api/orders/:id/tracking', authMiddleware, async (req, res) => {
 // Supabase-like function invocations
 app.post('/api/functions/:name', authMiddleware, async (req, res) => {
   const name = req.params.name;
-  const payload = req.body;
+  const payload = (req.body && req.body.body) ? req.body.body : (req.body || {});
   console.log('invoke function', name, payload);
   try {
     switch (name) {
@@ -1087,21 +1160,61 @@ app.post('/api/query', authMiddleware, async (req, res) => {
         for (const row of normValues) {
           const keys = Object.keys(row || {});
           if (!keys.length) continue;
-          // Serialize JSON for products table
-          const jsonCols = table === 'products' ? new Set(['amino_acid_profile','nutritional_info','metadata']) : new Set();
-          const vals = keys.map(k => jsonCols.has(k) ? JSON.stringify(row[k] ?? (k === 'amino_acid_profile' || k === 'nutritional_info' ? [] : {})) : row[k]);
+          // Serialize JSON for products/orders tables
+          const jsonCols = table === 'products'
+            ? new Set(['amino_acid_profile','nutritional_info','metadata'])
+            : table === 'orders'
+              ? new Set(['items','shipping_address','shipping_option'])
+              : new Set();
+          const vals = keys.map(k => {
+            if (jsonCols.has(k)) {
+              const v = row[k];
+              if (typeof v === 'string') {
+                try { return JSON.stringify(JSON.parse(v)); } catch { return JSON.stringify(k === 'items' ? [] : {}); }
+              }
+              return JSON.stringify(v ?? (k === 'items' ? [] : {}));
+            }
+            if (table === 'orders' && k === 'total') {
+              const n = typeof row[k] === 'string' ? Number(row[k]) : row[k];
+              return Number.isFinite(n) ? n : 0;
+            }
+            return row[k];
+          });
           const sql = `INSERT INTO ${table}(${keys.join(',')}) VALUES(${keys.map((_,i)=>`$${i+1}`).join(',')}) RETURNING *`;
           const { rows } = await pool.query(sql, vals);
           results.push(...rows);
         }
-        return res.json({ data: results, error: null });
+        return res.json({ data: maybeSingle ? (results[0] ?? null) : results, error: null });
       } else {
         const keys = Object.keys(normValues || {});
-        const jsonCols = table === 'products' ? new Set(['amino_acid_profile','nutritional_info','metadata']) : new Set();
-        const vals = keys.map(k => jsonCols.has(k) ? JSON.stringify(normValues[k] ?? (k === 'amino_acid_profile' || k === 'nutritional_info' ? [] : {})) : normValues[k]);
+        const jsonCols = table === 'products'
+          ? new Set(['amino_acid_profile','nutritional_info','metadata'])
+          : table === 'orders'
+            ? new Set(['items','shipping_address','shipping_option'])
+            : new Set();
+        const vals = keys.map(k => {
+          if (jsonCols.has(k)) {
+            const v = normValues[k];
+            if (table === 'orders') {
+              if (v === undefined || v === null || v === '') return null;
+              if (typeof v === 'string') { try { return JSON.stringify(JSON.parse(v)); } catch { return null; } }
+              return JSON.stringify(v);
+            }
+            const isArrayJson = (k === 'amino_acid_profile' || k === 'nutritional_info');
+            if (v === undefined || v === null || v === '') return JSON.stringify(isArrayJson ? [] : {});
+            if (typeof v === 'string') { try { return JSON.stringify(JSON.parse(v)); } catch { return JSON.stringify(isArrayJson ? [] : {}); } }
+            return JSON.stringify(v);
+          }
+          if (table === 'orders' && k === 'total') {
+            const vv = normValues[k];
+            const n = typeof vv === 'string' ? Number(vv) : vv;
+            return Number.isFinite(n) ? n : 0;
+          }
+          return normValues[k];
+        });
         const sql = `INSERT INTO ${table}(${keys.join(',')}) VALUES(${keys.map((_,i)=>`$${i+1}`).join(',')}) RETURNING *`;
         const { rows } = await pool.query(sql, vals);
-        return res.json({ data: rows, error: null });
+        return res.json({ data: maybeSingle ? (rows[0] ?? null) : rows, error: null });
       }
     }
 
@@ -1109,11 +1222,29 @@ app.post('/api/query', authMiddleware, async (req, res) => {
       const { where } = req.body;
       if (!where) return res.status(400).json({ data: null, error: 'missing where' });
       const setKeys = Object.keys(normValues || {});
-      const jsonCols = table === 'products' ? new Set(['amino_acid_profile','nutritional_info','metadata']) : new Set();
-      const setVals = setKeys.map(k => jsonCols.has(k) ? JSON.stringify(normValues[k] ?? (k === 'amino_acid_profile' || k === 'nutritional_info' ? [] : {})) : normValues[k]);
+      const jsonCols = table === 'products'
+        ? new Set(['amino_acid_profile','nutritional_info','metadata'])
+        : table === 'orders'
+          ? new Set(['items','shipping_address','shipping_option'])
+          : new Set();
+      const setVals = setKeys.map(k => {
+        if (jsonCols.has(k)) {
+          const v = normValues[k];
+          if (typeof v === 'string') {
+            try { return JSON.stringify(JSON.parse(v)); } catch { return JSON.stringify(k === 'items' ? [] : {}); }
+          }
+          return JSON.stringify(v ?? (k === 'items' ? [] : {}));
+        }
+        if (table === 'orders' && k === 'total') {
+          const vv = normValues[k];
+          const n = typeof vv === 'string' ? Number(vv) : vv;
+          return Number.isFinite(n) ? n : 0;
+        }
+        return normValues[k];
+      });
       const sql = `UPDATE ${table} SET ${setKeys.map((k,i)=>`${k}=$${i+1}`).join(', ')} WHERE ${where.field}=$${setKeys.length+1} RETURNING *`;
       const { rows } = await pool.query(sql, [...setVals, where.value]);
-      return res.json({ data: rows, error: null });
+      return res.json({ data: maybeSingle ? (rows[0] ?? null) : rows, error: null });
     }
 
     if (action === 'delete') {

@@ -61,6 +61,48 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Running the local API and smoke test
+
+The backend API lives in `server/` and uses PostgreSQL (see `docker/init/init.sql`). To run locally:
+
+```bash
+cd server
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/postgres" # adjust if needed
+export JWT_SECRET="dev-secret"
+npm install
+npm start
+```
+
+Endpoints used by the app:
+- `POST /api/auth/signup`, `POST /api/auth/signin`, `GET /api/auth/session`
+- `GET /api/products`, `GET /api/products/:id`, `POST /api/products`, `PUT /api/products/:id`, `DELETE /api/products/:id`
+- `POST /api/orders` (create order), `POST /api/admin/orders` (admin create), `POST /api/orders/:id/tracking` (save tracking)
+- `POST /api/query` (generic shim for tables)
+
+Smoke test the API end-to-end (signup → create product → create order):
+
+```bash
+cd server
+API_BASE="http://localhost:4000/api" npm run smoke
+```
+
+If it prints `SMOKE TEST OK`, the core flows are working.
+
+## Adding site images (login/marketing backgrounds)
+
+You can now drop images into the repository-tracked folder `storage/assets/` and reference them directly in the app:
+
+- Path to place files: `storage/assets/<your-file-name>`
+- URL to use in the frontend: `/api/storage/assets/<your-file-name>`
+
+Examples:
+- Place `storage/assets/login-bg.jpg` → reference it at `/api/storage/assets/login-bg.jpg` in CSS or JSX.
+- If you later upload via the admin upload endpoint with a key (e.g., `login-bg`), you can use `/api/storage/assets/login-bg` (without extension), and the server will resolve the actual extension.
+
+Notes:
+- The server already exposes these files via the `assets` bucket routes.
+- Ensure the server process runs with access to the `storage/assets` directory.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/d73a9acb-fe77-4ec3-aa5d-b97e819d7fc6) and click on Share -> Publish.
