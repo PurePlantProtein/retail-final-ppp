@@ -195,10 +195,12 @@ app.get('/api/xero/connect', authMiddleware, async (req, res) => {
     if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
     const state = crypto.randomBytes(16).toString('hex');
     // Naive state store: echo in cookie for demo; in production, store in DB/user session.
-    res.cookie && res.cookie('xero_oauth_state', state, { httpOnly: true, sameSite: 'lax' });
-    return res.redirect(buildXeroAuthUrl(state));
+    if (res.cookie) res.cookie('xero_oauth_state', state, { httpOnly: true, sameSite: 'lax' });
+    const authUrl = buildXeroAuthUrl(state);
+    console.log('[xero] connect initiated -> redirecting user to Xero authorize URL');
+    return res.redirect(authUrl);
   } catch (e) {
-    console.error('xero connect failed', e);
+    console.error('[xero] connect failed', e);
     return res.status(500).json({ error: 'xero_connect_failed' });
   }
 });
@@ -206,8 +208,13 @@ app.get('/api/xero/connect', authMiddleware, async (req, res) => {
 app.get('/api/xero/callback', async (req, res) => {
   try {
     const { code, state } = req.query || {};
-    if (!code) return res.status(400).send('Missing code');
+    if (!code) {
+      console.warn('[xero] callback hit without code param');
+      return res.status(400).send('Missing code');
+    }
+    console.log('[xero] callback received code, exchanging for tokens');
     const token = await xeroTokenRequest('authorization_code', { code, redirect_uri: XERO_REDIRECT_URI });
+    console.log('[xero] token exchange success, fetching connections');
     const conns = await xeroGetConnections(token.access_token);
     const tenant = Array.isArray(conns) ? conns[0] : null;
     if (!tenant) return res.status(400).send('No Xero tenant connection found');
@@ -216,10 +223,36 @@ app.get('/api/xero/callback', async (req, res) => {
       'INSERT INTO xero_tokens(tenant_id, access_token, refresh_token, expires_at, created_at, updated_at) VALUES($1,$2,$3,$4, now(), now())',
       [tenant.tenantId, token.access_token, token.refresh_token, expiresAt.toISOString()]
     );
+    console.log('[xero] stored new token for tenant', tenant.tenantId, 'expiresAt', expiresAt.toISOString());
     return res.send('Xero connected successfully. You can close this window.');
   } catch (e) {
-    console.error('xero callback failed', e);
+    console.error('[xero] callback failed', e);
     return res.status(500).send('Xero connection failed');
+  }
+});
+
+// Xero status endpoint for debugging connection state
+app.get('/api/xero/status', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const { rows } = await pool.query('SELECT tenant_id, expires_at, updated_at FROM xero_tokens ORDER BY updated_at DESC LIMIT 1');
+    if (!rows.length) {
+      return res.json({ connected: false, reason: 'no_token' });
+    }
+    const rec = rows[0];
+    const now = new Date();
+    const exp = new Date(rec.expires_at);
+    const remainingMs = exp.getTime() - now.getTime();
+    return res.json({
+      connected: remainingMs > 0,
+      tenant_id: rec.tenant_id,
+      expires_at: rec.expires_at,
+      remaining_seconds: Math.floor(remainingMs / 1000),
+      refreshed_at: rec.updated_at
+    });
+  } catch (e) {
+    console.error('[xero] status endpoint failed', e);
+    return res.status(500).json({ error: 'xero_status_failed' });
   }
 });
 
