@@ -133,6 +133,28 @@ export const useOrders = () => {
     }
   };
 
+        const createXeroInvoice = async (orderId: string) => {
+          try {
+            setIsSubmitting(true);
+            const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/xero-invoice`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {})
+              }
+            });
+            const body = await res.json();
+            if (!res.ok || body.error) throw new Error(body.error || 'Xero invoice create failed');
+            toast({ title: 'Xero Invoice Created', description: `Invoice created in Xero for order #${orderId}.` });
+            return { success: true, data: body.data };
+          } catch (e: any) {
+            console.error('createXeroInvoice failed', e);
+            toast({ variant: 'destructive', title: 'Xero Error', description: e.message || 'Failed to create invoice in Xero.' });
+            return { success: false };
+          } finally {
+            setIsSubmitting(false);
+          }
+        };
   const handleUpdateOrder = async (updatedOrder: Order) => {
     try {
       setIsSubmitting(true);
@@ -384,6 +406,7 @@ export const useOrders = () => {
     handleTrackingSubmit,
     clearAllOrders,
   updateOrder,
-  createAdminOrder
+  createAdminOrder,
+  createXeroInvoice
   };
 };

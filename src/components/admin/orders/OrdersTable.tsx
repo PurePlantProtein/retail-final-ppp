@@ -28,6 +28,7 @@ interface OrdersTableProps {
   onEdit: (order: Order) => void;
   onDelete: (order: Order) => void;
   onAddTracking: (order: Order) => void;
+  onCreateInvoice?: (order: Order) => void;
 }
 
 export const OrdersTable: React.FC<OrdersTableProps> = ({
@@ -35,7 +36,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   onStatusChange,
   onEdit,
   onDelete,
-  onAddTracking
+  onAddTracking,
+  onCreateInvoice
 }) => {
   const navigate = useNavigate();
 
@@ -123,6 +125,15 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                   >
                     View
                   </Button>
+                  {onCreateInvoice && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => onCreateInvoice(order)}
+                    >
+                      Create Invoice
+                    </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     size="sm"

@@ -30,7 +30,8 @@ const OrdersManagement = () => {
     handleDeleteOrder,
     fetchTrackingInfo,
     handleTrackingSubmit,
-    createAdminOrder
+    createAdminOrder,
+    createXeroInvoice
   } = useOrders();
   
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -131,6 +132,7 @@ const OrdersManagement = () => {
                 onEdit={openEditDialog}
                 onDelete={openDeleteDialog}
                 onAddTracking={openTrackingDialog}
+                onCreateInvoice={(order) => createXeroInvoice(order.id)}
               />
             )}
           </CardContent>

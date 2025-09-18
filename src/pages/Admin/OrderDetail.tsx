@@ -40,6 +40,7 @@ const OrderDetail = () => {
     handleTrackingSubmit,
     isLoading: isLoadingOrders,
     isSubmitting,
+    createXeroInvoice,
   } = useOrders();
   const [order, setOrder] = useState<Order | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
@@ -210,6 +211,12 @@ const OrderDetail = () => {
               </Button>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => order && createXeroInvoice(order.id)}
+              >
+                Create Xero Invoice
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setShowTrackingDialog(true)}
