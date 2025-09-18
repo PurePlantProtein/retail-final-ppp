@@ -235,20 +235,36 @@ app.get('/api/xero/callback', async (req, res) => {
 app.get('/api/xero/status', authMiddleware, async (req, res) => {
   try {
     if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
-    const { rows } = await pool.query('SELECT tenant_id, expires_at, updated_at FROM xero_tokens ORDER BY updated_at DESC LIMIT 1');
+    const envDiagnostics = {
+      has_client_id: !!(process.env.XERO_CLIENT_ID && process.env.XERO_CLIENT_ID.trim()),
+      has_client_secret: !!(process.env.XERO_CLIENT_SECRET && process.env.XERO_CLIENT_SECRET.trim()),
+      has_redirect_uri: !!(process.env.XERO_REDIRECT_URI && process.env.XERO_REDIRECT_URI.trim()),
+      redirect_uri: process.env.NODE_ENV === 'production' ? undefined : process.env.XERO_REDIRECT_URI, // hide in prod
+      scopes_configured: (process.env.XERO_SCOPES || XERO_SCOPES || '').split(/\s+/).filter(Boolean).length,
+      has_branding_theme: !!(process.env.XERO_BRANDING_THEME_ID),
+    };
+    const { rows } = await pool.query('SELECT tenant_id, expires_at, updated_at, created_at FROM xero_tokens ORDER BY updated_at DESC LIMIT 1');
     if (!rows.length) {
-      return res.json({ connected: false, reason: 'no_token' });
+      return res.json({ connected: false, reason: 'no_token', token_present: false, env: envDiagnostics });
     }
     const rec = rows[0];
     const now = new Date();
     const exp = new Date(rec.expires_at);
     const remainingMs = exp.getTime() - now.getTime();
+    const connected = remainingMs > 0;
+    const guidance = !connected
+      ? 'Token expired – re-run /api/xero/connect to refresh (admin authenticated).'
+      : 'Token active.';
     return res.json({
-      connected: remainingMs > 0,
+      connected,
       tenant_id: rec.tenant_id,
       expires_at: rec.expires_at,
       remaining_seconds: Math.floor(remainingMs / 1000),
-      refreshed_at: rec.updated_at
+      refreshed_at: rec.updated_at,
+      created_at: rec.created_at,
+      token_present: true,
+      env: envDiagnostics,
+      guidance
     });
   } catch (e) {
     console.error('[xero] status endpoint failed', e);

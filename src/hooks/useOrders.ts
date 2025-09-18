@@ -133,18 +133,39 @@ export const useOrders = () => {
     }
   };
 
+        // Helper to obtain an auth token even if stored under an alternate key (defensive)
+        const resolveAuthToken = (): string | null => {
+          const keys = ['token', 'authToken', 'access_token'];
+            for (const k of keys) {
+              const v = localStorage.getItem(k);
+              if (v && v.length > 10) return v;
+            }
+            return null;
+        };
+
         const createXeroInvoice = async (orderId: string) => {
           try {
             setIsSubmitting(true);
+            const authToken = resolveAuthToken();
+            if (!authToken) {
+              toast({ variant: 'destructive', title: 'Auth Missing', description: 'No auth token found in localStorage. Please sign in again.' });
+              return { success: false };
+            }
             const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/xero-invoice`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {})
+                Authorization: `Bearer ${authToken}`
               }
             });
             const body = await res.json();
-            if (!res.ok || body.error) throw new Error(body.error || 'Xero invoice create failed');
+            if (!res.ok || body.error) {
+              // Provide more granular messaging
+              if (body?.error === 'xero_not_connected') {
+                throw new Error('Xero not connected. Go to Connect Xero first.');
+              }
+              throw new Error(body.error || 'Xero invoice create failed');
+            }
             toast({ title: 'Xero Invoice Created', description: `Invoice created in Xero for order #${orderId}.` });
             return { success: true, data: body.data };
           } catch (e: any) {
