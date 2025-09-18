@@ -57,6 +57,7 @@ export const mapProductForClient = (product: any): Product => {
   price: Number.isFinite(priceNum) ? priceNum : 0,
   stock: Number.isFinite(stockNum) ? stockNum : 0,
   weight: typeof weightNum === 'number' && Number.isFinite(weightNum) ? weightNum : null,
+    sku: product.sku ?? null,
     minQuantity: product.min_quantity,
     bagSize: product.bag_size,
     numberOfServings: product.number_of_servings,
@@ -80,11 +81,13 @@ export const mapProductForStorage = (product: Partial<Product>): any => {
     aminoAcidProfile,
     nutritionalInfo,
     category,
+    sku,
     ...rest
   } = product;
 
   return {
     ...rest,
+    sku,
   // Ensure price is numeric when sending to DB
   price: typeof (rest as any).price === 'string' ? Number((rest as any).price) : (rest as any).price,
     min_quantity: minQuantity !== undefined ? minQuantity : product.minQuantity,

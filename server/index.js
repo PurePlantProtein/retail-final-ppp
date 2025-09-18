@@ -237,12 +237,37 @@ app.post('/api/admin/orders/:id/xero-invoice', authMiddleware, async (req, res) 
     // Map order → Xero invoice payload (simplified, tax-exclusive)
     const shippingAddress = order.shipping_address ? JSON.parse(order.shipping_address) : null;
     const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || '[]');
+    const defaultAccount = process.env.XERO_DEFAULT_ACCOUNT_CODE || '200';
+    const shippingAccount = process.env.XERO_SHIPPING_ACCOUNT_CODE || defaultAccount;
+    const taxCodeProducts = process.env.XERO_TAX_CODE_PRODUCTS || 'GST Free';
+    const taxCodeShipping = process.env.XERO_TAX_CODE_SHIPPING || 'GST on Income';
+
+    // Product lines (GST free) with ItemCode from SKU when available
     const lines = items.map((it) => ({
       Description: (it.product && it.product.name) || `Product ${it.product_id || ''}`,
       Quantity: Number(it.quantity) || 1,
       UnitAmount: Number(it.unit_price ?? it.product?.price ?? 0),
-      AccountCode: process.env.XERO_DEFAULT_ACCOUNT_CODE || '200'
+      AccountCode: defaultAccount,
+      ItemCode: it.product?.sku || undefined,
+      TaxType: taxCodeProducts
     }));
+
+    // Add shipping line with GST if shipping_option has a price
+    try {
+      const shippingOpt = order.shipping_option ? (typeof order.shipping_option === 'string' ? JSON.parse(order.shipping_option) : order.shipping_option) : null;
+      const shipPrice = shippingOpt && shippingOpt.price != null ? Number(shippingOpt.price) : null;
+      if (shipPrice && shipPrice > 0) {
+        lines.push({
+          Description: `Shipping${shippingOpt?.name ? ` - ${shippingOpt.name}` : ''}`,
+          Quantity: 1,
+          UnitAmount: shipPrice,
+          AccountCode: shippingAccount,
+          TaxType: taxCodeShipping
+        });
+      }
+    } catch (e) {
+      console.warn('failed to parse shipping_option for Xero invoice', e.message);
+    }
     const dueDays =  Number(order.payment_terms || 14);
     const today = new Date();
     const due = new Date(today.getTime() + dueDays*24*60*60*1000);
@@ -591,6 +616,7 @@ function mapProductClientCamelToDb(obj) {
     bagSize: 'bag_size',
     numberOfServings: 'number_of_servings',
     servingSize: 'serving_size',
+    sku: 'sku',
   };
   for (const [from, to] of Object.entries(mapping)) {
     if (out[from] !== undefined && out[to] === undefined) {
@@ -859,6 +885,59 @@ app.post('/api/debug/products-selftest', authMiddleware, async (req, res) => {
     }
   } catch (e) {
     return res.status(500).json({ error: 'selftest_failed', message: e.message });
+  }
+});
+
+// Admin metrics: summarized orders for analytics (filtered)
+app.get('/api/admin/metrics/orders', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const { include_admin, include_samples, days } = req.query || {};
+    const params = [];
+    let where = [];
+    if (!include_samples || String(include_samples).toLowerCase() !== 'true') {
+      where.push('o.is_sample IS NOT TRUE');
+    }
+    if (!include_admin || String(include_admin).toLowerCase() !== 'true') {
+      // Heuristic: admin-created orders have id starting with 'ADMIN-'
+      where.push("o.id NOT LIKE 'ADMIN-%'");
+    }
+    if (days && /^\d+$/.test(String(days))) {
+      where.push('o.created_at >= now() - ($1::int * interval \'1 day\')');
+      params.push(Number(days));
+    }
+    const whereSql = where.length ? 'WHERE ' + where.join(' AND ') : '';
+    const sql = `SELECT o.id, o.created_at, o.updated_at, o.total, o.status, o.items, o.is_sample
+                 FROM orders o
+                 ${whereSql}`;
+    const { rows } = await pool.query(sql, params);
+    // Basic aggregation
+    let totalRevenue = 0;
+    let statusCounts = {};
+    let byDate = {};
+    for (const r of rows) {
+      const t = Number(r.total) || 0;
+      totalRevenue += t;
+      statusCounts[r.status || 'unknown'] = (statusCounts[r.status || 'unknown'] || 0) + 1;
+      const d = new Date(r.created_at).toISOString().substring(0,10);
+      byDate[d] = (byDate[d] || 0) + 1;
+    }
+    return res.json({
+      data: {
+        orders: rows,
+        aggregates: {
+          count: rows.length,
+            totalRevenue,
+            averageOrderValue: rows.length ? totalRevenue / rows.length : 0,
+            statusCounts,
+            ordersByDate: byDate
+        }
+      },
+      error: null
+    });
+  } catch (e) {
+    console.error('metrics orders failed', e);
+    return res.status(500).json({ error: 'metrics_failed' });
   }
 });
 

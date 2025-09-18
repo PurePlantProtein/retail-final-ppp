@@ -50,6 +50,7 @@ const productSchema = z.object({
     return /^https?:\/\//i.test(v) || v.startsWith('/');
   }, { message: 'Image must be a valid URL' }),
   category: z.string().min(1, { message: "Please select a category" }),
+  sku: z.string().min(1, { message: 'SKU is required' }).optional().or(z.literal('')).transform((v) => v === '' ? undefined : v),
   // Ensure weight is properly validated as a number
   weight: z.coerce.number().nonnegative({ message: "Weight must be a non-negative number" }).optional(),
   servingSize: z.string().optional(),
@@ -124,6 +125,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       stock: product.stock,
       image: product.image,
       category: (product.category?.id ?? '').toString(),
+      sku: product.sku || '',
       // New fields
       weight: product.weight || 0,
       servingSize: product.servingSize || '',
@@ -140,6 +142,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
       stock: 0,
       image: '',
       category: '',
+      sku: '',
       // New fields
       weight: 0,
       servingSize: '',
@@ -182,6 +185,7 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
           stock: formData.stock,
           image: formData.image,
           category: formData.category, // category id as string
+          sku: formData.sku,
           weight: formData.weight || 0,
           servingSize: formData.servingSize,
           numberOfServings: formData.numberOfServings,
@@ -407,6 +411,22 @@ const ProductForm = ({ product, onSuccess }: ProductFormProps) => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <FormField
+                        control={form.control}
+                        name="sku"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>SKU</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g., PP-VAN-1KG" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Unique product code used for accounting and stock control
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <FormField
                         control={form.control}
                         name="minQuantity"

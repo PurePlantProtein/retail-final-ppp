@@ -322,6 +322,7 @@ export type Product = {
   stock: number;
   image: string | null;
   category: Category | null;
+  sku?: string | null;
   weight?: number | null;
   bagSize?: string | null;
   numberOfServings?: number | null;
