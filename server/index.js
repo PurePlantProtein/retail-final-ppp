@@ -56,6 +56,23 @@ const pool = new Pool({
   } catch (e) {
     console.error('[startup] failed ensuring email_settings table', e.message);
   }
+
+  // Ensure xero_tokens table exists
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS xero_tokens (
+        id SERIAL PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        access_token TEXT NOT NULL,
+        refresh_token TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT now(),
+        updated_at TIMESTAMPTZ DEFAULT now()
+      );
+    `);
+  } catch (e) {
+    console.error('[startup] failed ensuring xero_tokens table', e.message);
+  }
 })();
 
 // FIXED: Enforce a secure JWT_SECRET in production.
@@ -118,6 +135,150 @@ if (RESEND_API_KEY) {
     }
   };
 }
+
+// ---- Xero OAuth minimal scaffolding ----
+const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID || '';
+const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET || '';
+const XERO_REDIRECT_URI = process.env.XERO_REDIRECT_URI || '';
+const XERO_SCOPES = process.env.XERO_SCOPES || 'openid profile email accounting.transactions accounting.contacts offline_access';
+
+function buildXeroAuthUrl(state) {
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: XERO_CLIENT_ID,
+    redirect_uri: XERO_REDIRECT_URI,
+    scope: XERO_SCOPES,
+    state
+  });
+  return `https://login.xero.com/identity/connect/authorize?${params.toString()}`;
+}
+
+async function xeroTokenRequest(grant_type, payload) {
+  const basic = Buffer.from(`${XERO_CLIENT_ID}:${XERO_CLIENT_SECRET}`).toString('base64');
+  const params = new URLSearchParams({ grant_type, ...payload });
+  const fetchImpl = (typeof globalThis.fetch !== 'undefined') ? globalThis.fetch : (await import('node-fetch')).default;
+  const res = await fetchImpl('https://identity.xero.com/connect/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': `Basic ${basic}` },
+    body: params.toString()
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`xero token error: ${res.status} ${JSON.stringify(data)}`);
+  return data;
+}
+
+async function xeroGetConnections(access_token) {
+  const fetchImpl = (typeof globalThis.fetch !== 'undefined') ? globalThis.fetch : (await import('node-fetch')).default;
+  const res = await fetchImpl('https://api.xero.com/connections', { headers: { Authorization: `Bearer ${access_token}` } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`xero connections error: ${res.status} ${JSON.stringify(data)}`);
+  return data;
+}
+
+async function getActiveXeroToken() {
+  const { rows } = await pool.query('SELECT * FROM xero_tokens ORDER BY updated_at DESC LIMIT 1');
+  const rec = rows[0];
+  if (!rec) return null;
+  if (new Date(rec.expires_at) > new Date()) return rec;
+  // refresh
+  const token = await xeroTokenRequest('refresh_token', { refresh_token: rec.refresh_token });
+  const expiresAt = new Date(Date.now() + (token.expires_in * 1000));
+  const { rows: up } = await pool.query(
+    'UPDATE xero_tokens SET access_token=$1, refresh_token=$2, expires_at=$3, updated_at=now() WHERE id=$4 RETURNING *',
+    [token.access_token, token.refresh_token || rec.refresh_token, expiresAt.toISOString(), rec.id]
+  );
+  return up[0];
+}
+
+app.get('/api/xero/connect', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const state = crypto.randomBytes(16).toString('hex');
+    // Naive state store: echo in cookie for demo; in production, store in DB/user session.
+    res.cookie && res.cookie('xero_oauth_state', state, { httpOnly: true, sameSite: 'lax' });
+    return res.redirect(buildXeroAuthUrl(state));
+  } catch (e) {
+    console.error('xero connect failed', e);
+    return res.status(500).json({ error: 'xero_connect_failed' });
+  }
+});
+
+app.get('/api/xero/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query || {};
+    if (!code) return res.status(400).send('Missing code');
+    const token = await xeroTokenRequest('authorization_code', { code, redirect_uri: XERO_REDIRECT_URI });
+    const conns = await xeroGetConnections(token.access_token);
+    const tenant = Array.isArray(conns) ? conns[0] : null;
+    if (!tenant) return res.status(400).send('No Xero tenant connection found');
+    const expiresAt = new Date(Date.now() + (token.expires_in * 1000));
+    await pool.query(
+      'INSERT INTO xero_tokens(tenant_id, access_token, refresh_token, expires_at, created_at, updated_at) VALUES($1,$2,$3,$4, now(), now())',
+      [tenant.tenantId, token.access_token, token.refresh_token, expiresAt.toISOString()]
+    );
+    return res.send('Xero connected successfully. You can close this window.');
+  } catch (e) {
+    console.error('xero callback failed', e);
+    return res.status(500).send('Xero connection failed');
+  }
+});
+
+// Create Xero invoice for an order (admin-triggered)
+app.post('/api/admin/orders/:id/xero-invoice', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const id = req.params.id;
+    const { rows } = await pool.query('SELECT * FROM orders WHERE id=$1 LIMIT 1', [id]);
+    const order = rows[0];
+    if (!order) return res.status(404).json({ error: 'not_found' });
+    const token = await getActiveXeroToken();
+    if (!token) return res.status(400).json({ error: 'xero_not_connected' });
+
+    // Map order → Xero invoice payload (simplified, tax-exclusive)
+    const shippingAddress = order.shipping_address ? JSON.parse(order.shipping_address) : null;
+    const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || '[]');
+    const lines = items.map((it) => ({
+      Description: (it.product && it.product.name) || `Product ${it.product_id || ''}`,
+      Quantity: Number(it.quantity) || 1,
+      UnitAmount: Number(it.unit_price ?? it.product?.price ?? 0),
+      AccountCode: process.env.XERO_DEFAULT_ACCOUNT_CODE || '200'
+    }));
+    const dueDays =  Number(order.payment_terms || 14);
+    const today = new Date();
+    const due = new Date(today.getTime() + dueDays*24*60*60*1000);
+    const invoice = {
+      Type: 'ACCREC',
+      Contact: { Name: order.user_name, EmailAddress: order.email },
+      Date: today.toISOString().substring(0,10),
+      DueDate: due.toISOString().substring(0,10),
+      Reference: String(order.id),
+      Status: 'AUTHORISED',
+      LineItems: lines,
+      ...(process.env.XERO_BRANDING_THEME_ID ? { BrandingThemeID: process.env.XERO_BRANDING_THEME_ID } : {})
+    };
+
+    // POST to Xero Accounting API
+    const fetchImpl = (typeof globalThis.fetch !== 'undefined') ? globalThis.fetch : (await import('node-fetch')).default;
+    const resp = await fetchImpl(`https://api.xero.com/api.xro/2.0/Invoices`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.access_token}`,
+        'Xero-tenant-id': token.tenant_id
+      },
+      body: JSON.stringify({ Invoices: [invoice] })
+    });
+    const body = await resp.json();
+    if (!resp.ok) {
+      console.error('xero create invoice failed', body);
+      return res.status(resp.status).json({ error: 'xero_error', details: body });
+    }
+    return res.json({ data: body, error: null });
+  } catch (e) {
+    console.error('create xero invoice error', e);
+    return res.status(500).json({ error: 'xero_invoice_failed' });
+  }
+});
 
 // Simple signup route
 app.post('/api/auth/signup', async (req, res) => {
