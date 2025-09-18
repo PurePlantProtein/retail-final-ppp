@@ -32,6 +32,30 @@ const pool = new Pool({
   } catch (e) {
     console.error('[startup] failed ensuring products.updated_at', e.message);
   }
+
+  // Ensure email_settings table exists (simple single-row log of latest settings)
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS email_settings (
+        id SERIAL PRIMARY KEY,
+        admin_email TEXT,
+        dispatch_email TEXT,
+        accounts_email TEXT,
+        notify_admin BOOLEAN DEFAULT TRUE,
+        notify_dispatch BOOLEAN DEFAULT FALSE,
+        notify_accounts BOOLEAN DEFAULT FALSE,
+        notify_customer BOOLEAN DEFAULT TRUE,
+        customer_template TEXT,
+        admin_template TEXT,
+        dispatch_template TEXT,
+        accounts_template TEXT,
+        tracking_template TEXT,
+        created_at TIMESTAMPTZ DEFAULT now()
+      );
+    `);
+  } catch (e) {
+    console.error('[startup] failed ensuring email_settings table', e.message);
+  }
 })();
 
 // FIXED: Enforce a secure JWT_SECRET in production.
@@ -292,6 +316,38 @@ async function isAdmin(userId) {
     return rows.length > 0;
   } catch { return false; }
 }
+
+// Email settings API: returns the most recent row; write inserts a new row (immutable history)
+app.get('/api/email-settings', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const { rows } = await pool.query('SELECT * FROM email_settings ORDER BY created_at DESC LIMIT 1');
+    return res.json({ data: rows[0] || null, error: null });
+  } catch (e) {
+    console.error('email-settings get error', e);
+    return res.status(500).json({ error: 'db error' });
+  }
+});
+
+app.post('/api/email-settings', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const fields = [
+      'admin_email','dispatch_email','accounts_email','notify_admin','notify_dispatch','notify_accounts','notify_customer',
+      'customer_template','admin_template','dispatch_template','accounts_template','tracking_template'
+    ];
+    const body = req.body || {};
+    const cols = fields.filter(f => body[f] !== undefined);
+    const vals = cols.map((c, i) => body[c]);
+    const placeholders = cols.map((_, i) => `$${i+1}`).join(', ');
+    const sql = `INSERT INTO email_settings(${cols.join(', ')}) VALUES(${placeholders}) RETURNING *`;
+    const { rows } = await pool.query(sql, vals);
+    return res.json({ data: rows[0], error: null });
+  } catch (e) {
+    console.error('email-settings post error', e);
+    return res.status(500).json({ error: 'db error' });
+  }
+});
 
 app.post('/api/categories', authMiddleware, async (req, res) => {
   try {
@@ -817,26 +873,51 @@ app.put('/api/admin/orders/:id', authMiddleware, async (req, res) => {
     // Send notifications
     let email_sent = false;
     try {
+      // Load latest email settings
+      let settings = null;
+      try {
+        const { rows: es } = await pool.query('SELECT * FROM email_settings ORDER BY created_at DESC LIMIT 1');
+        settings = es[0] || null;
+      } catch (e) {
+        console.warn('email-settings read failed', e.message);
+      }
+
+      // Determine recipients
       const toList = [];
-      const sales = process.env.SALES_EMAIL || 'sales@ppprotein.com.au';
-      const accounts = process.env.ACCOUNTS_EMAIL || 'accounts@ppprotein.com.au';
-      const ordersEmail = process.env.ORDERS_EMAIL || 'orders@ppprotein.com.au';
-      const customer = row?.email || null;
-      [accounts, sales, ordersEmail, customer].forEach(e => { if (e) toList.push(e); });
+      const accounts = (settings?.accounts_email || process.env.ACCOUNTS_EMAIL || '').trim();
+      const sales = (settings?.admin_email || process.env.SALES_EMAIL || '').trim();
+      const dispatch = (settings?.dispatch_email || process.env.ORDERS_EMAIL || '').trim();
+      const notifyAccounts = settings ? !!settings.notify_accounts : true;
+      const notifyAdmin = settings ? !!settings.notify_admin : true;
+      const notifyDispatch = settings ? !!settings.notify_dispatch : true;
+      const notifyCustomer = settings ? !!settings.notify_customer : true;
+      if (notifyAccounts && accounts) toList.push(accounts);
+      if (notifyAdmin && sales) toList.push(sales);
+      if (notifyDispatch && dispatch) toList.push(dispatch);
+      if (notifyCustomer && row?.email) toList.push(row.email);
+
+      if (!RESEND_API_KEY) console.warn('RESEND_API_KEY not set; skipping email send');
+      if (!resendClient) console.warn('resendClient not configured; skipping email send');
+      if (!toList.length) console.warn('No recipients configured for admin order update');
+
       if (resendClient && toList.length) {
         const from = process.env.RESEND_FROM || 'no-reply@example.com';
-        const subject = `Order ${id} was manually updated`;
-        const html = `<p>Order <strong>${id}</strong> has been updated by an admin.</p>
-          <ul>
-            <li>Status: ${row.status}</li>
-            <li>Total: ${row.total}</li>
-            <li>Payment: ${row.payment_method || ''}</li>
-          </ul>
-          <p>View details in the admin portal.</p>`;
+        const subject = `Order ${id} updated (${row.status || ''})`;
+        const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;">
+          <p>Order <strong>${id}</strong> was manually updated by an admin.</p>
+          <table style="border-collapse:collapse;font-size:13px;">
+            <tr><td style="padding:4px 8px;color:#6b7280;">Status:</td><td style="padding:4px 8px;">${row.status || ''}</td></tr>
+            <tr><td style="padding:4px 8px;color:#6b7280;">Total:</td><td style="padding:4px 8px;">${row.total != null ? row.total : ''}</td></tr>
+            <tr><td style="padding:4px 8px;color:#6b7280;">Payment:</td><td style="padding:4px 8px;">${row.payment_method || ''}</td></tr>
+          </table>
+          <p style="color:#6b7280;">View details in the admin portal.</p>
+        </div>`;
         await resendClient.send({ from, to: toList, subject, html, text: `Order ${id} updated. Status=${row.status} Total=${row.total}` });
         email_sent = true;
       }
-    } catch (e) { console.error('update order email failed', e); }
+    } catch (e) {
+      console.error('update order email failed', e);
+    }
 
     return res.json({ data: row, email_sent });
   } catch (err) {
