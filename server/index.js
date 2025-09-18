@@ -196,9 +196,17 @@ app.post('/api/auth/update', authMiddleware, async (req, res) => {
       const hashed = await bcrypt.hash(payload.password, 10);
       await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hashed, req.user.sub]);
     }
+    // Accept camelCase aliases from clients and map to DB snake_case
+    const mapped = { ...payload };
+    if (mapped.businessName !== undefined && mapped.business_name === undefined) mapped.business_name = mapped.businessName;
+    if (mapped.businessAddress !== undefined && mapped.business_address === undefined) mapped.business_address = mapped.businessAddress;
+    if (mapped.contactPhone !== undefined && mapped.phone === undefined) mapped.phone = mapped.contactPhone;
+    if (mapped.businessType !== undefined && mapped.business_type === undefined) mapped.business_type = mapped.businessType;
+    if (mapped.paymentTerms !== undefined && mapped.payment_terms === undefined) mapped.payment_terms = mapped.paymentTerms;
+
     const profileFields = ['business_name','business_address','phone','business_type','email','payment_terms'];
     const updates = {};
-    for (const f of profileFields) if (payload[f] !== undefined) updates[f] = payload[f];
+    for (const f of profileFields) if (mapped[f] !== undefined) updates[f] = mapped[f];
     if (Object.keys(updates).length) {
       const keys = Object.keys(updates);
       const vals = keys.map(k => updates[k]);
