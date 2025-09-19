@@ -136,6 +136,101 @@ if (RESEND_API_KEY) {
   };
 }
 
+// ---- Email helper & templates ----
+function buildBaseEmail({ title, intro, bodyBlocks = [], footerNote }) {
+  const blocksHtml = bodyBlocks.map(b => {
+    if (!b) return '';
+    if (b.type === 'table' && b.rows) {
+      return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;border-collapse:collapse;font-size:14px;">${b.rows.map(r=>`<tr><td style=\"padding:4px 8px;color:#6b7280;vertical-align:top;width:140px;\">${r.label}</td><td style=\"padding:4px 8px;\">${r.value}</td></tr>`).join('')}</table>`;
+    }
+    if (b.type === 'html') return b.html;
+    if (b.type === 'paragraph') return `<p style="margin:0 0 12px;line-height:1.5;">${b.text}</p>`;
+    return '';
+  }).join('');
+  return `<!DOCTYPE html><html><head><meta charset='utf-8'><title>${title}</title></head><body style="margin:0;padding:0;background:#f7f7f9;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111827;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f9;padding:32px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+        <tr><td style="background:#111827;padding:16px 24px;">
+          <h1 style="margin:0;font-size:18px;line-height:1.3;color:#ffffff;font-weight:600;">${title}</h1>
+        </td></tr>
+        <tr><td style="padding:24px 24px 8px;">
+          <p style="margin:0 0 16px;line-height:1.5;font-size:14px;">${intro}</p>
+          ${blocksHtml}
+        </td></tr>
+        ${footerNote ? `<tr><td style="padding:16px 24px 24px;">
+          <p style="margin:0;font-size:12px;line-height:1.4;color:#6b7280;">${footerNote}</p>
+        </td></tr>` : ''}
+      </table>
+      <div style="margin-top:18px;font-size:11px;color:#9ca3af;">This is an automated message. Please do not reply.</div>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+function buildOrderConfirmationEmail(order) {
+  const title = 'Order Confirmation';
+  const intro = `Thanks for your order <strong>${order.id}</strong>. Below are the details.`;
+  let items = [];
+  try { items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || '[]'); } catch { /* ignore */ }
+  const itemRows = items.map(it => `<tr><td style=\"padding:4px 8px;border-bottom:1px solid #eee;\">${(it.product && it.product.name) || it.product_id || 'Item'}</td><td style=\"padding:4px 8px;border-bottom:1px solid #eee;text-align:right;\">${it.quantity || 1} × ${it.unit_price ?? it.product?.price ?? 0}</td></tr>`).join('');
+  const itemsTable = `<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='margin:8px 0 16px;border-collapse:collapse;font-size:13px;'>
+    <thead><tr><th align='left' style='padding:4px 8px;background:#f3f4f6;font-weight:600;'>Item</th><th align='right' style='padding:4px 8px;background:#f3f4f6;font-weight:600;'>Qty × Price</th></tr></thead>
+    <tbody>${itemRows || `<tr><td style=\"padding:8px;\" colspan=2>No line items found</td></tr>`}</tbody>
+  </table>`;
+  return buildBaseEmail({
+    title,
+    intro,
+    bodyBlocks: [
+      { type: 'html', html: itemsTable },
+      { type: 'table', rows: [
+        { label: 'Order ID', value: order.id },
+        { label: 'Status', value: order.status || 'pending' },
+        { label: 'Total', value: order.total != null ? `$${order.total}` : '—' },
+        { label: 'Email', value: order.email || '—' }
+      ]}
+    ],
+    footerNote: 'We\'ll send you another email when your order ships.'
+  });
+}
+
+function buildTrackingEmail(orderId, trackingRow) {
+  const title = 'Your order has shipped';
+  const intro = `Great news — your order <strong>${orderId}</strong> is on its way.`;
+  const linkHtml = trackingRow.tracking_url ? `<a href="${trackingRow.tracking_url}" style="color:#2563eb;text-decoration:underline;">Track your shipment</a>` : '';
+  return buildBaseEmail({
+    title,
+    intro,
+    bodyBlocks: [
+      { type: 'table', rows: [
+        { label: 'Tracking Number', value: trackingRow.tracking_number || '—' },
+        { label: 'Carrier', value: trackingRow.carrier || '—' },
+        trackingRow.estimated_delivery_date ? { label: 'Est. Delivery', value: trackingRow.estimated_delivery_date } : null,
+        trackingRow.tracking_url ? { label: 'Tracking URL', value: linkHtml } : null
+      ].filter(Boolean) }
+    ],
+    footerNote: 'If the tracking link is not active yet, please check again in a few hours.'
+  });
+}
+
+async function sendSystemEmail({ to, subject, html, text, tag }) {
+  if (!to || (Array.isArray(to) && !to.length)) return { skipped: true, reason: 'no_recipient' };
+  const toList = Array.isArray(to) ? to : [to];
+  const from = process.env.RESEND_FROM || 'no-reply@example.com';
+  if (!resendClient) {
+    console.warn('[email] resendClient not configured; skip send', { subject, toList });
+    return { skipped: true, reason: 'no_client' };
+  }
+  try {
+    const resp = await resendClient.send({ from, to: toList, subject, html, text: text || '' });
+    console.log('[email] sent', { subject, toCount: toList.length, tag });
+    return { sent: true, response: resp };
+  } catch (e) {
+    console.error('[email] send failed', subject, e.message);
+    return { sent: false, error: e.message };
+  }
+}
+
 // ---- Xero OAuth minimal scaffolding ----
 const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID || '';
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET || '';
@@ -274,83 +369,134 @@ app.get('/api/xero/status', authMiddleware, async (req, res) => {
 
 // Create Xero invoice for an order (admin-triggered)
 app.post('/api/admin/orders/:id/xero-invoice', authMiddleware, async (req, res) => {
+  const debug = process.env.DEBUG_ERRORS === 'true';
+  const t0 = Date.now();
+  function dbg(...a) { if (debug) console.log('[xero][invoice]', ...a); }
   try {
     if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
     const id = req.params.id;
+    dbg('begin create invoice for order', id);
     const { rows } = await pool.query('SELECT * FROM orders WHERE id=$1 LIMIT 1', [id]);
     const order = rows[0];
     if (!order) return res.status(404).json({ error: 'not_found' });
     const token = await getActiveXeroToken();
     if (!token) return res.status(400).json({ error: 'xero_not_connected' });
 
-    // Map order → Xero invoice payload (simplified, tax-exclusive)
-    const shippingAddress = order.shipping_address ? JSON.parse(order.shipping_address) : null;
-    const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || '[]');
+    let itemsRaw = order.items;
+    let items; let parseErr = null;
+    try {
+      items = Array.isArray(itemsRaw) ? itemsRaw : JSON.parse(itemsRaw || '[]');
+    } catch (e) { parseErr = e; }
+    if (parseErr) {
+      console.error('[xero][invoice] failed parsing order.items', parseErr.message, { orderId: id, snippet: String(itemsRaw).slice(0,200) });
+      return res.status(500).json({ error: 'parse_items_failed' });
+    }
+    dbg('parsed items count', items.length);
+
+    let shippingAddress = null;
+    if (order.shipping_address) {
+      try { shippingAddress = typeof order.shipping_address === 'string' ? JSON.parse(order.shipping_address) : order.shipping_address; }
+      catch (e) { console.warn('[xero][invoice] shipping_address parse failed', e.message); }
+    }
+
     const defaultAccount = process.env.XERO_DEFAULT_ACCOUNT_CODE || '200';
     const shippingAccount = process.env.XERO_SHIPPING_ACCOUNT_CODE || defaultAccount;
     const taxCodeProducts = process.env.XERO_TAX_CODE_PRODUCTS || 'GST Free';
     const taxCodeShipping = process.env.XERO_TAX_CODE_SHIPPING || 'GST on Income';
 
-    // Product lines (GST free) with ItemCode from SKU when available
-    const lines = items.map((it) => ({
-      Description: (it.product && it.product.name) || `Product ${it.product_id || ''}`,
-      Quantity: Number(it.quantity) || 1,
-      UnitAmount: Number(it.unit_price ?? it.product?.price ?? 0),
-      AccountCode: defaultAccount,
-      ItemCode: it.product?.sku || undefined,
-      TaxType: taxCodeProducts
-    }));
+    const lines = items.map((it, idx) => {
+      const unitPrice = Number(it.unit_price ?? it.product?.price ?? 0);
+      return {
+        LineNumber: idx + 1,
+        Description: (it.product && it.product.name) || `Product ${it.product_id || ''}`,
+        Quantity: Number(it.quantity) || 1,
+        UnitAmount: unitPrice,
+        AccountCode: defaultAccount,
+        ItemCode: it.product?.sku || undefined,
+        TaxType: taxCodeProducts
+      };
+    });
 
-    // Add shipping line with GST if shipping_option has a price
-    try {
-      const shippingOpt = order.shipping_option ? (typeof order.shipping_option === 'string' ? JSON.parse(order.shipping_option) : order.shipping_option) : null;
-      const shipPrice = shippingOpt && shippingOpt.price != null ? Number(shippingOpt.price) : null;
-      if (shipPrice && shipPrice > 0) {
-        lines.push({
-          Description: `Shipping${shippingOpt?.name ? ` - ${shippingOpt.name}` : ''}`,
-          Quantity: 1,
-          UnitAmount: shipPrice,
-          AccountCode: shippingAccount,
-          TaxType: taxCodeShipping
-        });
-      }
-    } catch (e) {
-      console.warn('failed to parse shipping_option for Xero invoice', e.message);
+    let shippingOpt = null;
+    try { shippingOpt = order.shipping_option ? (typeof order.shipping_option === 'string' ? JSON.parse(order.shipping_option) : order.shipping_option) : null; }
+    catch (e) { console.warn('[xero][invoice] shipping_option parse failed', e.message); }
+    const shipPrice = shippingOpt && shippingOpt.price != null ? Number(shippingOpt.price) : null;
+    if (shipPrice && shipPrice > 0) {
+      lines.push({
+        Description: `Shipping${shippingOpt?.name ? ` - ${shippingOpt.name}` : ''}`,
+        Quantity: 1,
+        UnitAmount: shipPrice,
+        AccountCode: shippingAccount,
+        TaxType: taxCodeShipping
+      });
     }
-    const dueDays =  Number(order.payment_terms || 14);
+
+    const dueDays = Number(order.payment_terms || 14);
     const today = new Date();
-    const due = new Date(today.getTime() + dueDays*24*60*60*1000);
+    const due = new Date(today.getTime() + dueDays * 24 * 60 * 60 * 1000);
     const invoice = {
       Type: 'ACCREC',
-      Contact: { Name: order.user_name, EmailAddress: order.email },
-      Date: today.toISOString().substring(0,10),
-      DueDate: due.toISOString().substring(0,10),
+      LineAmountTypes: 'Exclusive',
+      Contact: { Name: order.user_name || (shippingAddress?.name) || order.email, EmailAddress: order.email },
+      Date: today.toISOString().substring(0, 10),
+      DueDate: due.toISOString().substring(0, 10),
       Reference: String(order.id),
       Status: 'AUTHORISED',
       LineItems: lines,
       ...(process.env.XERO_BRANDING_THEME_ID ? { BrandingThemeID: process.env.XERO_BRANDING_THEME_ID } : {})
     };
-
-    // POST to Xero Accounting API
-    const fetchImpl = (typeof globalThis.fetch !== 'undefined') ? globalThis.fetch : (await import('node-fetch')).default;
-    const resp = await fetchImpl(`https://api.xero.com/api.xro/2.0/Invoices`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token.access_token}`,
-        'Xero-tenant-id': token.tenant_id
-      },
-      body: JSON.stringify({ Invoices: [invoice] })
-    });
-    const body = await resp.json();
-    if (!resp.ok) {
-      console.error('xero create invoice failed', body);
-      return res.status(resp.status).json({ error: 'xero_error', details: body });
+    if (shippingAddress) {
+      invoice.Contact.Addresses = [{
+        AddressType: 'STREET',
+        AddressLine1: shippingAddress.address1 || shippingAddress.line1 || undefined,
+        City: shippingAddress.city || undefined,
+        Region: shippingAddress.state || shippingAddress.province || undefined,
+        PostalCode: shippingAddress.postcode || shippingAddress.postal_code || shippingAddress.zip || undefined,
+        Country: shippingAddress.country || undefined
+      }];
     }
+
+    dbg('constructed invoice summary', {
+      lineCount: lines.length,
+      firstLine: lines[0] ? { desc: lines[0].Description, amount: lines[0].UnitAmount } : null,
+      hasShipping: !!(shipPrice && shipPrice > 0),
+      dueDate: invoice.DueDate
+    });
+
+    const payload = { Invoices: [invoice] };
+    let responseText = null;
+    const fetchImpl = (typeof globalThis.fetch !== 'undefined') ? globalThis.fetch : (await import('node-fetch')).default;
+    let resp;
+    try {
+      resp = await fetchImpl('https://api.xero.com/api.xro/2.0/Invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.access_token}`,
+          'Xero-tenant-id': token.tenant_id
+        },
+        body: JSON.stringify(payload)
+      });
+      responseText = await resp.text();
+    } catch (netErr) {
+      console.error('[xero][invoice] network_error', netErr.message);
+      return res.status(502).json({ error: 'xero_network_error', message: netErr.message });
+    }
+    let body;
+    try { body = responseText ? JSON.parse(responseText) : {}; }
+    catch (parse) {
+      console.error('[xero][invoice] response_parse_error', parse.message, responseText?.slice(0,300));
+      return res.status(502).json({ error: 'xero_response_parse_error', raw: responseText?.slice(0,500) });
+    }
+    if (!resp.ok) {
+      console.error('[xero][invoice] xero_http_error', resp.status, body);
+      return res.status(resp.status).json({ error: 'xero_http_error', status: resp.status, details: body });
+    }
+    dbg('invoice created OK', { status: resp.status, hasInvoices: !!body.Invoices, elapsedMs: Date.now()-t0 });
     return res.json({ data: body, error: null });
   } catch (e) {
-    console.error('create xero invoice error', e);
-    return res.status(500).json({ error: 'xero_invoice_failed' });
+    console.error('[xero][invoice] unhandled_error', e);
+    return res.status(500).json({ error: 'xero_invoice_failed', message: e.message });
   }
 });
 
@@ -367,6 +513,34 @@ app.post('/api/auth/signup', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db error' });
+  }
+});
+
+// Order creation endpoint (simplified) – add confirmation email send if not present already
+// NOTE: If there's an existing order creation route elsewhere, consider merging logic instead of duplicating.
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { email, user_name, items, total, payment_method } = req.body || {};
+    if (!email || !items) return res.status(400).json({ error: 'missing_fields' });
+    const id = `ORDER-${Date.now()}`;
+    const itemsJson = JSON.stringify(items);
+    const { rows } = await pool.query(
+      `INSERT INTO orders(id, email, user_name, items, total, status, payment_method, created_at, updated_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7, now(), now()) RETURNING *`,
+      [id, email, user_name || null, itemsJson, total || 0, 'pending', payment_method || null]
+    );
+    const order = rows[0];
+
+    // Send confirmation email (non-blocking style with try/catch)
+    try {
+      const html = buildOrderConfirmationEmail(order);
+      await sendSystemEmail({ to: order.email, subject: `Order Confirmation ${order.id}`, html, text: `Your order ${order.id} was received`, tag: 'order_confirmation' });
+    } catch (e) { console.error('[email] order confirmation failed', e.message); }
+
+    return res.json({ data: order });
+  } catch (e) {
+    console.error('create order failed', e);
+    return res.status(500).json({ error: 'order_create_failed' });
   }
 });
 
@@ -406,6 +580,38 @@ app.get('/api/auth/session', async (req, res) => {
     return res.json({ data: { session }, error: null });
   } catch (err) {
     return res.json({ data: { session: null }, error: null });
+  }
+});
+
+// Email status endpoint (admin auth required)
+app.get('/api/admin/email/status', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    return res.json({
+      has_api_key: !!RESEND_API_KEY,
+      from: process.env.RESEND_FROM || null
+    });
+  } catch (e) {
+    return res.status(500).json({ error: 'email_status_failed' });
+  }
+});
+
+// Email test endpoint
+app.post('/api/admin/email/test', authMiddleware, async (req, res) => {
+  try {
+    if (!(await isAdmin(req.user.sub))) return res.status(403).json({ error: 'forbidden' });
+    const { to, subject, message } = req.body || {};
+    if (!to) return res.status(400).json({ error: 'missing_to' });
+    const html = buildBaseEmail({
+      title: subject || 'Test Email',
+      intro: message || 'This is a test email.',
+      bodyBlocks: [ { type: 'paragraph', text: 'If you received this, email sending is operational.' } ]
+    });
+    const result = await sendSystemEmail({ to, subject: subject || 'Test Email', html, text: message || 'Test email', tag: 'test' });
+    return res.json({ result });
+  } catch (e) {
+    console.error('email test failed', e);
+    return res.status(500).json({ error: 'email_test_failed', message: e.message });
   }
 });
 
@@ -1254,23 +1460,17 @@ app.post('/api/orders/:id/tracking', authMiddleware, async (req, res) => {
       row = ins[0];
     }
 
-    // Optionally send tracking email via resendClient
+    // Send styled tracking email
     let email_sent = false;
-    if (resendClient) {
-      try {
-        const { rows: o } = await pool.query('SELECT email FROM orders WHERE id=$1', [orderId]);
-        const to = o[0]?.email || null;
-        if (to) {
-          const from = process.env.RESEND_FROM || 'no-reply@example.com';
-          const subject = 'Your order has shipped';
-          const html = `<p>Your order <strong>${orderId}</strong> has shipped.</p>
-                        ${row.tracking_number ? `<p>Tracking number: <strong>${row.tracking_number}</strong></p>` : ''}
-                        ${row.tracking_url ? `<p>Track here: <a href="${row.tracking_url}">${row.tracking_url}</a></p>` : ''}`;
-          await resendClient.send({ from, to: [to], subject, html, text: `Order ${orderId} shipped. Tracking: ${row.tracking_number || ''} ${row.tracking_url || ''}` });
-          email_sent = true;
-        }
-      } catch (e) { console.error('send tracking email failed', e); }
-    }
+    try {
+      const { rows: o } = await pool.query('SELECT email FROM orders WHERE id=$1', [orderId]);
+      const to = o[0]?.email || null;
+      if (to) {
+        const html = buildTrackingEmail(orderId, row);
+        const result = await sendSystemEmail({ to, subject: 'Your order has shipped', html, text: `Order ${orderId} shipped. Tracking: ${row.tracking_number || ''} ${row.tracking_url || ''}`, tag: 'tracking' });
+        email_sent = !!result.sent;
+      }
+    } catch (e) { console.error('send tracking email failed', e); }
 
     return res.json({ data: row, email_sent });
   } catch (err) {
